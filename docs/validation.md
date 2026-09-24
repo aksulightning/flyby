@@ -64,3 +64,5 @@ runner PATH. The workflow now explicitly sets up Android command-line tools.
 Its checkout/setup-java actions use supported Node 24 versions after the runner
 reported their previous Node 20 versions as deprecated. All CI actions are
 pinned to verified commit SHAs. CI results remain separate from local validation.
+The setup action's obsolete default `tools` package was also replaced with an
+explicit `platform-tools` selection after Google no longer served that package.
