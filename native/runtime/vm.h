@@ -15,7 +15,8 @@ constexpr uint64_t PciMemory = 0x40000000, PciMemorySize = 0x40000000;
 constexpr uint64_t Rtc = 0x00101000;
 class Vm {
   public:
-    Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "");
+    Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "",
+       bool fullSystem = false);
     ~Vm();
     Vm(const Vm &) = delete;
     Vm &operator=(const Vm &) = delete;

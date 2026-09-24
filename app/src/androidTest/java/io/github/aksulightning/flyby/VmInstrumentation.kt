@@ -12,6 +12,10 @@ import io.github.aksulightning.flyby.terminal.TerminalView
 import io.github.aksulightning.flyby.nativebridge.NativeBridge
 import io.github.aksulightning.flyby.service.VmService
 import io.github.aksulightning.flyby.vm.VmState
+import io.github.aksulightning.flyby.vm.DiskMode
+import io.github.aksulightning.flyby.settings.ThemeMode
+import android.net.Uri
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -110,8 +114,45 @@ class VmInstrumentation : Instrumentation() {
             await(15_000) { "\nFLYBY_PERSIST_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
+            runOnMainSync { activity?.window?.insetsController?.hide(android.view.WindowInsets.Type.ime()) }
+            await(10_000) {
+                var hidden = false
+                runOnMainSync { hidden = activity?.window?.decorView?.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == false }
+                hidden
+            }
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            clickText("Settings")
+            clickText("Night")
+            val preferences = (targetContext.applicationContext as FlybyApplication).settings
+            check(preferences.state.value.theme == ThemeMode.DARK)
+            clickText("Whole system · 1 GiB")
+            check(preferences.state.value.disk == DiskMode.SYSTEM)
+            targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
+            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_SYSTEM_READY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            runOnMainSync { check(!vmService.selectDisk(DiskMode.DATA)) }
+            runBlocking { vmService.session.sendInput("echo $token > /etc/flyby-system-test; sync; printf '\\nFLYBY_SYSTEM_WRITE_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_SYSTEM_WRITE_OK\r\n" in vmService.session.transcript.value }
+            runBlocking { vmService.vm.stop() }
+            val backup = File(targetContext.cacheDir, "system-test.flyby")
+            fun transfer(action: String, completion: String) {
+                // Private file fixture calls the real service handler on main; production uses SAF content URIs.
+                // Never send a file:// URI through Android IPC (FileUriExposedException).
+                runOnMainSync { vmService.onStartCommand(Intent(targetContext, VmService::class.java).setAction(action).setData(Uri.fromFile(backup)), 0, 0) }
+                await(180_000) { !vmService.transfer.value.busy && vmService.transfer.value.message == completion }
+            }
+            transfer(VmService.ACTION_EXPORT, "Disk exported successfully")
+            check(backup.length() > 0)
+            // Replace the current disk with a fresh seed, then restore the actual exported disk.
+            check(File(targetContext.filesDir, "vm/default/system.raw").delete())
+            transfer(VmService.ACTION_IMPORT, "Disk imported successfully")
+            targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
+            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            runBlocking { vmService.session.sendInput("[ \"\$(cat /etc/flyby-system-test)\" = $token ] && printf '\\nFLYBY_RESTORE_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_RESTORE_OK\r\n" in vmService.session.transcript.value }
+            runBlocking { vmService.vm.stop() }
+            backup.delete()
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root after restart and Stop\n")
+            report.putString("stream", "PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, full system root, service export/import, restored /etc after restart and Stop\n")
         } catch (failure: Throwable) {
             report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
@@ -123,7 +164,8 @@ class VmInstrumentation : Instrumentation() {
         }
         finish(result, report)
     }
-    private fun clickStart() {
+    private fun clickStart() = clickText("Start")
+    private fun clickText(label: String) {
         await(10_000) {
             // Traverse virtual Compose nodes: framework text search may not enumerate them.
             val nodes = mutableListOf<AccessibilityNodeInfo>()
@@ -136,7 +178,7 @@ class VmInstrumentation : Instrumentation() {
             uiTree = nodes.joinToString("\n") { "${it.packageName} ${it.className}: ${it.text} / ${it.contentDescription} enabled=${it.isEnabled} clickable=${it.isClickable}" }
             var clicked = false
             for (node in nodes) {
-                if (node.text?.toString() != "Start") continue
+                if (node.text?.toString() != label) continue
                 var target: AccessibilityNodeInfo? = node
                 while (target != null && !target.isClickable) target = target.parent
                 if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { clicked = true; break }

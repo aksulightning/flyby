@@ -20,10 +20,10 @@ class NativeVmController(private val log: (String) -> Unit) : VmController {
         mutex.withLock {
             check(handle == 0L) { "VM already running" }
             config.validateRuntime()
-            DiskImage.validate(files.directory)
+            DiskImage.validate(files.directory, files.mode)
             log("VM_CREATE")
             try {
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount)
+                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 NativeBridge.startVm(handle)

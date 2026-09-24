@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Pinned Alpine artifacts -> deterministic development initramfs. No root/tools needed."""
-import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess
+import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
@@ -27,7 +27,7 @@ def member(path, name):
     with tarfile.open(path, ignore_zeros=True) as tar:
         return tar.extractfile(name).read()
 
-def initramfs(rootfs, kernel_package):
+def initramfs(rootfs, kernel_package, system_root):
     entries = {}
     with tarfile.open(rootfs) as tar:
         for item in tar:
@@ -71,6 +71,21 @@ mount -t devtmpfs devtmpfs /dev
 mkdir -p /dev/pts /run /tmp
 mount -t devpts devpts /dev/pts
 hostname flyby
+if grep -q 'flyby.root=1' /proc/cmdline; then
+    modprobe ext4 || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    i=0
+    while [ ! -b /dev/nvme0n1 ] && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i+1)); done
+    mkdir -p /newroot
+    mount -t ext4 /dev/nvme0n1 /newroot || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    [ -x /newroot/sbin/init ] || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    mkdir -p /newroot/run /newroot/tmp /newroot/dev /newroot/proc /newroot/sys
+    mount -t tmpfs tmpfs /newroot/run || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    mount -t tmpfs -o mode=1777 tmpfs /newroot/tmp || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    mount -o move /dev /newroot/dev || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    mount -o move /sys /newroot/sys || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    mount -o move /proc /newroot/proc || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    exec switch_root /newroot /sbin/init
+fi
 exec /bin/busybox init
 ''', 0o755)
     file('etc/inittab', '''::sysinit:/bin/sh /etc/flyby-boot
@@ -83,7 +98,11 @@ ttyS0::respawn:/bin/sh -l
 printf '\\nHello from Linux\\n'
 /etc/flyby-network &
 cat /etc/os-release
-if grep -q 'flyby.disk=1' /proc/cmdline; then
+if grep -q 'flyby.root=1' /proc/cmdline; then
+    mkdir -p /data /root
+    echo FLYBY_STORAGE_READY
+    echo FLYBY_SYSTEM_READY
+elif grep -q 'flyby.disk=1' /proc/cmdline; then
     modprobe ext4 || { echo FLYBY_STORAGE_ERROR; exit 1; }
     i=0
     while [ ! -b /dev/nvme0n1 ] && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i+1)); done
@@ -148,6 +167,18 @@ while read -r op rows cols; do
     esac
 done <&3
 ''')
+    # Populate the full root filesystem without privileged mounts or archive extraction.
+    if system_root.exists(): shutil.rmtree(system_root)
+    system_root.mkdir(parents=True)
+    for name, (mode, data) in sorted(entries.items(), key=lambda e: (len(pathlib.PurePosixPath(e[0]).parts), e[0])):
+        dest = system_root / name
+        for parent in dest.parents:
+            if parent == system_root: break
+            if parent.is_symlink(): raise ValueError('Root seed path traverses a symlink')
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if stat.S_ISDIR(mode): dest.mkdir(exist_ok=True); dest.chmod(stat.S_IMODE(mode))
+        elif stat.S_ISLNK(mode): dest.symlink_to(data.decode())
+        else: dest.write_bytes(data); dest.chmod(stat.S_IMODE(mode))
     output = io.BytesIO()
     def record(ino, name, mode, data):
         encoded = name.encode() + b'\0'
@@ -194,24 +225,34 @@ def main():
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.53-0-lts'))
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
-    (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk']))
+    (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
-    # Package a fresh seed; existing user disks are never replaced on the device.
-    disk = config_dir/'disk-seed.raw'
-    disk.unlink(missing_ok=True)
-    with disk.open('wb') as stream: stream.truncate(256 * 1024 * 1024)
-    env = dict(os.environ, E2FSPROGS_FAKE_TIME='1700000000')
-    subprocess.run(['mke2fs', '-q', '-t', 'ext4', '-F', '-L', 'flyby-data',
-                    '-U', 'fedcba98-7654-4321-8123-123456789abc', '-m', '0',
-                    '-E', 'lazy_itable_init=0,lazy_journal_init=0,hash_seed=fedcba98-7654-4321-8123-123456789abc', str(disk)],
-                   check=True, env=env)
-    digest = hashlib.sha256()
-    with disk.open('rb') as source, (DEST/'disk.seed').open('wb') as target:
-        with gzip.GzipFile(filename='', mode='wb', fileobj=target, mtime=0) as compressed:
-            while chunk := source.read(65536):
-                digest.update(chunk)
-                compressed.write(chunk)
-    manifest['disk.raw'] = digest.hexdigest()
+    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root')]:
+        disk = config_dir/(name+'-seed.raw')
+        disk.unlink(missing_ok=True)
+        with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)
+        env = dict(os.environ, E2FSPROGS_FAKE_TIME='1700000000')
+        command = ['mke2fs', '-q', '-t', 'ext4', '-F', '-L', 'flyby-'+name,
+                   '-U', 'fedcba98-7654-4321-8123-123456789abc', '-m', '0',
+                   '-E', 'lazy_itable_init=0,lazy_journal_init=0,hash_seed=fedcba98-7654-4321-8123-123456789abc']
+        if root: command += ['-d', str(root)]
+        subprocess.run(command+[str(disk)], check=True, env=env)
+        if root:
+            # mke2fs -d copies host ownership. Normalize every inode without root/fakeroot.
+            commands = config_dir/'root-ownership.txt'
+            names = ['/'] + ['/'+str(p.relative_to(root)) for p in root.rglob('*')]
+            if any('"' in n or '\\' in n or '\n' in n for n in names): raise ValueError('Invalid root filename')
+            commands.write_text(''.join(f'set_inode_field "{n}" uid 0\nset_inode_field "{n}" gid 0\n' for n in names))
+            result = subprocess.run(['debugfs', '-w', '-f', str(commands), str(disk)], check=True,
+                                    capture_output=True, text=True, env=env)
+            if any(line and not line.startswith('debugfs ') for line in result.stderr.splitlines()):
+                raise RuntimeError('debugfs failed: '+result.stderr)
+        digest = hashlib.sha256()
+        with disk.open('rb') as source, (DEST/(name+'.seed')).open('wb') as target:
+            with gzip.GzipFile(filename='', mode='wb', fileobj=target, mtime=0) as compressed:
+                while chunk := source.read(1024*1024):
+                    digest.update(chunk); compressed.write(chunk)
+        manifest[name+'.raw'] = digest.hexdigest()
     (DEST/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print(json.dumps(manifest, indent=2))
 if __name__ == '__main__': main()

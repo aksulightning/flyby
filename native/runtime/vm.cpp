@@ -113,7 +113,8 @@ struct Vm::Impl {
             rvvm_free_machine(machine);
     }
 };
-Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath)
+Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
+       bool fullSystem)
     : impl(std::make_unique<Impl>()) {
     if (memoryMiB < 256 || memoryMiB > 1024 || cpus != 1)
         throw std::invalid_argument("RV64 requires 256–1024 MiB and one CPU in this milestone");
@@ -148,6 +149,8 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         "console=ttyS0,115200 earlycon=uart8250,mmio,0x10000000 rdinit=/init loglevel=6 panic=0";
     if (!diskPath.empty())
         command += " flyby.disk=1";
+    if (fullSystem)
+        command += " flyby.root=1";
     rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {

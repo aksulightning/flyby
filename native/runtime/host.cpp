@@ -5,12 +5,13 @@
 #include <thread>
 #include <unistd.h>
 int main(int argc, char **argv) {
-    if (argc != 2 && argc != 3) {
-        fprintf(stderr, "usage: flyby-host GUEST_DIRECTORY [DISK_RAW]\n");
+    if ((argc != 2 && argc != 3 && argc != 4) || (argc == 4 && std::string(argv[3]) != "--system")) {
+        fprintf(stderr, "usage: flyby-host GUEST_DIRECTORY [DISK_RAW [--system]]\n");
         return 2;
     }
     try {
-        flyby::Vm vm(argv[1], 512, 1, argc == 3 ? argv[2] : "");
+        flyby::Vm vm(argv[1], 512, 1, argc >= 3 ? argv[2] : "",
+                     argc == 4 && std::string(argv[3]) == "--system");
         vm.start();
         std::atomic<bool> done{false};
         std::thread input([&] {

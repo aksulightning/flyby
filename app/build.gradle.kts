@@ -16,15 +16,18 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "io.github.aksulightning.flyby.VmInstrumentation"
-        versionCode = 1
-        versionName = "0.1.0-dev"
+        versionCode = providers.gradleProperty("flybyVersionCode").getOrElse("2").toInt()
+        versionName = providers.gradleProperty("flybyVersionName").getOrElse("0.2.0-dev")
+        val revision = providers.gradleProperty("flybyCommit").getOrElse("local-unpublished")
+        require(revision.matches(Regex("[a-z0-9-]{7,40}")))
+        buildConfigField("String", "REVISION", "\"$revision\"")
         // x86_64 is an explicit Android-emulator test build; device APKs stay ARM64.
         val abi = providers.gradleProperty("flybyAbi").getOrElse("arm64-v8a")
         require(abi in setOf("arm64-v8a", "x86_64")) { "Unsupported flybyAbi: $abi" }
         ndk { abiFilters += abi }
         externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     sourceSets.getByName("main").assets.srcDir("../docs/licenses")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -59,7 +62,7 @@ dependencies {
 
 val verifyGuestAssets by tasks.registering {
     doLast {
-        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.seed").forEach { name ->
+        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.seed", "system.seed").forEach { name ->
             check(file("src/main/assets/vm/$name").let { it.isFile && it.length() > 0 }) {
                 "Guest assets missing. Run python3 scripts/prepare-alpine-riscv64.py before assembling an APK."
             }
@@ -76,9 +79,11 @@ val verifyDebugApkAssets by tasks.registering {
     dependsOn("packageDebug")
     doLast {
         ZipFile(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile).use { apk ->
-            val seed = checkNotNull(apk.getEntry("assets/vm/disk.seed")) { "Disk seed missing from APK" }
+            for (name in listOf("disk.seed", "system.seed")) {
+            val seed = checkNotNull(apk.getEntry("assets/vm/$name")) { "Disk seed missing from APK" }
             apk.getInputStream(seed).use {
                 check(it.read() == 0x1f && it.read() == 0x8b) { "APK disk seed must retain its gzip encoding" }
+            }
             }
         }
     }

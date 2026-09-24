@@ -80,10 +80,12 @@ std::string string(JNIEnv *env, jstring s) {
         error(env, "Unknown native exception");                                                              \
     }
 extern "C" {
-JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint ram, jint cpus) {
+JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint ram, jint cpus,
+                                      jboolean system) {
     try {
-        return put(
-            vms, std::make_shared<flyby::Vm>(string(env, path), ram, cpus, string(env, path) + "/disk.raw"));
+        return put(vms, std::make_shared<flyby::Vm>(
+                            string(env, path), ram, cpus,
+                            string(env, path) + (system ? "/system.raw" : "/disk.raw"), system));
     }
     CATCH_RET(0)
 }

@@ -15,7 +15,8 @@ import io.github.aksulightning.flyby.vm.VmStatus
 
 @Composable
 fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
-               onTerminal: () -> Unit, modifier: Modifier = Modifier, connected: Boolean = true) {
+               onTerminal: () -> Unit, modifier: Modifier = Modifier, connected: Boolean = true,
+               onSettings: () -> Unit = {}, fullSystem: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Linux VM", style = MaterialTheme.typography.headlineMedium)
         Text("Status: ${status.state.label()}")
@@ -29,7 +30,8 @@ fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
             }
             OutlinedButton(onTerminal) { Text("Terminal") }
         }
-        Text("Local development Linux VM. Files in /root and /data survive VM restarts. Other filesystem changes are temporary.")
+        OutlinedButton(onSettings) { Text("Settings") }
+        Text(if (fullSystem) "Whole Linux system persists on a 1 GiB disk." else "Files in /root and /data persist. Enable Whole system in Settings to keep installed packages and system changes.")
         status.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         status.exitCode?.let { Text("VM exit code: $it") }
     }
