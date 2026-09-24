@@ -8,13 +8,16 @@ Termux, a remote server, or QEMU.
 
 **Start → native RV64 VM → OpenSBI → Linux → Alpine root shell**, with a
 persistent `/root` and `/data` disk and outbound user-mode networking.
+Settings now offers **Night / Light / Follow device**, an optional **whole-system
+1 GiB root disk**, and disk **Export / Import** through Android documents.
+See [nightly downloads and disk backups](docs/nightly-and-backups.md).
 
 Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
 input, Alpine shell, DNS/HTTP/HTTPS, Activity recreation/background/return, session
 identity, Stop/Start disk persistence and graceful Stop. The default **ARM64** APK
-and NDK library build; 36 JVM tests per variant and native/guest tests pass.
+and NDK library build; 39 JVM tests per variant and native/guest tests pass.
 **Physical ARM64 hardware, keyboard apps and screen-off/OEM power behavior remain
-acceptance gates. No stable/alpha release is published.**
+acceptance gates. Nightlies are development prereleases, not stable releases.**
 
 The Compose UI retains Start / Stop / Terminal. The terminal uses libvterm for
 ANSI, colors, cursor movement, UTF-8, alternate screen and 2,000 lines of scrollback.
@@ -26,7 +29,7 @@ A started foreground service owns the VM and terminal independently of Activitie
 Keep the Phase 1 toolchain: **JDK 17**, Gradle 8.11.1, AGP 8.9.2, Kotlin 2.1.20,
 Compose BOM 2025.03.01, minSdk 26, compile/targetSdk 35. Native ABI: **arm64-v8a**.
 Set `ANDROID_HOME`; local SDK paths and signing material must not be committed.
-Python 3, host `mke2fs` (e2fsprogs) and HTTPS access are needed for the verified provisioning scripts.
+Python 3, host `mke2fs` and `debugfs` (e2fsprogs) and HTTPS access are needed for the verified provisioning scripts.
 
 ```sh
 sdkmanager 'platforms;android-35' 'build-tools;35.0.0' \
@@ -126,10 +129,11 @@ battery behavior still need a physical-device check in addition to the runner.
 ## Known limitations
 
 - Android emulator execution passes; physical ARM64 hardware, keyboard apps and
-  screen-off/OEM behavior still need testing. No stable/alpha release is published.
-- `/root` and `/data` persist; other rootfs changes and package installs do not.
+  screen-off/OEM behavior still need testing. Nightlies are development builds.
+- Default DATA mode keeps `/root` and `/data`; SYSTEM mode keeps the entire root
+  filesystem, including package installs. Kernel/firmware stay app-managed.
 - User-mode outbound networking is implemented; no forwarding or network settings UI.
-- One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. No settings UI.
+- One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. CPU/RAM controls are not yet exposed.
 - Interpreter performance depends on the device. The host idle check is not an
   Android benchmark. RVVM's staging API must be reviewed before any version update.
 - Copy copies the visible screen; character-range selection is not implemented.
@@ -146,7 +150,8 @@ additional packages; exact versions/licenses/source revisions are documented in
 [licenses](docs/licenses.md). Building with these libraries does not relicense
 Flyby's original source. Distributing a guest-containing APK carries the guest's
 source/notice obligations: provide complete corresponding sources/configs/patches
-alongside any binary release. This branch publishes source, not a binary release.
+alongside any binary release. The nightly job builds and uploads the matching
+corresponding-source bundle before it publishes a prerelease.
 
 ## Persistent disk milestone
 

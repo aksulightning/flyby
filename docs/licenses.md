@@ -79,9 +79,11 @@ the exact aports recipes/patches/configs at the commits above, Flyby guest scrip
 and required build materials. Fetch the versions and checksummed distfiles specified
 by those APKBUILD files; preserve their notices. A generic upstream URL, this
 inventory, or just the kernel config is not a complete GPL source distribution.
-This branch does not publish a GitHub binary release or claim that such a release
-source bundle has been assembled. Do not publish a release until that bundle and
-physical ARM64 acceptance tests are complete.
+`scripts/bundle-sources.py` assembles all SHA512-listed distfiles and the exact
+aports directories, plus native archives, Flyby source and kernel config. The
+nightly job fails closed if this source bundle cannot be built and uploads it
+alongside the APK. Physical ARM64 acceptance remains required for a stable release;
+the user-requested nightly is explicitly a development prerelease.
 
 GPL obligations for the guest do not disappear because it is emulated. Conversely,
 separate guest programs do not change Flyby's original Apache-2.0 license. There is
@@ -93,6 +95,15 @@ Android runtime CI uses ReactiveCircus/android-emulator-runner at
 Its upstream LICENSE was inspected before use. It is a CI tool, not packaged in Flyby.
 
 The NVMe, PCI, Goldfish RTC, RTL8169 and user socket network modules come from
-the same pinned MPL-2.0 RVVM source. Host disk provisioning uses e2fsprogs mke2fs
+the same pinned MPL-2.0 RVVM source. Host disk provisioning uses e2fsprogs mke2fs/debugfs
 (GPL-2.0), a build tool not packaged in the APK. Added kernel modules come from
 the already documented GPL-2.0 Linux artifact; no new guest packages are added.
+
+Nightly development-key caching uses actions/cache v4.2.4 at
+`0400d5f644dc74513175e3cd8d07132dd4860809`, MIT
+([license](https://github.com/actions/cache/blob/v4.2.4/LICENSE)).
+No new Android runtime dependencies are introduced by settings or disk transfer.
+
+The networked persistence smoke test installs `tree` 2.2.1-r0 (GPL-2.0-or-later,
+[Alpine recipe](https://github.com/alpinelinux/aports/blob/3.23-stable/main/tree/APKBUILD))
+into a disposable test disk. It is not present in either seed or the released APK.

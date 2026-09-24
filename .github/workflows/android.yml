@@ -43,6 +43,7 @@ jobs:
           ctest --test-dir out/host --output-on-failure
           python3 scripts/smoke-boot.py
           python3 scripts/test-storage.py
+          python3 scripts/test-storage.py --system --network
           python3 scripts/test-network.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
@@ -81,3 +82,43 @@ jobs:
           ram-size: 3072M
           disable-linux-hw-accel: false
           script: python3 scripts/test-android.py --network
+
+  nightly:
+    needs: [build, android-runtime]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/codex/riscv-phase2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      # Development signing only. Never use this cache for a production signing key.
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4, MIT
+        with:
+          path: ~/.android/debug.keystore
+          key: flyby-nightly-debug-signing-v1
+      - name: Prepare guest and complete corresponding sources
+        run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+          python3 scripts/bundle-sources.py
+      - name: Build identifiable ARM64 nightly
+        run: |
+          ./gradlew --no-daemon assembleDebug \
+            -PflybyVersionName="0.2.0-nightly.${GITHUB_RUN_NUMBER}+${GITHUB_SHA:0:7}" \
+            -PflybyVersionCode="$((10000 + GITHUB_RUN_NUMBER))" \
+            -PflybyCommit="$GITHUB_SHA"
+      - name: Publish verified development prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish-nightly.py

@@ -15,10 +15,10 @@ INTx IRQs 3–6. These constants live in `native/runtime/vm.h`; RVVM generates t
 PCI device tree. The pinned Alpine kernel has built-in PCI/NVMe and its exact
 ext4/jbd2/mbcache/crc16 modules are extracted into the initramfs.
 
-The guest mounts the disk at `/data` and binds `/data/root` onto `/root`.
-**Only `/data` and `/root` persist.** `/etc`, installed packages and the remainder
-of the initramfs are still temporary. A persistent full root filesystem is a
-separate migration, not claimed here. Stop asks BusyBox init to sync/unmount before
+In default DATA mode the guest mounts this disk at `/data` and binds `/data/root`
+onto `/root`; the remaining initramfs is temporary. Settings also offers SYSTEM
+mode: a separate 1 GiB `system.raw` mounted at `/` through initramfs `switch_root`.
+It preserves /etc, /usr and installed packages. See [whole-system backups](nightly-and-backups.md). Stop asks BusyBox init to sync/unmount before
 poweroff; forced termination can still require filesystem recovery. There is no
 automatic formatting, destructive repair or disk reset.
 
