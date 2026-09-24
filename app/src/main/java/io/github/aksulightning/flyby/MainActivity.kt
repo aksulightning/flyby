@@ -15,7 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import io.github.aksulightning.flyby.settings.ThemeMode
 import io.github.aksulightning.flyby.ui.SettingsScreen
-import io.github.aksulightning.flyby.vm.DiskMode
+import io.github.aksulightning.flyby.ui.LicensesScreen
 import io.github.aksulightning.flyby.vm.VmState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -38,6 +38,24 @@ class MainActivity : ComponentActivity() {
     private var pendingImport by mutableStateOf<String?>(null)
     private val exportPicker = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { pendingExport = it?.toString() }
     private val importPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { pendingImport = it?.toString() }
+    private val sharedPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            val preferences = (application as FlybyApplication).settings
+            val old = preferences.state.value.sharedTree
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            try {
+                contentResolver.takePersistableUriPermission(uri, flags)
+                check(service?.setSharedTree(uri.toString()) == true) { "Stop Linux before changing the shared folder" }
+                if (old != null && old != uri.toString()) runCatching {
+                    contentResolver.releasePersistableUriPermission(android.net.Uri.parse(old), flags)
+                }
+                connectionError = null
+            } catch (failure: Exception) {
+                if (old != uri.toString()) runCatching { contentResolver.releasePersistableUriPermission(uri, flags) }
+                connectionError = "Cannot select shared folder: ${failure.message}"
+            }
+        }
+    }
     private val noTransfer = MutableStateFlow(VmService.Transfer())
     private val disconnected = MutableStateFlow(VmStatus())
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { startServiceVm() }
@@ -56,6 +74,7 @@ class MainActivity : ComponentActivity() {
             val settings by preferences.state.collectAsStateWithLifecycle()
             val transfer by (connected?.transfer ?: noTransfer).collectAsStateWithLifecycle()
             var settingsVisible by rememberSaveable { mutableStateOf(false) }
+            var licensesVisible by rememberSaveable { mutableStateOf(false) }
             LaunchedEffect(connected, pendingExport) {
                 if (connected != null && pendingExport != null) {
                     transferDisk(VmService.ACTION_EXPORT, pendingExport!!)
@@ -64,7 +83,9 @@ class MainActivity : ComponentActivity() {
             }
             val status by (connected?.vm?.status ?: disconnected).collectAsStateWithLifecycle()
             var terminalVisible by rememberSaveable { mutableStateOf(false) }
-            BackHandler(terminalVisible || settingsVisible) { terminalVisible = false; settingsVisible = false }
+            BackHandler(terminalVisible || settingsVisible || licensesVisible) {
+                if (licensesVisible) licensesVisible = false else { terminalVisible = false; settingsVisible = false }
+            }
             val dark = settings.theme == ThemeMode.DARK || (settings.theme == ThemeMode.SYSTEM && isSystemInDarkTheme())
             SideEffect {
                 val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -82,19 +103,24 @@ class MainActivity : ComponentActivity() {
                         text = { Text("The ${settings.disk.name.lowercase()} disk will be replaced by this backup. Export it first if you need its current contents.") },
                         confirmButton = { TextButton({ transferDisk(VmService.ACTION_IMPORT, pendingImport!!); pendingImport = null }, enabled = idle) { Text("Replace disk") } },
                         dismissButton = { TextButton({ pendingImport = null }) { Text("Cancel") } })
-                    if (settingsVisible) {
-                        SettingsScreen(settings, idle, transfer, preferences::theme, { connected?.selectDisk(it) },
+                    if (licensesVisible) {
+                        LicensesScreen({ licensesVisible = false }, content)
+                    } else if (settingsVisible) {
+                        SettingsScreen(settings, idle, transfer, preferences,
+                            { connected?.setMemory(it) }, { createDisk(it) },
+                            { sharedPicker.launch(settings.sharedTree?.let(android.net.Uri::parse)) },
+                            { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },
                             { importPicker.launch(arrayOf("*/*")) }, { settingsVisible = false }, content, connectionError)
                     } else if (terminalVisible && connected != null) {
-                        TerminalScreen(connected.session, visibleStatus, { terminalVisible = false }, content)
+                        TerminalScreen(connected.session, visibleStatus, { terminalVisible = false }, content, settings)
                     } else {
                         MainScreen(visibleStatus, {
                             terminalVisible = true
                             if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                                 notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                             else startServiceVm()
-                        }, { connected?.stopVm() }, { terminalVisible = true }, content, connected != null && !transfer.busy, { settingsVisible = true }, settings.disk == DiskMode.SYSTEM)
+                        }, { connected?.stopVm() }, { terminalVisible = true }, content, connected != null && !transfer.busy, { settingsVisible = true }, settings.memoryMiB, settings.diskGiB)
                     }
                 }
             }
@@ -104,6 +130,19 @@ class MainActivity : ComponentActivity() {
         outState.putString("export", pendingExport)
         outState.putString("import", pendingImport)
         super.onSaveInstanceState(outState)
+    }
+    private fun createDisk(gib: Int) {
+        try {
+            connectionError = null
+            startForegroundService(Intent(this, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, gib))
+        } catch (failure: RuntimeException) { connectionError = "Cannot create disk: ${failure.message}" }
+    }
+    private fun disconnectSharedFolder() {
+        val old = (application as FlybyApplication).settings.state.value.sharedTree ?: return
+        if (service?.setSharedTree(null) == true) {
+            runCatching { contentResolver.releasePersistableUriPermission(android.net.Uri.parse(old), Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+            connectionError = null
+        }
     }
     private fun transferDisk(action: String, uri: String) {
         try {

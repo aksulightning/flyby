@@ -32,6 +32,8 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install Android SDK packages
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
       - name: Prepare verified native sources and Alpine guest
         run: |
           python3 scripts/prepare-native.py
@@ -44,6 +46,8 @@ jobs:
           python3 scripts/smoke-boot.py
           python3 scripts/test-storage.py
           python3 scripts/test-storage.py --system --network
+          FLYBY_RAM_MIB=128 FLYBY_DISK_GIB=2 python3 scripts/test-storage.py --system
+          FLYBY_RAM_MIB=768 FLYBY_DISK_GIB=100 python3 scripts/test-storage.py --system
           python3 scripts/test-network.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
@@ -63,6 +67,8 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
       - name: Prepare and build emulator test APKs
         run: |
           python3 scripts/prepare-native.py
@@ -116,6 +122,8 @@ jobs:
               -alias androiddebugkey -storepass android -keypass android \
               -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
           fi
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
       - name: Prepare guest and complete corresponding sources
         run: |
           python3 scripts/prepare-native.py

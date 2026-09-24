@@ -16,11 +16,11 @@ import io.github.aksulightning.flyby.vm.VmStatus
 @Composable
 fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
                onTerminal: () -> Unit, modifier: Modifier = Modifier, connected: Boolean = true,
-               onSettings: () -> Unit = {}, fullSystem: Boolean = false) {
+               onSettings: () -> Unit = {}, memoryMiB: Int = 512, diskGiB: Int = 1) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Linux VM", style = MaterialTheme.typography.headlineMedium)
         Text("Status: ${status.state.label()}")
-        Text("RISC-V 64 · Alpine Linux · 512 MiB RAM")
+        Text("RISC-V 64 · Alpine Linux · ${memoryMiB} MiB RAM")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onStart, enabled = connected && (status.state == VmState.STOPPED || status.state == VmState.ERROR)) {
                 Text("Start")
@@ -31,7 +31,7 @@ fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
             OutlinedButton(onTerminal) { Text("Terminal") }
         }
         OutlinedButton(onSettings) { Text("Settings") }
-        Text(if (fullSystem) "Whole Linux system persists on a 1 GiB disk." else "Files in /root and /data persist. Enable Whole system in Settings to keep installed packages and system changes.")
+        Text("Whole Linux system persists on a $diskGiB GiB disk. Configure RAM, Disk Creator and /shared in Settings.")
         status.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         status.exitCode?.let { Text("VM exit code: $it") }
     }

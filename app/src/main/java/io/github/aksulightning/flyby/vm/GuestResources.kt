@@ -8,7 +8,7 @@ import java.io.File
 import java.security.MessageDigest
 
 object GuestResources {
-    suspend fun prepare(context: Context, mode: DiskMode = DiskMode.DATA): GuestFiles = withContext(Dispatchers.IO) {
+    suspend fun prepare(context: Context, mode: DiskMode = DiskMode.SYSTEM): GuestFiles = withContext(Dispatchers.IO) {
         val root = File(context.filesDir, "vm/default").apply { check(mkdirs() || isDirectory) }
         check(root.canonicalFile.toPath().startsWith(context.filesDir.canonicalFile.toPath())) { "Guest directory escapes app storage" }
         check(root.canonicalFile.parentFile == File(context.filesDir, "vm").canonicalFile) { "Invalid private guest directory" }
@@ -29,6 +29,12 @@ object GuestResources {
         }
         DiskImage.prepare(root, manifest.getString(mode.fileName), mode) { context.assets.open("vm/${mode.seedName}") }
         GuestFiles(root, mode).validated()
+    }
+    suspend fun createSystem(context: Context, gib: Int) = withContext(Dispatchers.IO) {
+        val root = File(context.filesDir, "vm/default").apply { check(mkdirs() || isDirectory) }
+        check(root.canonicalFile.toPath().startsWith(context.filesDir.canonicalFile.toPath()))
+        val manifest = JSONObject(context.assets.open("vm/manifest.json").bufferedReader().use { it.readText() })
+        DiskImage.createSystem(root, manifest.getString("system.raw"), gib) { context.assets.open("vm/system.seed") }
     }
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")

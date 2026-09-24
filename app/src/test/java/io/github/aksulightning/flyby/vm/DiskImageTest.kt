@@ -47,4 +47,29 @@ class DiskImageTest {
         assertFalse(File(temp.root, "disk.raw").exists())
         assertFalse(File(temp.root, "disk.raw.pending").exists())
     }
+    @Test fun systemSizeBoundsUseLongAndPreserveExistingDisks() {
+        val disk = File(temp.root, "system.raw")
+        listOf(1, 2, 100).forEach { gib ->
+            RandomAccessFile(disk, "rw").use { it.setLength(gib * DiskImage.GIB) }
+            assertEquals(gib * DiskImage.GIB, DiskImage.validate(temp.root, DiskMode.SYSTEM).length())
+        }
+        listOf(0L, DiskImage.GIB - 1, DiskImage.GIB + 1, 101 * DiskImage.GIB).forEach { size ->
+            RandomAccessFile(disk, "rw").use { it.setLength(size) }
+            assertThrows(IllegalArgumentException::class.java) { DiskImage.validate(temp.root, DiskMode.SYSTEM) }
+            assertEquals(size, disk.length())
+        }
+    }
+    @Test fun failedCreatorRetainsOldSystemAndLegacyData() {
+        val system = File(temp.root, "system.raw").apply { writeText("old system") }
+        val legacy = File(temp.root, "disk.raw").apply { writeText("old home") }
+        val bytes = ByteArrayOutputStream().apply { GZIPOutputStream(this).use { it.write("invalid seed".toByteArray()) } }.toByteArray()
+        assertThrows(IllegalArgumentException::class.java) {
+            DiskImage.createSystem(temp.root, "unused", 2) { ByteArrayInputStream(bytes) }
+        }
+        assertEquals("old system", system.readText()); assertEquals("old home", legacy.readText())
+        listOf(0, 101, Int.MAX_VALUE).forEach { size ->
+            assertThrows(IllegalArgumentException::class.java) { DiskImage.createSystem(temp.root, "unused", size) { error("Must validate size first") } }
+        }
+    }
+
 }

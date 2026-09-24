@@ -12,10 +12,32 @@ object DiskImage {
     const val SIZE = 256L * 1024 * 1024
     fun validate(directory: File, mode: DiskMode = DiskMode.DATA): File {
         val disk = privateFile(directory, mode.fileName)
-        require(disk.isFile && disk.canRead() && disk.canWrite() && disk.length() == mode.size) {
+        require(disk.isFile && disk.canRead() && disk.canWrite() && validSize(mode, disk.length())) {
             "Persistent disk is missing, inaccessible or has an invalid size; it was not modified"
         }
         return disk
+    }
+    const val GIB = 1024L * 1024 * 1024
+    fun validSize(mode: DiskMode, bytes: Long): Boolean = if (mode == DiskMode.SYSTEM)
+        bytes in GIB..100 * GIB && bytes % GIB == 0L else bytes == mode.size
+
+    /** Create a new complete Alpine disk; publish only after the seed is verified and synced. */
+    fun createSystem(directory: File, expectedHash: String, gib: Int, seed: () -> InputStream): File {
+        require(gib in 1..100) { "Disk must be between 1 and 100 GiB" }
+        val staging = File(directory, "creator").apply {
+            require(!Files.isSymbolicLink(toPath())) { "Invalid staging directory" }
+            check(mkdirs() || isDirectory)
+        }
+        val target = privateFile(directory, DiskMode.SYSTEM.fileName)
+        val temporary = privateFile(staging, DiskMode.SYSTEM.fileName)
+        try {
+            // A crash may leave a staging disk, never a partially replaced user disk.
+            if (temporary.exists()) check(temporary.delete())
+            prepare(staging, expectedHash, DiskMode.SYSTEM, seed)
+            RandomAccessFile(temporary, "rw").use { it.setLength(gib * GIB); it.fd.sync() }
+            check(temporary.renameTo(target)) { "Cannot install new disk; existing disk retained" }
+        } finally { temporary.delete(); staging.delete() }
+        return validate(directory, DiskMode.SYSTEM)
     }
     fun prepare(directory: File, expectedHash: String, mode: DiskMode = DiskMode.DATA, seed: () -> InputStream): File {
         val disk = privateFile(directory, mode.fileName)

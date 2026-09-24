@@ -108,21 +108,25 @@ struct Vm::Impl {
     rvvm_machine_t *machine = nullptr;
     Console console;
     Console control{true};
+    Console shared;
     ~Impl() {
         if (machine)
             rvvm_free_machine(machine);
     }
 };
 Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
-       bool fullSystem)
+       bool fullSystem, bool sharedFolder)
     : impl(std::make_unique<Impl>()) {
-    if (memoryMiB < 256 || memoryMiB > 1024 || cpus != 1)
-        throw std::invalid_argument("RV64 requires 256–1024 MiB and one CPU in this milestone");
+    if (memoryMiB < 128 || memoryMiB > 768 || cpus != 1)
+        throw std::invalid_argument("RV64 requires 128–768 MiB and one CPU in this milestone");
     auto kernel = load(dir + "/kernel", 120 * 1024 * 1024);
     if (kernel.size() < 64 || std::memcmp(kernel.data() + 56, "RSC\x05", 4))
         throw std::invalid_argument("Invalid RISC-V Linux Image header");
     auto fw = load(dir + "/firmware", 2 * 1024 * 1024);
     auto initrd = load(dir + "/initrd", 64 * 1024 * 1024);
+    const uint64_t initrdBase = (RamBase + (uint64_t(memoryMiB) << 20) - initrd.size()) & ~uint64_t(4095);
+    if (initrdBase < KernelBase + kernel.size() + 2 * 1024 * 1024)
+        throw std::runtime_error("Guest kernel and initrd do not fit in the selected RAM");
     impl->machine = rvvm_create_machine(size_t(memoryMiB) << 20, cpus, "rv64");
     auto *m = impl->machine;
     if (!m)
@@ -130,7 +134,8 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
     auto *irq = rvvm_riscv_plic_init(m, Plic);
     if (!irq || !rvvm_riscv_clint_init(m, Clint) || !rvvm_syscon_init(m, Syscon) ||
         !rvvm_ns16550a_init(m, &impl->console.dev, Uart, 0, irq, 1) ||
-        !rvvm_ns16550a_init(m, &impl->control.dev, ControlUart, 0, irq, 2))
+        !rvvm_ns16550a_init(m, &impl->control.dev, ControlUart, 0, irq, 2) ||
+        (sharedFolder && !rvvm_ns16550a_init(m, &impl->shared.dev, SharedUart, 0, irq, 8)))
         throw std::runtime_error("Native board initialization failed");
     const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
     if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
@@ -140,17 +145,19 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         throw std::runtime_error("Cannot attach persistent NVMe disk");
     if (!rvvm_load_firmware(m, (dir + "/firmware").c_str()) ||
         !rvvm_load_kernel(m, (dir + "/kernel").c_str()) ||
-        !rvvm_write_ram(m, InitrdBase, initrd.data(), initrd.size()))
+        !rvvm_write_ram(m, initrdBase, initrd.data(), initrd.size()))
         throw std::runtime_error("Cannot load guest into native RAM");
     auto *chosen = rvvm_fdt_find(rvvm_get_fdt_root(m), "chosen");
-    rvvm_fdt_prop_set_u64(chosen, "linux,initrd-start", InitrdBase);
-    rvvm_fdt_prop_set_u64(chosen, "linux,initrd-end", InitrdBase + initrd.size());
+    rvvm_fdt_prop_set_u64(chosen, "linux,initrd-start", initrdBase);
+    rvvm_fdt_prop_set_u64(chosen, "linux,initrd-end", initrdBase + initrd.size());
     std::string command =
         "console=ttyS0,115200 earlycon=uart8250,mmio,0x10000000 rdinit=/init loglevel=6 panic=0";
     if (!diskPath.empty())
         command += " flyby.disk=1";
     if (fullSystem)
         command += " flyby.root=1";
+    if (sharedFolder)
+        command += " flyby.shared=1";
     rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {
@@ -203,8 +210,7 @@ void Vm::resize(unsigned rows, unsigned cols) {
         impl->control.write(reinterpret_cast<const uint8_t *>(s.data()), s.size());
     }
 }
-std::vector<uint8_t> Vm::output(unsigned timeoutMs) {
-    auto &c = impl->console;
+static std::vector<uint8_t> readConsole(Console &c, unsigned timeoutMs) {
     std::unique_lock lock(c.mutex);
     c.changed.wait_for(lock, std::chrono::milliseconds(std::min(timeoutMs, 1000u)),
                        [&] { return c.closed || c.outSize; });
@@ -216,5 +222,12 @@ std::vector<uint8_t> Vm::output(unsigned timeoutMs) {
         --c.outSize;
     }
     return b;
+}
+std::vector<uint8_t> Vm::output(unsigned timeoutMs) { return readConsole(impl->console, timeoutMs); }
+std::vector<uint8_t> Vm::sharedOutput() { return readConsole(impl->shared, 0); }
+void Vm::sharedInput(const uint8_t *data, size_t size) {
+    std::lock_guard lock(impl->lifecycle);
+    if (!impl->machine) throw std::runtime_error("VM stopped");
+    impl->shared.write(data, size);
 }
 } // namespace flyby

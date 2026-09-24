@@ -36,4 +36,18 @@ class DiskArchiveTest {
         assertThrows(IllegalArgumentException::class.java) { archive.inputStream().use { DiskArchive.import(temp.root,DiskMode.SYSTEM,it) } }
         assertFalse(File(temp.root,"system.raw").exists())
     }
+    @Test fun variableSystemSizeRoundTrip() {
+        val disk = File(temp.root, "system.raw")
+        RandomAccessFile(disk, "rw").use {
+            it.setLength(2 * DiskImage.GIB); it.seek(1080); it.write(byteArrayOf(0x53, 0xef.toByte()))
+            it.seek(DiskImage.GIB + 32); it.writeUTF("beyond original seed")
+        }
+        val backup = temp.newFile("large.flyby")
+        backup.outputStream().use { DiskArchive.export(temp.root, DiskMode.SYSTEM, it) }
+        RandomAccessFile(disk, "rw").use { it.setLength(DiskImage.GIB) }
+        backup.inputStream().use { DiskArchive.import(temp.root, DiskMode.SYSTEM, it) }
+        assertEquals(2 * DiskImage.GIB, disk.length())
+        RandomAccessFile(disk, "r").use { it.seek(DiskImage.GIB + 32); assertEquals("beyond original seed", it.readUTF()) }
+    }
+
 }

@@ -60,8 +60,22 @@ class VmInstrumentation : Instrumentation() {
             val vmService = checkNotNull(service)
             observedService = vmService
             waitForIdleSync()
+            val sharedRoot = File(context.filesDir, "shared-test").apply { mkdirs() }
+            File(sharedRoot, "from-android").writeText("android-data")
+            val sharedUri = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
+            runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(sharedUri.toString())) }
             clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            await(30_000) { "FLYBY_SHARED_READY" in vmService.session.transcript.value }
+            runBlocking { vmService.session.sendInput((
+                "[ \"\$(cat /shared/from-android)\" = android-data ] && " +
+                "echo linux-data > /shared/from-linux && mkdir /shared/sub && " +
+                "echo nested > /shared/sub/old && mv /shared/sub/old /shared/sub/renamed && " +
+                "cat /shared/sub/renamed && rm /shared/sub/renamed && rmdir /shared/sub && " +
+                "printf '\\nFLYBY_SHARED_IO_OK\\n'\n").toByteArray()) }
+            await(30_000) { "\nFLYBY_SHARED_IO_OK\r\n" in vmService.session.transcript.value }
+            check(File(sharedRoot, "from-linux").readText().trim() == "linux-data")
+            check(!File(sharedRoot, "sub").exists())
             var terminalView: TerminalView? = null
             await(10_000) { runOnMainSync { terminalView = findTerminal(checkNotNull(activity).window.decorView) }; terminalView != null }
             runOnMainSync {
@@ -125,11 +139,16 @@ class VmInstrumentation : Instrumentation() {
             clickText("Night")
             val preferences = (targetContext.applicationContext as FlybyApplication).settings
             check(preferences.state.value.theme == ThemeMode.DARK)
-            clickText("Whole system · 1 GiB")
             check(preferences.state.value.disk == DiskMode.SYSTEM)
+            runOnMainSync {
+                vmService.onStartCommand(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, 2), 0, 0)
+            }
+            await(180_000) { !vmService.transfer.value.busy }
+            check(File(targetContext.filesDir, "vm/default/system.raw").length() == 2L * 1024 * 1024 * 1024)
+            check(preferences.state.value.diskGiB == 2)
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
             await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_SYSTEM_READY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
-            runOnMainSync { check(!vmService.selectDisk(DiskMode.DATA)) }
+            runOnMainSync { check(!vmService.setMemory(768)); check(!vmService.setSharedTree(null)) }
             runBlocking { vmService.session.sendInput("echo $token > /etc/flyby-system-test; sync; printf '\\nFLYBY_SYSTEM_WRITE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_SYSTEM_WRITE_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }

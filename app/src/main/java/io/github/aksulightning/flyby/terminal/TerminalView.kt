@@ -9,6 +9,8 @@ import android.view.inputmethod.*
 import android.widget.Toast
 import android.util.TypedValue
 import kotlin.math.*
+import io.github.aksulightning.flyby.settings.Settings
+import io.github.aksulightning.flyby.settings.CursorStyle
 
 /** Android canvas/IME adapter. ANSI interpretation and screen history stay in libvterm. */
 class TerminalView(context: Context) : View(context) {
@@ -23,7 +25,18 @@ class TerminalView(context: Context) : View(context) {
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14f, resources.displayMetrics)
     }
     private val cellWidth get() = paint.measureText("M")
-    private val cellHeight get() = ceil(paint.fontSpacing)
+    private var spacing = 1f
+    private var cursorStyle = CursorStyle.UNDERLINE
+    private val cellHeight get() = ceil(paint.fontSpacing * spacing)
+    fun configure(settings: Settings) {
+        val size = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, settings.fontSize.toFloat(), resources.displayMetrics)
+        val lineSpacing = settings.lineSpacing / 100f
+        val resized = paint.textSize != size || spacing != lineSpacing
+        paint.textSize = size; spacing = lineSpacing; cursorStyle = settings.cursor
+        keepScreenOn = settings.keepScreenOn
+        if (resized && width > 0 && height > 0) onResize((height / cellHeight).toInt().coerceIn(2, 300), (width / cellWidth).toInt().coerceIn(2, 500))
+        invalidate()
+    }
     private var scrollback = 0
     private var scrollRemainder = 0f
     private var latest = intArrayOf()
@@ -90,8 +103,12 @@ class TerminalView(context: Context) : View(context) {
         paint.isFakeBoldText = false; paint.isUnderlineText = false; paint.textSkewX = 0f
         if (frame[5] != 0) {
             paint.color = 0x99ffffff.toInt()
-            canvas.drawRect(frame[3] * cellWidth, (frame[2] + 1) * cellHeight - 2,
-                (frame[3] + 1) * cellWidth, (frame[2] + 1) * cellHeight, paint)
+            val left = frame[3] * cellWidth; val top = frame[2] * cellHeight
+            when (cursorStyle) {
+                CursorStyle.UNDERLINE -> canvas.drawRect(left, top + cellHeight - 2, left + cellWidth, top + cellHeight, paint)
+                CursorStyle.BLOCK -> canvas.drawRect(left, top, left + cellWidth, top + cellHeight, paint)
+                CursorStyle.BAR -> canvas.drawRect(left, top, left + 2, top + cellHeight, paint)
+            }
         }
     }
     fun extraKey(key: Int) { emitKey(key, modifiers()); consumeModifiers() }

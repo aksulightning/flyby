@@ -12,4 +12,6 @@ Every guest package's version, license and exact Alpine source recipe revision
 is listed in assets/vm/provenance.json. Full native/core notices are packaged
 as assets/*-*.txt. Source/build/provisioning scripts and the redistribution
 requirements are in the Flyby repository, docs/licenses.md.
-This development guest has an automatic root shell and a transient RAM filesystem.
+This development guest has an automatic root shell. Its system disk persists; /run and /tmp are temporary.
+The Flyby guest filesystem-growth helper and SAF/9P bridge are original Apache-2.0 code.
+The guest helper is freestanding and links no C library.

@@ -1,6 +1,7 @@
 #include "vm.h"
 #include <atomic>
 #include <cstdio>
+#include <cstdlib>
 #include <poll.h>
 #include <thread>
 #include <unistd.h>
@@ -10,7 +11,8 @@ int main(int argc, char **argv) {
         return 2;
     }
     try {
-        flyby::Vm vm(argv[1], 512, 1, argc >= 3 ? argv[2] : "",
+        unsigned ram = std::getenv("FLYBY_RAM_MIB") ? std::stoul(std::getenv("FLYBY_RAM_MIB")) : 512;
+        flyby::Vm vm(argv[1], ram, 1, argc >= 3 ? argv[2] : "",
                      argc == 4 && std::string(argv[3]) == "--system");
         vm.start();
         std::atomic<bool> done{false};

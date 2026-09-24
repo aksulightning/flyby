@@ -81,11 +81,11 @@ std::string string(JNIEnv *env, jstring s) {
     }
 extern "C" {
 JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint ram, jint cpus,
-                                      jboolean system) {
+                                      jboolean system, jboolean shared) {
     try {
         return put(vms, std::make_shared<flyby::Vm>(
                             string(env, path), ram, cpus,
-                            string(env, path) + (system ? "/system.raw" : "/disk.raw"), system));
+                            string(env, path) + (system ? "/system.raw" : "/disk.raw"), system, shared));
     }
     CATCH_RET(0)
 }
@@ -133,6 +133,14 @@ JNIEXPORT jbyteArray JNICALL JNI(readVm)(JNIEnv *env, jobject, jlong id, jint ti
     try {
         return array(env, get(vms, id)->output(timeout));
     }
+    CATCH_RET(nullptr)
+}
+JNIEXPORT void JNICALL JNI(sharedInputVm)(JNIEnv *env, jobject, jlong id, jbyteArray data) {
+    try { auto b = bytes(env, data); get(vms, id)->sharedInput(b.data(), b.size()); }
+    CATCH_VOID
+}
+JNIEXPORT jbyteArray JNICALL JNI(sharedOutputVm)(JNIEnv *env, jobject, jlong id) {
+    try { return array(env, get(vms, id)->sharedOutput()); }
     CATCH_RET(nullptr)
 }
 JNIEXPORT void JNICALL JNI(resizeVm)(JNIEnv *env, jobject, jlong id, jint rows, jint cols) {

@@ -12,10 +12,10 @@ object DiskArchive {
         val disk = DiskImage.validate(directory, mode)
         DataOutputStream(GZIPOutputStream(destination, 1024 * 1024)).use { out ->
             out.writeUTF(MAGIC); out.writeInt(1); out.writeUTF(mode.name)
-            out.writeUTF(DiskMode.GUEST_ID); out.writeLong(mode.size)
+            out.writeUTF(DiskMode.GUEST_ID); out.writeLong(disk.length())
             val digest = MessageDigest.getInstance("SHA-256")
             disk.inputStream().use { input ->
-                copy(input, mode.size, progress) { b, n -> digest.update(b, 0, n); out.write(b, 0, n) }
+                copy(input, disk.length(), progress) { b, n -> digest.update(b, 0, n); out.write(b, 0, n) }
                 check(input.read() == -1) { "Disk changed while exporting" }
             }
             out.write(digest.digest())
@@ -29,16 +29,17 @@ object DiskArchive {
                 require(input.readUTF() == MAGIC && input.readInt() == 1) { "Not a supported Flyby disk backup" }
                 require(input.readUTF() == mode.name) { "Backup disk type differs from the selected storage mode" }
                 require(input.readUTF() == DiskMode.GUEST_ID) { "Backup requires a different guest/kernel version" }
-                require(input.readLong() == mode.size) { "Invalid backup disk size" }
+                val size = input.readLong()
+                require(DiskImage.validSize(mode, size)) { "Invalid backup disk size" }
                 val digest = MessageDigest.getInstance("SHA-256")
                 RandomAccessFile(pending, "rw").use { output ->
                     output.setLength(0)
-                    copy(input, mode.size, progress) { b, n ->
+                    copy(input, size, progress) { b, n ->
                         digest.update(b, 0, n)
                         if ((0 until n).all { b[it] == 0.toByte() }) output.seek(output.filePointer + n)
                         else output.write(b, 0, n)
                     }
-                    output.setLength(mode.size)
+                    output.setLength(size)
                     val expected = ByteArray(32); input.readFully(expected)
                     require(MessageDigest.isEqual(expected, digest.digest()) && input.read() == -1) { "Backup checksum mismatch or unexpected data" }
                     output.seek(1080)

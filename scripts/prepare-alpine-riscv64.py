@@ -50,7 +50,7 @@ def initramfs(rootfs, kernel_package, system_root):
             if name in selected: return
             selected.add(name)
             for dep in dependencies[name].split(): include(dep)
-        for module in ('ext4', 'realtek', 'r8169', 'af_packet'):
+        for module in ('ext4', 'realtek', 'r8169', 'af_packet', '9p', '9pnet', '9pnet_fd'):
             include(next(n for n in dependencies if n.endswith('/'+module+'.ko.gz')))
         for name in sorted(selected):
             path = prefix + name.removesuffix('.gz')
@@ -63,6 +63,21 @@ def initramfs(rootfs, kernel_package, system_root):
         for parent in pathlib.PurePosixPath(name).parents:
             if str(parent) != '.': entries.setdefault(str(parent), (stat.S_IFDIR | 0o755, b''))
         entries[name] = (stat.S_IFREG | mode, value.encode())
+    helper = ROOT / 'out/guest/flyby-grow-root'
+    helper.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-static', '-s', '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector', '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start',
+                    '-Wall', '-Wextra', '-Werror', str(ROOT/'native/guest/grow-root.c'), '-o', str(helper)], check=True)
+    entries['sbin/flyby-grow-root'] = (stat.S_IFREG | 0o755, helper.read_bytes())
+    file('etc/flyby-shared', '''#!/bin/sh
+# The private third UART carries 9P2000, never terminal input or network traffic.
+grep -q 'flyby.shared=1' /proc/cmdline || exit 0
+modprobe 9pnet_fd && modprobe 9p || { echo FLYBY_SHARED_ERROR; exit 1; }
+mkdir -p /shared
+exec 4<> /dev/ttyS2
+stty raw -echo <&4
+mount -t 9p -o trans=fd,rfdno=4,wfdno=4,version=9p2000,msize=8192,cache=none,access=any,nodev,nosuid shared /shared || { echo FLYBY_SHARED_ERROR; exit 1; }
+echo FLYBY_SHARED_READY
+''', 0o755)
     file('init', '''#!/bin/busybox sh
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 mount -t proc proc /proc
@@ -77,15 +92,23 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     while [ ! -b /dev/nvme0n1 ] && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i+1)); done
     mkdir -p /newroot
     mount -t ext4 /dev/nvme0n1 /newroot || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    /sbin/flyby-grow-root || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     [ -x /newroot/sbin/init ] || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mkdir -p /newroot/run /newroot/tmp /newroot/dev /newroot/proc /newroot/sys
     mount -t tmpfs tmpfs /newroot/run || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -t tmpfs -o mode=1777 tmpfs /newroot/tmp || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    # Mount from the current initrd so older persistent roots also support sharing.
+    /etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    if grep -q 'flyby.shared=1' /proc/cmdline; then
+        mkdir -p /newroot/shared
+        mount -o move /shared /newroot/shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    fi
     mount -o move /dev /newroot/dev || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /sys /newroot/sys || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /proc /newroot/proc || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     exec switch_root /newroot /sbin/init
 fi
+/etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
 exec /bin/busybox init
 ''', 0o755)
     file('etc/inittab', '''::sysinit:/bin/sh /etc/flyby-boot
@@ -232,7 +255,7 @@ def main():
         disk.unlink(missing_ok=True)
         with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)
         env = dict(os.environ, E2FSPROGS_FAKE_TIME='1700000000')
-        command = ['mke2fs', '-q', '-t', 'ext4', '-F', '-L', 'flyby-'+name,
+        command = ['mke2fs', '-q', '-t', 'ext4', '-b', '4096', '-F', '-L', 'flyby-'+name,
                    '-U', 'fedcba98-7654-4321-8123-123456789abc', '-m', '0',
                    '-E', 'lazy_itable_init=0,lazy_journal_init=0,hash_seed=fedcba98-7654-4321-8123-123456789abc']
         if root: command += ['-d', str(root)]

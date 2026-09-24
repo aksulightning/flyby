@@ -9,11 +9,18 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import io.github.aksulightning.flyby.shared.NinePServer
+import io.github.aksulightning.flyby.shared.SharedTree
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
 
-class NativeVmController(private val log: (String) -> Unit) : VmController {
+class NativeVmController(private val log: (String) -> Unit, private val sharedTree: () -> SharedTree? = { null }) : VmController {
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
     private var handle = 0L
+    private var shared: NinePServer? = null
     private var output: (ByteArray) -> Unit = {}
 
     override suspend fun start(config: VmConfig, files: GuestFiles, onOutput: (ByteArray) -> Unit) = withContext(Dispatchers.IO) {
@@ -23,7 +30,8 @@ class NativeVmController(private val log: (String) -> Unit) : VmController {
             DiskImage.validate(files.directory, files.mode)
             log("VM_CREATE")
             try {
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM)
+                shared = sharedTree()?.let { it.root(); NinePServer(it) }
+                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 NativeBridge.startVm(handle)
@@ -34,8 +42,16 @@ class NativeVmController(private val log: (String) -> Unit) : VmController {
         }
     }
 
-    override suspend fun awaitExit(): Int = withContext(Dispatchers.IO) {
+    override suspend fun awaitExit(): Int = withContext(Dispatchers.IO) { coroutineScope {
         val id = mutex.withLock { check(handle != 0L); handle }
+        val sharedJob = shared?.let { server -> launch {
+            while (isActive && NativeBridge.runningVm(id)) {
+                val bytes = NativeBridge.sharedOutputVm(id)
+                if (bytes.isEmpty()) delay(5)
+                else server.receive(bytes) { NativeBridge.sharedInputVm(id, it) }
+            }
+        } }
+        try {
         var tail = ""
         var booted = false
         val bootDeadline = System.nanoTime() + 300_000_000_000L
@@ -72,7 +88,8 @@ class NativeVmController(private val log: (String) -> Unit) : VmController {
             output(bytes)
         }
         0
-    }
+        } finally { sharedJob?.cancelAndJoin() }
+    } }
 
     override suspend fun stop() = withContext(Dispatchers.IO) {
         mutex.withLock { if (handle != 0L) NativeBridge.requestStopVm(handle) }

@@ -13,9 +13,10 @@ import io.github.aksulightning.flyby.terminal.TerminalSession
 import io.github.aksulightning.flyby.terminal.TerminalView
 import io.github.aksulightning.flyby.vm.VmStatus
 import kotlinx.coroutines.launch
+import io.github.aksulightning.flyby.settings.Settings
 
 @Composable
-fun TerminalScreen(session: TerminalSession, status: VmStatus, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun TerminalScreen(session: TerminalSession, status: VmStatus, onBack: () -> Unit, modifier: Modifier = Modifier, settings: Settings = Settings()) {
     val scope = rememberCoroutineScope()
     val emulator = session.emulator
     var view by remember { mutableStateOf<TerminalView?>(null) }
@@ -41,13 +42,14 @@ fun TerminalScreen(session: TerminalSession, status: VmStatus, onBack: () -> Uni
                     terminal.onInput = { bytes -> scope.launch { session.sendInput(bytes) } }
                     terminal.onResize = { rows, cols -> scope.launch { session.resize(rows, cols) } }
                     // Observe one revision per native output batch, never one per UART byte.
+                    terminal.configure(settings)
                     if (revision >= 0) terminal.invalidate()
                 },
             )
         } else {
             Text("Native terminal is unavailable. Start will show the initialization error.", Modifier.weight(1f))
         }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        if (settings.extraKeys) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             listOf("ESC" to 4, "TAB" to 2).forEach { (label, key) -> TextButton({ view?.extraKey(key) }) { Text(label) } }
             TextButton({ ctrl = !ctrl }) { Text(if (ctrl) "CTRL •" else "CTRL") }
             TextButton({ alt = !alt }) { Text(if (alt) "ALT •" else "ALT") }

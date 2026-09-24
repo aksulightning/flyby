@@ -160,3 +160,10 @@ Host two-boot and Android restart persistence tests pass. DHCP, DNS, HTTP and
 HTTPS pass on the host CI and inside Android. See [storage and networking](docs/storage-network.md)
 for provisioning, limits and validation. Android runtime CI uses an explicit
 `-PflybyAbi=x86_64` test build; default APKs remain ARM64.
+
+## Configurable VM and shared folder
+
+Settings now includes RAM (128–768 MiB), a complete Alpine Disk Creator
+(1–100 GiB), Android folder selection for `/shared`, terminal customization and
+an offline Licenses screen. See [settings and sharing](docs/settings-and-sharing.md)
+for upgrade behavior, storage semantics and validation.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Two separate RVVM processes must share actual ext4 data, not retained RAM."""
 import gzip
+import os
 from pathlib import Path
 import selectors
 import shutil
@@ -57,9 +58,13 @@ if __name__ == '__main__':
     with gzip.open(GUEST/('system.seed' if SYSTEM else 'disk.seed'), 'rb') as source, DISK.open('wb') as dest:
         shutil.copyfileobj(source, dest)
     if SYSTEM:
+        gib = int(os.environ.get('FLYBY_DISK_GIB', '1'))
+        if not 1 <= gib <= 100: raise ValueError('Invalid test disk size')
+        with DISK.open('r+b') as stream: stream.truncate(gib * 1024**3)
         install = "apk add --no-cache tree && " if '--network' in sys.argv else ""
         verify = "apk info -e tree && tree --version && " if '--network' in sys.argv else ""
-        boot(install + f"echo {TOKEN} > /etc/flyby-persist-test; echo {TOKEN} > /usr/local/persist-test; sync; printf '\\nSYSTEM_WRITE_OK\\n'",
+        capacity = f"[ \"$(df -k / | awk 'END {{print $2}}')\" -gt {int(gib * 1024**2 * .85)} ] && "
+        boot(capacity + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
              '\r\nSYSTEM_WRITE_OK\r\n', 'write.log')
         boot(verify + f"[ \"$(cat /etc/flyby-persist-test)\" = {TOKEN} ] && [ \"$(cat /usr/local/persist-test)\" = {TOKEN} ] && grep '/dev/nvme0n1 / ext4' /proc/mounts && printf '\\nSYSTEM_PERSIST_OK\\n'",
              '\r\nSYSTEM_PERSIST_OK\r\n', 'read.log')
