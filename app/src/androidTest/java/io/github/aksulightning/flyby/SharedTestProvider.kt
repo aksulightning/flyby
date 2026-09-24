@@ -49,3 +49,17 @@ class SharedTestProvider : DocumentsProvider() {
     }
     override fun isChildDocument(parentDocumentId: String, documentId: String) = file(documentId).toPath().startsWith(file(parentDocumentId).toPath())
 }
+
+/** Owns the fixture and grants the same scoped tree permission as a document picker. */
+class SharedTestSetupActivity : android.app.Activity() {
+    override fun onCreate(state: android.os.Bundle?) {
+        super.onCreate(state)
+        val root = File(filesDir, "shared-test").apply { mkdirs() }
+        File(root, "from-android").writeText("android-data")
+        val tree = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
+        grantUriPermission("io.github.aksulightning.flyby", tree,
+            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION or android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        finish()
+    }
+}

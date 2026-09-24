@@ -54,14 +54,14 @@ class VmInstrumentation : Instrumentation() {
             try { NativeBridge.createVm("${targetContext.filesDir}/missing-guest", 512, 1) }
             catch (_: IllegalStateException) { rejected = true }
             check(rejected)
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(uiAutomation.executeShellCommand(
+                "am start -W -n io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.SharedTestSetupActivity")).use { it.readBytes() }
             activity = startActivitySync(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             bound = targetContext.bindService(Intent(targetContext, VmService::class.java), connection, Context.BIND_AUTO_CREATE)
             check(connected.await(10, TimeUnit.SECONDS)) { "Service bind timed out" }
             val vmService = checkNotNull(service)
             observedService = vmService
             waitForIdleSync()
-            val sharedRoot = File(context.filesDir, "shared-test").apply { mkdirs() }
-            File(sharedRoot, "from-android").writeText("android-data")
             val sharedUri = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
             runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(sharedUri.toString())) }
             clickStart()
@@ -74,8 +74,11 @@ class VmInstrumentation : Instrumentation() {
                 "cat /shared/sub/renamed && rm /shared/sub/renamed && rmdir /shared/sub && " +
                 "printf '\\nFLYBY_SHARED_IO_OK\\n'\n").toByteArray()) }
             await(30_000) { "\nFLYBY_SHARED_IO_OK\r\n" in vmService.session.transcript.value }
-            check(File(sharedRoot, "from-linux").readText().trim() == "linux-data")
-            check(!File(sharedRoot, "sub").exists())
+            val sharedBackend = io.github.aksulightning.flyby.shared.AndroidSharedTree(targetContext.contentResolver, sharedUri)
+            val files = sharedBackend.children(sharedBackend.root().id)
+            val written = files.single { it.name == "from-linux" }
+            check(sharedBackend.read(written.id, 0, 100).toString(Charsets.UTF_8).trim() == "linux-data")
+            check(files.none { it.name == "sub" })
             var terminalView: TerminalView? = null
             await(10_000) { runOnMainSync { terminalView = findTerminal(checkNotNull(activity).window.decorView) }; terminalView != null }
             runOnMainSync {
