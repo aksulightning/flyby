@@ -18,6 +18,13 @@ class VmConfigTest {
         VmConfig(2048, 4).validate()
     }
 
+    @Test fun currentRuntimeLimitsAreExplicit() {
+        listOf(256, 512, 1024).forEach { VmConfig(it).validateRuntime() }
+        listOf(VmConfig(128), VmConfig(2048), VmConfig(cpuCount = 2)).forEach {
+            assertThrows(IllegalArgumentException::class.java) { it.validateRuntime() }
+        }
+    }
+
     @Test fun invalidRamIsRejected() {
         listOf(Int.MIN_VALUE, -1, 0, 127, 2049, Int.MAX_VALUE).forEach {
             assertThrows(IllegalArgumentException::class.java) { VmConfig(it).validate() }

@@ -11,3 +11,9 @@ internal fun TemporaryFolder.vmFiles(): VmFiles {
     check(files.executable.setExecutable(true))
     return files
 }
+
+internal fun TemporaryFolder.guestFiles(): GuestFiles {
+    val root = newFolder("guest")
+    listOf("kernel", "firmware", "initrd").forEach { File(root, it).writeText("test-only resource") }
+    return GuestFiles(root)
+}

@@ -13,12 +13,14 @@ android {
         applicationId = "io.github.aksulightning.flyby"
         minSdk = 26
         targetSdk = 35
+        testInstrumentationRunner = "io.github.aksulightning.flyby.VmInstrumentation"
         versionCode = 1
         versionName = "0.1.0-dev"
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
     buildFeatures { compose = true }
+    sourceSets.getByName("main").assets.srcDir("../docs/licenses")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -48,4 +50,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
+}
+
+val verifyGuestAssets by tasks.registering {
+    doLast {
+        listOf("kernel", "firmware", "initrd", "manifest.json").forEach { name ->
+            check(file("src/main/assets/vm/$name").let { it.isFile && it.length() > 0 }) {
+                "Guest assets missing. Run python3 scripts/prepare-alpine-riscv64.py before assembling an APK."
+            }
+        }
+    }
+}
+tasks.configureEach {
+    if (name.startsWith("merge") && name.endsWith("Assets")) dependsOn(verifyGuestAssets)
 }

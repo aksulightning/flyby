@@ -68,7 +68,9 @@ printf '\\nFLYBY_ALPINE_READY\\n'
 ''')
     # Dedicated second UART. Commands never enter the user's shell or host shell.
     file('etc/flyby-control', '''#!/bin/sh
-stty -F /dev/ttyS1 raw -echo
+exec 3<> /dev/ttyS1
+stty raw -echo <&3
+printf 'FLYBY_CONTROL_READY\\n' >&3
 while read -r op rows cols; do
     case "$op" in
         stop) /bin/busybox poweroff ;;
@@ -79,7 +81,7 @@ while read -r op rows cols; do
             stty -F /dev/ttyS0 rows "$rows" cols "$cols"
             ;;
     esac
-done < /dev/ttyS1
+done <&3
 ''')
     output = io.BytesIO()
     def record(ino, name, mode, data):
@@ -91,15 +93,38 @@ done < /dev/ttyS1
         output.write(b'\0' * (-output.tell() % 4))
     for ino, (name, (mode, data)) in enumerate(sorted(entries.items()), 1): record(ino, name, mode, data)
     record(len(entries)+1, 'TRAILER!!!', 0, b'')
-    return gzip.compress(output.getvalue(), compresslevel=9, mtime=0)
+    compressed = bytearray(gzip.compress(output.getvalue(), compresslevel=9, mtime=0))
+    compressed[9] = 255  # Stable gzip OS byte across supported Python versions.
+    return bytes(compressed)
+
+def provenance(paths):
+    packages = []
+    with tarfile.open(paths['alpine-minirootfs.tar.gz']) as tar:
+        database = tar.extractfile('./lib/apk/db/installed').read().decode()
+    for block in database.strip().split('\n\n'):
+        fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
+        packages.append(dict(name=fields['P'], version=fields['V'], license=fields['L'],
+                             origin=fields['o'], commit=fields['c']))
+    for name in ['linux-lts.apk', 'opensbi.apk']:
+        fields = dict(line.split(' = ', 1) for line in member(paths[name], '.PKGINFO').decode().splitlines() if ' = ' in line)
+        packages.append(dict(name=fields['pkgname'], version=fields['pkgver'], license=fields['license'],
+                             origin=fields['origin'], commit=fields['commit']))
+    for package in packages:
+        package['source_recipe'] = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{package['commit']}/main/{package['origin']}"
+    return dict(artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in ARTIFACTS.items()}, packages=packages)
 
 def main():
     paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in ARTIFACTS.items()}
+    metadata = provenance(paths)
     DEST.mkdir(parents=True, exist_ok=True)
+    (DEST/'provenance.json').write_text(json.dumps(metadata, indent=2)+'\n')
     kernel = member(paths['linux-lts.apk'], 'boot/vmlinuz-lts')
     if kernel[:2] == b'\x1f\x8b': kernel = gzip.decompress(kernel)
     if kernel[56:60] != b'RSC\x05': raise ValueError('Not a RISC-V Linux Image')
     (DEST/'kernel').write_bytes(kernel)
+    config_dir = ROOT/'out/guest'
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.53-0-lts'))
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz']))
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}

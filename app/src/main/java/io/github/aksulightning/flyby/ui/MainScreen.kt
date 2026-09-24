@@ -15,13 +15,13 @@ import io.github.aksulightning.flyby.vm.VmStatus
 
 @Composable
 fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
-               onTerminal: () -> Unit, modifier: Modifier = Modifier) {
+               onTerminal: () -> Unit, modifier: Modifier = Modifier, connected: Boolean = true) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Linux VM", style = MaterialTheme.typography.headlineMedium)
         Text("Status: ${status.state.label()}")
-        Text("ARM64 · 1 CPU · 512 MiB RAM")
+        Text("RISC-V 64 · Alpine Linux · 512 MiB RAM")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onStart, enabled = status.state == VmState.STOPPED || status.state == VmState.ERROR) {
+            Button(onStart, enabled = connected && (status.state == VmState.STOPPED || status.state == VmState.ERROR)) {
                 Text("Start")
             }
             OutlinedButton(onStop, enabled = status.state == VmState.STARTING || status.state == VmState.RUNNING) {
@@ -29,9 +29,9 @@ fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
             }
             OutlinedButton(onTerminal) { Text("Terminal") }
         }
-        Text("Phase 1: Android foundation. QEMU and Linux images are not bundled yet. Start checks the runtime and reports what is missing.")
+        Text("Local development Linux VM. Root shell, RAM filesystem; files are lost when the VM stops.")
         status.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        status.exitCode?.let { Text("QEMU exit code: $it") }
+        status.exitCode?.let { Text("VM exit code: $it") }
     }
 }
 

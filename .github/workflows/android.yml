@@ -31,6 +31,16 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - name: Install Android SDK packages
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Prepare verified native sources and Alpine guest
+        run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+      - name: Native build and Alpine shell smoke test
+        run: |
+          cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host -j2
+          ctest --test-dir out/host --output-on-failure
+          python3 scripts/smoke-boot.py
       - name: Unit tests, debug APK and lint
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
+        run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug

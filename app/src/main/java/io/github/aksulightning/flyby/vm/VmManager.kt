@@ -17,13 +17,15 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Owned outside Activity. A service must own the process before a controller is installed. */
+/** Owned outside Activity. A service must own the runtime before a controller is installed. */
 class VmManager(
     private val scope: CoroutineScope,
-    private val controller: QemuController? = null,
+    private val controller: VmController? = null,
     private val log: (String) -> Unit = {},
     private val shutdownTimeoutMs: Long = 5_000,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val onOutput: (ByteArray) -> Unit = {},
+    private val onReset: () -> Unit = {},
 ) : TerminalSession {
     private val mutex = Mutex()
     private val current = MutableStateFlow(VmStatus())
@@ -34,7 +36,9 @@ class VmManager(
     private var stoppingOperation = false
     private var cleanupPending = false
 
-    suspend fun start(config: VmConfig, files: VmFiles): Boolean = mutex.withLock {
+    suspend fun start(config: VmConfig, files: GuestFiles): Boolean = start(config) { files }
+
+    suspend fun start(config: VmConfig, prepare: suspend () -> GuestFiles): Boolean = mutex.withLock {
         if (active != null || stoppingOperation || cleanupPending) return@withLock false
         current.value = VmStatus(VmState.STARTING)
         buffer.clear()
@@ -44,25 +48,27 @@ class VmManager(
             var result = VmStatus(VmState.STOPPED)
             var attemptedStart = false
             try {
-                val command = withContext(ioDispatcher) { QemuCommandBuilder.build(config, files) }
+                onReset()
+                val checked = withContext(ioDispatcher) { config.validateRuntime(); prepare().validated() }
                 val runtime = checkNotNull(controller) {
-                    "Phase 1: QEMU process integration is not installed. See docs/qemu-android.md."
+                    "Native VM runtime is not installed"
                 }
                 attemptedStart = true
-                runtime.start(command, buffer::append)
+                runtime.start(config, checked) { bytes -> buffer.append(bytes); onOutput(bytes) }
                 mutex.withLock {
                     if (current.value.state == VmState.STARTING) current.value = VmStatus(VmState.RUNNING)
                 }
                 val code = runtime.awaitExit()
-                log("QEMU_EXIT_CODE $code")
+                log("NATIVE_EXIT_CODE $code")
                 result = if (code == 0 || current.value.state == VmState.STOPPING) {
                     VmStatus(VmState.STOPPED, exitCode = code)
                 } else {
-                    VmStatus(VmState.ERROR, "QEMU exited with code $code", code)
+                    VmStatus(VmState.ERROR, "Native VM exited with code $code", code)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
+                log("NATIVE_ERROR ${failure.message}")
                 result = VmStatus(VmState.ERROR, failure.message ?: failure.javaClass.simpleName)
             } finally {
                 withContext(NonCancellable) {
@@ -71,7 +77,7 @@ class VmManager(
                         if (attemptedStart) controller?.forceStop()
                     } catch (failure: Exception) {
                         cleanupFailed = true
-                        result = VmStatus(VmState.ERROR, "Process cleanup failed: ${failure.message}")
+                        result = VmStatus(VmState.ERROR, "Native cleanup failed: ${failure.message}")
                     }
                     mutex.withLock {
                         current.value = result
@@ -94,7 +100,7 @@ class VmManager(
             val starting = current.value.state == VmState.STARTING
             current.value = VmStatus(VmState.STOPPING)
             log("VM_STOP")
-            // A controller must handle cancellation during spawn without leaking a child.
+            // A controller must handle cancellation during spawn without leaking a runtime.
             if (starting) running.cancel()
             running
         }
@@ -123,7 +129,7 @@ class VmManager(
                     cleanupPending = false
                     current.value = VmStatus(VmState.STOPPED)
                 } catch (failure: Exception) {
-                    current.value = VmStatus(VmState.ERROR, "Process cleanup failed: ${failure.message}")
+                    current.value = VmStatus(VmState.ERROR, "Native cleanup failed: ${failure.message}")
                 }
             }
             active
@@ -139,6 +145,10 @@ class VmManager(
             }
         }
         job.join() // run's finally performs forceStop and reaps before publishing STOPPED.
+    }
+
+    override suspend fun resize(rows: Int, cols: Int) {
+        if (current.value.state == VmState.RUNNING) controller?.resize(rows, cols)
     }
 
     override suspend fun sendInput(bytes: ByteArray) {
