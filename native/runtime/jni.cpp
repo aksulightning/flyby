@@ -82,7 +82,8 @@ std::string string(JNIEnv *env, jstring s) {
 extern "C" {
 JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint ram, jint cpus) {
     try {
-        return put(vms, std::make_shared<flyby::Vm>(string(env, path), ram, cpus, string(env, path) + "/disk.raw"));
+        return put(
+            vms, std::make_shared<flyby::Vm>(string(env, path), ram, cpus, string(env, path) + "/disk.raw"));
     }
     CATCH_RET(0)
 }

@@ -29,7 +29,7 @@ fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
             }
             OutlinedButton(onTerminal) { Text("Terminal") }
         }
-        Text("Local development Linux VM. Root shell, RAM filesystem; files are lost when the VM stops.")
+        Text("Local development Linux VM. Files in /root and /data survive VM restarts. Other filesystem changes are temporary.")
         status.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         status.exitCode?.let { Text("VM exit code: $it") }
     }

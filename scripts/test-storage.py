@@ -51,7 +51,7 @@ def boot(command, marker, name):
 
 
 if __name__ == '__main__':
-    with gzip.open(GUEST/'disk.raw.gz', 'rb') as source, DISK.open('wb') as dest:
+    with gzip.open(GUEST/'disk.seed', 'rb') as source, DISK.open('wb') as dest:
         shutil.copyfileobj(source, dest)
     boot(f"echo {TOKEN} > /root/persist-test; echo {TOKEN} > /data/persist-test; sync; printf '\\nWRITE_OK\\n'",
          '\r\nWRITE_OK\r\n', 'write.log')

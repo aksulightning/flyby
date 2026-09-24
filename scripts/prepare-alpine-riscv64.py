@@ -182,6 +182,9 @@ def main():
     paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in ARTIFACTS.items()}
     metadata = provenance(paths)
     DEST.mkdir(parents=True, exist_ok=True)
+    # aapt transparently expands .gz assets and strips their suffix. Keep gzip bytes
+    # under a neutral extension so Android and host consume the exact same seed.
+    (DEST/'disk.raw.gz').unlink(missing_ok=True)
     (DEST/'provenance.json').write_text(json.dumps(metadata, indent=2)+'\n')
     kernel = member(paths['linux-lts.apk'], 'boot/vmlinuz-lts')
     if kernel[:2] == b'\x1f\x8b': kernel = gzip.decompress(kernel)
@@ -203,7 +206,7 @@ def main():
                     '-E', 'lazy_itable_init=0,lazy_journal_init=0,hash_seed=fedcba98-7654-4321-8123-123456789abc', str(disk)],
                    check=True, env=env)
     digest = hashlib.sha256()
-    with disk.open('rb') as source, (DEST/'disk.raw.gz').open('wb') as target:
+    with disk.open('rb') as source, (DEST/'disk.seed').open('wb') as target:
         with gzip.GzipFile(filename='', mode='wb', fileobj=target, mtime=0) as compressed:
             while chunk := source.read(65536):
                 digest.update(chunk)

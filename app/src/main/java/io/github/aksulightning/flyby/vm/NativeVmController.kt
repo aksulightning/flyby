@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 class NativeVmController(private val log: (String) -> Unit) : VmController {
+    private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
     private var handle = 0L
     private var output: (ByteArray) -> Unit = {}
@@ -54,9 +55,14 @@ class NativeVmController(private val log: (String) -> Unit) : VmController {
                 }.toByteArray()
                 output(batch)
                 tail = (tail + batch.toString(Charsets.UTF_8)).takeLast(8192)
-                if (!booted && "FLYBY_ALPINE_READY" in tail) { booted = true; log("LINUX_BOOT Alpine shell ready") }
-                check("FLYBY_STORAGE_ERROR" !in tail) { "Persistent disk could not be mounted. See Terminal; disk was not reformatted." }
-                check("Kernel panic" !in tail) { "Linux kernel panic. See Terminal for diagnostics." }
+                if (!booted) {
+                    check("FLYBY_STORAGE_ERROR" !in tail) { "Persistent disk could not be mounted. See Terminal; disk was not reformatted." }
+                    if ("FLYBY_ALPINE_READY" in tail) { booted = true; log("LINUX_BOOT Alpine shell ready") }
+                }
+                // Do not treat ordinary shell text mentioning a kernel panic as a fatal event.
+                check(!kernelPanic.containsMatchIn(tail)) {
+                    "Linux kernel panic. See Terminal for diagnostics."
+                }
             }
             check(booted || System.nanoTime() < bootDeadline) { "Linux did not reach its shell within 5 minutes. See Terminal." }
         }

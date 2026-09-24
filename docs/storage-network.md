@@ -24,7 +24,8 @@ automatic formatting, destructive repair or disk reset.
 
 `prepare-alpine-riscv64.py` now requires host `mke2fs` (e2fsprogs, GPL-2.0;
 Ubuntu: `sudo apt-get install e2fsprogs`). It creates an unmounted seed, with fixed
-UUID/hash seed/time and disabled lazy initialization, then packages it with gzip.
+UUID/hash seed/time and disabled lazy initialization, then packages gzip bytes as `disk.seed` (a `.gz` asset would be transparently
+expanded and renamed by aapt).
 The host mke2fs version may affect the exact filesystem bytes; the generated
 manifest always hashes the actual seed. No unverified filesystem binary is used.
 The developer seed lives in `out/guest/disk-seed.raw`; neither disks nor generated

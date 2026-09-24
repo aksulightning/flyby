@@ -44,12 +44,13 @@ exposing queued input. This prevents Linux's UART initialization from discarding
 an early resize or shutdown. It carries only fixed Stop and numeric resize requests;
 management never writes into the user's shell. Guest shutdown is followed by native
 cleanup. After ten seconds, cancellation falls back to stop/join without a guest
-shutdown. With the current RAM filesystem this discards transient state.
+shutdown. Forced termination discards transient state and may leave the persistent
+ext4 disk requiring recovery; the app never silently reformats it.
 
 ## Foreground execution
 
 Manifest: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `WAKE_LOCK`,
-`POST_NOTIFICATIONS`; non-exported `VmService`, `specialUse` type and the SDK-defined
+`POST_NOTIFICATIONS`, `INTERNET`; non-exported `VmService`, `specialUse` type and the SDK-defined
 `android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE`. Start originates from a visible
 Activity. Notification opens Flyby and provides Stop. A partial wake lock lasts
 only as long as active execution/startup/cleanup. Normal Activity lifecycle does

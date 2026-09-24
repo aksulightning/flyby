@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit
  */
 class VmInstrumentation : Instrumentation() {
     private var checkNetwork = false
+    private var uiTree = ""
+    private var observedService: VmService? = null
     override fun onCreate(arguments: Bundle?) {
         super.onCreate(arguments)
         checkNetwork = arguments?.getString("network") == "true"
@@ -52,13 +54,15 @@ class VmInstrumentation : Instrumentation() {
             bound = targetContext.bindService(Intent(targetContext, VmService::class.java), connection, Context.BIND_AUTO_CREATE)
             check(connected.await(10, TimeUnit.SECONDS)) { "Service bind timed out" }
             val vmService = checkNotNull(service)
+            observedService = vmService
+            waitForIdleSync()
             clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             var terminalView: TerminalView? = null
             await(10_000) { runOnMainSync { terminalView = findTerminal(checkNotNull(activity).window.decorView) }; terminalView != null }
             runOnMainSync {
                 val input = checkNotNull(terminalView).onCreateInputConnection(EditorInfo())
-                input.commitText("printf '\\nFLYBY_IME_OK\\n'", 1)
+                input.commitText("echo Kernel panic; printf '\\nFLYBY_IME_OK\\n'", 1)
                 input.performEditorAction(EditorInfo.IME_ACTION_NONE)
             }
             await(15_000) { "\nFLYBY_IME_OK\r\n" in vmService.session.transcript.value }
@@ -96,19 +100,20 @@ class VmInstrumentation : Instrumentation() {
                 await(90_000) { "\nFLYBY_NETWORK_OK\r\n" in vmService.session.transcript.value }
             }
             val token = "persist-${SystemClock.elapsedRealtime()}"
-            runBlocking { vmService.session.sendInput("echo $token > /root/device-persist; sync; printf '\\nFLYBY_WRITE_OK\\n'\n".toByteArray()) }
+            runBlocking { vmService.session.sendInput("echo $token > /root/.flyby-test-$token; sync; printf '\\nFLYBY_WRITE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_WRITE_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
             await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
-            runBlocking { vmService.session.sendInput("[ \"\$(cat /root/device-persist)\" = $token ] && printf '\\nFLYBY_PERSIST_OK\\n'\n".toByteArray()) }
+            runBlocking { vmService.session.sendInput("[ \"\$(cat /root/.flyby-test-$token)\" = $token ] && printf '\\nFLYBY_PERSIST_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_PERSIST_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
             result = Activity.RESULT_OK
             report.putString("stream", "PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root after restart and Stop\n")
         } catch (failure: Throwable) {
+            report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
             report.putString("stream", "FAIL: ${failure.stackTraceToString()}\n")
         } finally {
@@ -120,7 +125,15 @@ class VmInstrumentation : Instrumentation() {
     }
     private fun clickStart() {
         await(10_000) {
-            val nodes = uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Start").orEmpty()
+            // Traverse virtual Compose nodes: framework text search may not enumerate them.
+            val nodes = mutableListOf<AccessibilityNodeInfo>()
+            fun visit(node: AccessibilityNodeInfo?) {
+                if (node == null || nodes.size >= 256) return
+                nodes += node
+                for (i in 0 until node.childCount) visit(node.getChild(i))
+            }
+            visit(uiAutomation.rootInActiveWindow)
+            uiTree = nodes.joinToString("\n") { "${it.packageName} ${it.className}: ${it.text} / ${it.contentDescription} enabled=${it.isEnabled} clickable=${it.isClickable}" }
             var clicked = false
             for (node in nodes) {
                 if (node.text?.toString() != "Start") continue
@@ -139,6 +152,9 @@ class VmInstrumentation : Instrumentation() {
     private fun await(timeout: Long, condition: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + timeout
         while (!condition()) {
+            observedService?.vm?.status?.value?.let { status ->
+                check(status.state != VmState.ERROR) { "VM failed: ${status.error}" }
+            }
             check(SystemClock.elapsedRealtime() < deadline) { "Timed out waiting for guest output" }
             SystemClock.sleep(100)
         }

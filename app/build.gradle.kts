@@ -1,3 +1,5 @@
+import java.util.zip.ZipFile
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -39,7 +41,7 @@ android {
             version = "3.22.1"
         }
     }
-    androidResources { noCompress += listOf("kernel", "firmware", "initrd") }
+    androidResources { noCompress += listOf("kernel", "firmware", "initrd", "seed") }
 
 }
 
@@ -57,7 +59,7 @@ dependencies {
 
 val verifyGuestAssets by tasks.registering {
     doLast {
-        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.raw.gz").forEach { name ->
+        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.seed").forEach { name ->
             check(file("src/main/assets/vm/$name").let { it.isFile && it.length() > 0 }) {
                 "Guest assets missing. Run python3 scripts/prepare-alpine-riscv64.py before assembling an APK."
             }
@@ -66,4 +68,21 @@ val verifyGuestAssets by tasks.registering {
 }
 tasks.configureEach {
     if (name.startsWith("merge") && name.endsWith("Assets")) dependsOn(verifyGuestAssets)
+}
+
+// aapt expands .gz assets. Catch filename/content changes in the final APK,
+// not just the source asset directory (the first Android disk test found this).
+val verifyDebugApkAssets by tasks.registering {
+    dependsOn("packageDebug")
+    doLast {
+        ZipFile(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile).use { apk ->
+            val seed = checkNotNull(apk.getEntry("assets/vm/disk.seed")) { "Disk seed missing from APK" }
+            apk.getInputStream(seed).use {
+                check(it.read() == 0x1f && it.read() == 0x8b) { "APK disk seed must retain its gzip encoding" }
+            }
+        }
+    }
+}
+tasks.configureEach {
+    if (name == "assembleDebug") dependsOn(verifyDebugApkAssets)
 }

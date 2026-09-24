@@ -1,7 +1,7 @@
 # Alpine riscv64 guest
 
 Run `python3 scripts/prepare-alpine-riscv64.py`. It produces `kernel`, `firmware`,
-`initrd` and a SHA-256 manifest in `app/src/main/assets/vm/` using pinned official
+`initrd`, `disk.seed` and a SHA-256 manifest in `app/src/main/assets/vm/` using pinned official
 Alpine archives. These generated resources are packaged into the APK, not Git.
 `out/downloads` caches the original archives. No random prebuilt image is accepted.
 
@@ -25,7 +25,9 @@ devpts, set hostname, exec BusyBox init. Its inittab starts a login shell on tty
 and a respawning private control daemon on ttyS1. The shell prints
 `FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. This is an intentional development
 autologin root environment, no password/login management. Alpine's default SSL CA
-bundle is retained, but no virtual network device is attached.
+bundle is retained for HTTPS. The RTL8169 NIC uses RVVM user-mode sockets.
+Matching ext4, realtek PHY, r8169 and af_packet kernel modules are extracted from
+the pinned linux-lts APK, together with their transitive dependencies.
 
 The firmware, Image, FDT and initrd layout is in `native/runtime/vm.h` and
 [the runtime document](riscv-runtime.md). Serial console is NS16550 `ttyS0`, verified
@@ -36,4 +38,5 @@ Run `python3 scripts/smoke-boot.py` after building the host target. It boots the
 same board, waits for the real Alpine shell, sends commands, checks output and
 powers off. `ctest` additionally tests the private resize/Stop path and Ctrl+C.
 Failure keeps serial diagnostics in `out/smoke-boot.log`. The root filesystem is
-in RAM: there is no persistence or disk device in this milestone.
+in RAM except `/root` and `/data`, which use the private ext4/NVMe disk. See
+[storage/network](storage-network.md) for seed generation, lifecycle and tests.

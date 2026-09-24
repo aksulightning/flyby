@@ -23,7 +23,7 @@ def main():
         adb("logcat", "-c")
         result = adb("shell", "am", "instrument", "-w", "-r", *(["-e", "network", "true"] if "--network" in sys.argv else []),
                      "io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation",
-                     timeout=420)
+                     timeout=780)
         (OUT / "instrumentation.txt").write_text(result)
         print(result)
         if "INSTRUMENTATION_CODE: -1" not in result or "PASS:" not in result or "FAIL:" in result:

@@ -89,3 +89,25 @@ Phase 2 is not declared fully accepted until the physical-device gates pass.
 9. Force-stop the app with Android: a later launch must be Stopped, not claim a restored
    VM. No snapshot/persistence is implemented. Do not label a release stable from
    build/host evidence alone.
+
+## Storage/network continuation
+
+- ARM64 debug APK and instrumentation APK build; 36 JVM tests per variant pass.
+- Host persistence: a unique token survives poweroff and a new RVVM process in
+  both `/root` and `/data` (`scripts/test-storage.py`).
+- GitHub run 36024038220, job 107716256707: native tests, Alpine shell,
+  persistence, real DNS/HTTP/HTTPS and Gradle test/build/lint all passed.
+- Earlier Android API 35 x86_64 execution reached the real Alpine shell, passed
+  commands, duplicate Start, recreation/background/return and graceful Stop.
+  The wrapper initially misread the formatted instrumentation output; it now
+  requests raw output (`am instrument -r`) and checks result code plus PASS.
+- Final APK inspection caught aapt expanding `disk.raw.gz` to `disk.raw`.
+  The gzip bytes now use `disk.seed`; `assembleDebug` checks the actual APK entry
+  and gzip magic. This fixes the app-private disk provisioning path.
+- The extended UI test's framework text search did not find Compose's virtual
+  Start node. It now traverses the accessibility tree and includes it in failure
+  diagnostics. Initialization errors fail immediately instead of waiting five minutes.
+
+The extended Android Start/IME/storage/network acceptance execution is tracked in
+GitHub Actions. Physical ARM64, actual keyboard app behavior, screen-off/OEM power
+management and abrupt process-death filesystem recovery still require device tests.
