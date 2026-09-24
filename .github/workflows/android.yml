@@ -42,6 +42,7 @@ jobs:
           cmake --build out/host -j2
           ctest --test-dir out/host --output-on-failure
           python3 scripts/smoke-boot.py
+          python3 scripts/test-storage.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 

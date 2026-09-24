@@ -112,7 +112,7 @@ struct Vm::Impl {
             rvvm_free_machine(machine);
     }
 };
-Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus) : impl(std::make_unique<Impl>()) {
+Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath) : impl(std::make_unique<Impl>()) {
     if (memoryMiB < 256 || memoryMiB > 1024 || cpus != 1)
         throw std::invalid_argument("RV64 requires 256–1024 MiB and one CPU in this milestone");
     auto kernel = load(dir + "/kernel", 120 * 1024 * 1024);
@@ -129,6 +129,12 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus) : impl(std::ma
         !rvvm_ns16550a_init(m, &impl->console.dev, Uart, 0, irq, 1) ||
         !rvvm_ns16550a_init(m, &impl->control.dev, ControlUart, 0, irq, 2))
         throw std::runtime_error("Native board initialization failed");
+    if (!diskPath.empty()) {
+        const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
+        if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
+            !rvvm_nvme_init_auto(m, diskPath.c_str()))
+            throw std::runtime_error("Cannot attach persistent NVMe disk");
+    }
     if (!rvvm_load_firmware(m, (dir + "/firmware").c_str()) ||
         !rvvm_load_kernel(m, (dir + "/kernel").c_str()) ||
         !rvvm_write_ram(m, InitrdBase, initrd.data(), initrd.size()))
@@ -136,8 +142,9 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus) : impl(std::ma
     auto *chosen = rvvm_fdt_find(rvvm_get_fdt_root(m), "chosen");
     rvvm_fdt_prop_set_u64(chosen, "linux,initrd-start", InitrdBase);
     rvvm_fdt_prop_set_u64(chosen, "linux,initrd-end", InitrdBase + initrd.size());
-    rvvm_set_cmdline(
-        m, "console=ttyS0,115200 earlycon=uart8250,mmio,0x10000000 rdinit=/init loglevel=6 panic=0");
+    std::string command = "console=ttyS0,115200 earlycon=uart8250,mmio,0x10000000 rdinit=/init loglevel=6 panic=0";
+    if (!diskPath.empty()) command += " flyby.disk=1";
+    rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {
     stop();

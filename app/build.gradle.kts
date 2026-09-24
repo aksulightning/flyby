@@ -57,7 +57,7 @@ dependencies {
 
 val verifyGuestAssets by tasks.registering {
     doLast {
-        listOf("kernel", "firmware", "initrd", "manifest.json").forEach { name ->
+        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.raw.gz").forEach { name ->
             check(file("src/main/assets/vm/$name").let { it.isFile && it.length() > 0 }) {
                 "Guest assets missing. Run python3 scripts/prepare-alpine-riscv64.py before assembling an APK."
             }

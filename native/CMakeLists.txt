@@ -16,7 +16,8 @@ list(FILTER RVVM_UTIL EXCLUDE REGEX "/networking.c$")
 list(FILTER RVVM_CPU EXCLUDE REGEX "/riscv32_interpreter.c$")
 add_library(rvvm STATIC ${RVVM_CORE} ${RVVM_UTIL} ${RVVM_CPU}
   ${RVVM}/src/devices/riscv-aclint.c ${RVVM}/src/devices/riscv-plic.c
-  ${RVVM}/src/devices/ns16550a.c ${RVVM}/src/devices/syscon.c)
+  ${RVVM}/src/devices/ns16550a.c ${RVVM}/src/devices/syscon.c
+  ${RVVM}/src/devices/nvme.c)
 target_include_directories(rvvm PUBLIC ${RVVM}/include ${RVVM}/src ${RVVM}/src/util)
 target_compile_definitions(rvvm PRIVATE USE_RV64=1 USE_FPU=1 USE_FDT=1 RVVM_VERSION="flyby-ce8ca7c")
 target_compile_options(rvvm PRIVATE -O2 -frounding-math -fno-math-errno)

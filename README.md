@@ -22,7 +22,7 @@ A started foreground service owns the VM and terminal independently of Activitie
 Keep the Phase 1 toolchain: **JDK 17**, Gradle 8.11.1, AGP 8.9.2, Kotlin 2.1.20,
 Compose BOM 2025.03.01, minSdk 26, compile/targetSdk 35. Native ABI: **arm64-v8a**.
 Set `ANDROID_HOME`; local SDK paths and signing material must not be committed.
-Python 3 and HTTPS access are needed for the verified provisioning scripts.
+Python 3, host `mke2fs` (e2fsprogs) and HTTPS access are needed for the verified provisioning scripts.
 
 ```sh
 sdkmanager 'platforms;android-35' 'build-tools;35.0.0' \
@@ -109,7 +109,7 @@ lock is held only while active and released on stop/error/service destruction.
 It allows screen-off execution but consumes battery. Android may still kill the
 process; RAM state is then lost. No automatic restart or snapshot is claimed.
 
-An SDK-only device integration runner is included (built, **not run here**):
+An SDK-only device integration runner is included:
 
 ```sh
 ./gradlew assembleDebugAndroidTest
@@ -144,3 +144,10 @@ additional packages; exact versions/licenses/source revisions are documented in
 Flyby's original source. Distributing a guest-containing APK carries the guest's
 source/notice obligations: provide complete corresponding sources/configs/patches
 alongside any binary release. This branch publishes source, not a binary release.
+
+## Persistent disk milestone
+
+A 256 MiB raw ext4 disk now preserves `/data` and `/root` across VM restarts.
+Host two-boot persistence tests pass. See [storage and networking](docs/storage-network.md)
+for provisioning, limits and validation. Android runtime CI uses an explicit
+`-PflybyAbi=x86_64` test build; default APKs remain ARM64.

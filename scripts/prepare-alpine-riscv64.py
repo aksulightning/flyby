@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Pinned Alpine artifacts -> deterministic development initramfs. No root/tools needed."""
-import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request
+import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
@@ -27,7 +27,7 @@ def member(path, name):
     with tarfile.open(path, ignore_zeros=True) as tar:
         return tar.extractfile(name).read()
 
-def initramfs(rootfs):
+def initramfs(rootfs, kernel_package):
     entries = {}
     with tarfile.open(rootfs) as tar:
         for item in tar:
@@ -40,6 +40,24 @@ def initramfs(rootfs):
             elif item.isfile() or item.islnk(): data, mode = tar.extractfile(item).read(), stat.S_IFREG | item.mode
             else: raise ValueError(f'Unexpected archive entry: {name}')
             entries[name] = (mode, data)
+    # Only ext4 and its exact dependencies, from the matching kernel package.
+    with tarfile.open(kernel_package, ignore_zeros=True) as tar:
+        dep_name = next(n for n in tar.getnames() if n.endswith('/modules.dep'))
+        prefix = dep_name.removesuffix('modules.dep')
+        dependencies = dict(line.split(':', 1) for line in tar.extractfile(dep_name).read().decode().splitlines())
+        selected = set()
+        def include(name):
+            if name in selected: return
+            selected.add(name)
+            for dep in dependencies[name].split(): include(dep)
+        include(next(n for n in dependencies if n.endswith('/ext4.ko.gz')))
+        for name in sorted(selected):
+            path = prefix + name.removesuffix('.gz')
+            for parent in pathlib.PurePosixPath(path).parents:
+                if str(parent) != '.': entries[str(parent)] = (stat.S_IFDIR | 0o755, b'')
+            entries[path] = (stat.S_IFREG | 0o644, gzip.decompress(tar.extractfile(prefix + name).read()))
+        dep_data = ''.join(f"{n.removesuffix('.gz')}: {' '.join(d.removesuffix('.gz') for d in dependencies[n].split())}\n" for n in sorted(selected))
+        entries[dep_name] = (stat.S_IFREG | 0o644, dep_data.encode())
     def file(name, value, mode=0o644): entries[name] = (stat.S_IFREG | mode, value.encode())
     file('init', '''#!/bin/busybox sh
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
@@ -60,6 +78,17 @@ ttyS0::respawn:/bin/sh -l
     file('etc/flyby-boot', '''#!/bin/sh
 printf '\\nHello from Linux\\n'
 cat /etc/os-release
+if grep -q 'flyby.disk=1' /proc/cmdline; then
+    modprobe ext4 || { echo FLYBY_STORAGE_ERROR; exit 1; }
+    i=0
+    while [ ! -b /dev/nvme0n1 ] && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i+1)); done
+    mkdir -p /data
+    mount -t ext4 /dev/nvme0n1 /data || { echo FLYBY_STORAGE_ERROR; exit 1; }
+    mkdir -p /data/root
+    mount -o bind /data/root /root || { echo FLYBY_STORAGE_ERROR; exit 1; }
+    touch /run/flyby-storage-ready
+    echo FLYBY_STORAGE_READY
+fi
 ''')
     file('etc/profile', '''export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TERM=xterm-256color
@@ -126,8 +155,24 @@ def main():
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.53-0-lts'))
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
-    (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz']))
+    (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk']))
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
+    # Package a fresh seed; existing user disks are never replaced on the device.
+    disk = config_dir/'disk-seed.raw'
+    disk.unlink(missing_ok=True)
+    with disk.open('wb') as stream: stream.truncate(256 * 1024 * 1024)
+    env = dict(os.environ, E2FSPROGS_FAKE_TIME='1700000000')
+    subprocess.run(['mke2fs', '-q', '-t', 'ext4', '-F', '-L', 'flyby-data',
+                    '-U', 'fedcba98-7654-4321-8123-123456789abc', '-m', '0',
+                    '-E', 'lazy_itable_init=0,lazy_journal_init=0,hash_seed=fedcba98-7654-4321-8123-123456789abc', str(disk)],
+                   check=True, env=env)
+    digest = hashlib.sha256()
+    with disk.open('rb') as source, (DEST/'disk.raw.gz').open('wb') as target:
+        with gzip.GzipFile(filename='', mode='wb', fileobj=target, mtime=0) as compressed:
+            while chunk := source.read(65536):
+                digest.update(chunk)
+                compressed.write(chunk)
+    manifest['disk.raw'] = digest.hexdigest()
     (DEST/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print(json.dumps(manifest, indent=2))
 if __name__ == '__main__': main()

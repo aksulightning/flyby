@@ -5,12 +5,12 @@
 #include <thread>
 #include <unistd.h>
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr, "usage: flyby-host GUEST_DIRECTORY\n");
+    if (argc != 2 && argc != 3) {
+        fprintf(stderr, "usage: flyby-host GUEST_DIRECTORY [DISK_RAW]\n");
         return 2;
     }
     try {
-        flyby::Vm vm(argv[1], 512, 1);
+        flyby::Vm vm(argv[1], 512, 1, argc == 3 ? argv[2] : "");
         vm.start();
         std::atomic<bool> done{false};
         std::thread input([&] {

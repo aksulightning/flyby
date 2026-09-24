@@ -27,6 +27,7 @@ object GuestResources {
                 } finally { pending.delete() }
             }
         }
+        DiskImage.prepare(root, manifest.getString("disk.raw")) { context.assets.open("vm/disk.raw.gz") }
         GuestFiles(root).validated()
     }
     private fun sha256(file: File): String {

@@ -10,9 +10,11 @@ constexpr uint64_t RamBase = 0x80000000, KernelBase = RamBase + 0x200000;
 constexpr uint64_t InitrdBase = RamBase + 0x08000000;
 constexpr uint64_t Clint = 0x02000000, Plic = 0x0c000000, Uart = 0x10000000;
 constexpr uint64_t ControlUart = 0x10001000, Syscon = 0x00100000;
+constexpr uint64_t PciEcam = 0x30000000, PciIo = 0x03000000;
+constexpr uint64_t PciMemory = 0x40000000, PciMemorySize = 0x40000000;
 class Vm {
   public:
-    Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus);
+    Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "");
     ~Vm();
     Vm(const Vm &) = delete;
     Vm &operator=(const Vm &) = delete;

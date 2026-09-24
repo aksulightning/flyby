@@ -72,10 +72,19 @@ class VmInstrumentation : Instrumentation() {
             check(service === vmService) { "Service was replaced while backgrounded" }
             check(vmService.vm.status.value.state == VmState.RUNNING)
             check(vmService.session.emulator === terminal)
+            val token = "persist-${SystemClock.elapsedRealtime()}"
+            runBlocking { vmService.session.sendInput("echo $token > /root/device-persist; sync; printf '\\nFLYBY_WRITE_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_WRITE_OK\r\n" in vmService.session.transcript.value }
+            runBlocking { vmService.vm.stop() }
+            check(vmService.vm.status.value.state == VmState.STOPPED)
+            targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
+            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            runBlocking { vmService.session.sendInput("[ \"\$(cat /root/device-persist)\" = $token ] && printf '\\nFLYBY_PERSIST_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_PERSIST_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, Alpine shell, duplicate start, Activity recreate/background/return, session identity and Stop\n")
+            report.putString("stream", "PASS: JNI validation, Alpine shell, duplicate start, Activity recreate/background/return, session identity, persistent /root after restart and Stop\n")
         } catch (failure: Throwable) {
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
             report.putString("stream", "FAIL: ${failure.stackTraceToString()}\n")
