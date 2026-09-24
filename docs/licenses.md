@@ -87,3 +87,7 @@ GPL obligations for the guest do not disappear because it is emulated. Conversel
 separate guest programs do not change Flyby's original Apache-2.0 license. There is
 no linked QEMU/GLib/libfdt dependency in the implemented runtime. See the historical
 Phase 1 QEMU document only for the superseded proposal.
+
+Android runtime CI uses ReactiveCircus/android-emulator-runner at
+`a421e43855164a8197daf9d8d40fe71c6996bb0d`, Apache-2.0 (Yang Chen).
+Its upstream LICENSE was inspected before use. It is a CI tool, not packaged in Flyby.

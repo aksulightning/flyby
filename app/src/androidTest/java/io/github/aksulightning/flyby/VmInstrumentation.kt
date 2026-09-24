@@ -11,7 +11,7 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/** SDK-only on-device integration runner; no emulator or mocked engine.
+/** SDK-only on-device integration runner; real embedded RVVM engine.
  * adb shell am instrument -w io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation
  */
 class VmInstrumentation : Instrumentation() {
@@ -20,7 +20,7 @@ class VmInstrumentation : Instrumentation() {
         var activity: Activity? = null
         var service: VmService? = null
         var bound = false
-        val connected = CountDownLatch(1)
+        var connected = CountDownLatch(1)
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
                 service = (binder as VmService.LocalBinder).service; connected.countDown()
@@ -53,6 +53,9 @@ class VmInstrumentation : Instrumentation() {
             activity = checkNotNull(monitor.waitForActivityWithTimeout(10_000)) { "Activity did not recreate" }
             removeMonitor(monitor)
             runOnMainSync { activity?.moveTaskToBack(true) }
+            // Neither the Activity nor the test keeps the service bound in the background.
+            targetContext.unbindService(connection)
+            bound = false
             SystemClock.sleep(1500)
             check(vmService.vm.status.value.state == VmState.RUNNING)
             check(vmService.session.emulator === terminal)
@@ -63,6 +66,10 @@ class VmInstrumentation : Instrumentation() {
             check("ID=alpine" in vmService.session.transcript.value)
             targetContext.startActivity(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
             waitForIdleSync()
+            connected = CountDownLatch(1)
+            bound = targetContext.bindService(Intent(targetContext, VmService::class.java), connection, Context.BIND_AUTO_CREATE)
+            check(connected.await(10, TimeUnit.SECONDS))
+            check(service === vmService) { "Service was replaced while backgrounded" }
             check(vmService.vm.status.value.state == VmState.RUNNING)
             check(vmService.session.emulator === terminal)
             runBlocking { vmService.vm.stop() }
@@ -70,6 +77,7 @@ class VmInstrumentation : Instrumentation() {
             result = Activity.RESULT_OK
             report.putString("stream", "PASS: JNI validation, Alpine shell, duplicate start, Activity recreate/background/return, session identity and Stop\n")
         } catch (failure: Throwable) {
+            report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
             report.putString("stream", "FAIL: ${failure.stackTraceToString()}\n")
         } finally {
             service?.let { runBlocking { it.vm.forceStop() } }

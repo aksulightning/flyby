@@ -16,7 +16,10 @@ android {
         testInstrumentationRunner = "io.github.aksulightning.flyby.VmInstrumentation"
         versionCode = 1
         versionName = "0.1.0-dev"
-        ndk { abiFilters += "arm64-v8a" }
+        // x86_64 is an explicit Android-emulator test build; device APKs stay ARM64.
+        val abi = providers.gradleProperty("flybyAbi").getOrElse("arm64-v8a")
+        require(abi in setOf("arm64-v8a", "x86_64")) { "Unsupported flybyAbi: $abi" }
+        ndk { abiFilters += abi }
         externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
     buildFeatures { compose = true }
