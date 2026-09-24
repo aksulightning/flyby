@@ -19,6 +19,7 @@ interface SharedTree {
 }
 
 class NinePServer(private val tree: SharedTree) {
+    private class ProtocolError(val wireText: String) : Exception()
     private data class Fid(var entry: SharedTree.Entry, val parents: List<SharedTree.Entry>, var mode: Int? = null, var listing: List<ByteArray>? = null)
     private val fids = mutableMapOf<Int, Fid>()
     private val qids = mutableMapOf<String, Long>()
@@ -70,7 +71,7 @@ class NinePServer(private val tree: SharedTree) {
                     repeat(count) {
                         val name = input.string()
                         if (walked.size != it) return@repeat
-                        require(entry.directory) { "Not a directory" }
+                        if (!entry.directory) throw ProtocolError("Not a directory")
                         when (name) {
                             "." -> Unit
                             ".." -> if (parents.isNotEmpty()) entry = parents.removeAt(parents.lastIndex)
@@ -83,7 +84,7 @@ class NinePServer(private val tree: SharedTree) {
                         }
                         walked += entry
                     }
-                    require(count == 0 || walked.isNotEmpty()) { "File not found" }
+                    if (count != 0 && walked.isEmpty()) throw ProtocolError("No such file or directory")
                     if (walked.size == count) fids[next] = Fid(entry, parents)
                     out.u16(walked.size); walked.forEach { qid(out, it) }
                 }
@@ -144,19 +145,31 @@ class NinePServer(private val tree: SharedTree) {
                     if (size != -1L) { require(size >= 0 && !f.entry.directory); tree.truncate(f.entry.id, size) }
                     if (name.isNotEmpty() && name != f.entry.name) {
                         require(f.parents.isNotEmpty()) { "Cannot rename share root" }; validName(name)
+                        if (tree.children(f.parents.last().id).any { it.name == name && it.id != f.entry.id })
+                            throw java.nio.file.FileAlreadyExistsException(name)
                         val oldId = f.entry.id
                         val renamed = tree.rename(oldId, name)
                         qids[oldId]?.let { qids[renamed.id] = it }
                         fids.values.filter { it.entry.id == oldId }.forEach { it.entry = renamed }
                     }
                 }
-                else -> error("Unsupported 9P operation")
+                else -> throw ProtocolError("Operation not supported")
             }
             return packet(type + 1, tag, out.data())
-        } catch (_: Exception) {
-            // Provider exceptions may contain host paths or private document identifiers.
-            val failure = Writer().apply { string("Shared folder operation failed; check folder access and file permissions") }
-            return packet(107, tag, failure.data())
+        } catch (failure: Exception) {
+            // Legacy 9P maps these exact protocol strings to errno (not arbitrary messages).
+            // In particular ENOENT is required for the Linux VFS to create missing files.
+            val error = when (failure) {
+                is ProtocolError -> failure.wireText
+                is java.io.FileNotFoundException -> "No such file or directory"
+                is java.nio.file.FileAlreadyExistsException -> "File exists"
+                is SecurityException -> "Permission denied"
+                is UnsupportedOperationException -> "Operation not supported"
+                is IllegalArgumentException -> "Invalid argument"
+                else -> "Input/output error"
+            }
+            // Never return a provider exception's private paths or document IDs.
+            return packet(107, tag, Writer().apply { string(error) }.data())
         }
     }
     private fun fid(id: Int) = fids[id] ?: error("Unknown fid")

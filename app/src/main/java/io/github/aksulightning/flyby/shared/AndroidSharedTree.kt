@@ -52,7 +52,7 @@ class AndroidSharedTree(private val resolver: ContentResolver, private val tree:
     }
     override fun create(parent: String, name: String, directory: Boolean): SharedTree.Entry {
         NinePServer.validName(name)
-        require(children(parent).none { it.name == name }) { "File exists" }
+        if (children(parent).any { it.name == name }) throw java.nio.file.FileAlreadyExistsException(name)
         val created = checkNotNull(DocumentsContract.createDocument(resolver, uri(parent), if (directory) Document.MIME_TYPE_DIR else "application/octet-stream", name))
         val id = DocumentsContract.getDocumentId(created); known += id
         return stat(id)
