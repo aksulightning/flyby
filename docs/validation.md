@@ -56,3 +56,11 @@ been verified on hardware. Unit tests exercise a test-only controller, not QEMU.
 Native/guest acceptance is specified in `qemu-android.md` and `guest-linux.md`.
 No alpha release should be made until real ARM64 Android spawn, boot and an
 interactive shell pass.
+
+## GitHub Actions
+
+The first CI attempt failed before Gradle because `sdkmanager` was not on the
+runner PATH. The workflow now explicitly sets up Android command-line tools.
+Its checkout/setup-java actions use supported Node 24 versions after the runner
+reported their previous Node 20 versions as deprecated. All CI actions are
+pinned to verified commit SHAs. CI results remain separate from local validation.

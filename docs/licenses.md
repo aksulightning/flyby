@@ -21,7 +21,8 @@ standard build bootstrap, generated from the verified Gradle 8.11.1 distribution
 | JetBrains annotations | transitive dependency | Apache-2.0 ([license](https://github.com/JetBrains/java-annotations/blob/master/LICENSE.txt)) |
 | Guava listenablefuture | AndroidX transitive dependency | Apache-2.0 ([license](https://github.com/google/guava/blob/master/COPYING)) |
 | Terminal emulator library | **none** | Diagnostic preview is Flyby code, not a terminal emulator |
-| GitHub Actions checkout / setup-java | v4, CI only | MIT ([checkout](https://github.com/actions/checkout/blob/v4/LICENSE), [setup-java](https://github.com/actions/setup-java/blob/v4/LICENSE)) |
+| GitHub Actions checkout / setup-java | v5, SHA-pinned, CI only | MIT ([checkout](https://github.com/actions/checkout/blob/v5/LICENSE), [setup-java](https://github.com/actions/setup-java/blob/v5/LICENSE)) |
+| android-actions/setup-android | v3, SHA-pinned, CI only | MIT ([license](https://github.com/android-actions/setup-android/blob/v3/LICENSE)) |
 
 Android SDK/NDK are external development tools with their own distribution terms
 and component notices. They are not checked into this repository. Review all
