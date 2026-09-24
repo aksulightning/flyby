@@ -1,9 +1,9 @@
-# Licenses and redistribution
+# Licenses and source provenance
 
-Flyby's original Android frontend source is licensed **Apache-2.0**, see the repository
-`LICENSE`. Third-party components retain their own licenses. No native QEMU,
-Linux or BusyBox binary is currently included. The Gradle wrapper JAR is the
-standard build bootstrap, generated from the verified Gradle 8.11.1 distribution.
+Flyby's original source remains **Apache-2.0** (`LICENSE`). Third-party licenses
+are identified before shipping these components. No external native/guest binaries
+are checked into Git; the build provisions the exact archives from their official
+sources. The debug APK contains the compiled RVVM/libvterm runtime and guest assets.
 
 ## Current dependencies
 
@@ -20,7 +20,8 @@ standard build bootstrap, generated from the verified Gradle 8.11.1 distribution
 | Hamcrest | 1.3, JUnit test dependency | BSD-3-Clause ([license](https://github.com/hamcrest/JavaHamcrest/blob/v1.3/LICENSE.txt)) |
 | JetBrains annotations | transitive dependency | Apache-2.0 ([license](https://github.com/JetBrains/java-annotations/blob/master/LICENSE.txt)) |
 | Guava listenablefuture | AndroidX transitive dependency | Apache-2.0 ([license](https://github.com/google/guava/blob/master/COPYING)) |
-| Terminal emulator library | **none** | Diagnostic preview is Flyby code, not a terminal emulator |
+| libvterm | 0.3.3 | MIT; [full notice](licenses/libvterm-MIT.txt), verified source archive in prepare-native.py |
+| RVVM library | ce8ca7c00ba4058e5f26811057573b3ff23e9316 | MPL-2.0; [full notice](licenses/RVVM-MPL-2.0.txt); GPL CLI excluded |
 | GitHub Actions checkout / setup-java | v5, SHA-pinned, CI only | MIT ([checkout](https://github.com/actions/checkout/blob/v5/LICENSE), [setup-java](https://github.com/actions/setup-java/blob/v5/LICENSE)) |
 | android-actions/setup-android | v3, SHA-pinned, CI only | MIT ([license](https://github.com/android-actions/setup-android/blob/v3/LICENSE)) |
 
@@ -29,50 +30,60 @@ and component notices. They are not checked into this repository. Review all
 resolved runtime artifacts and preserve notices when making a distributable APK;
 build/test tools do not automatically become APK contents.
 
-## Planned native components (not dependencies yet)
+## Guest packages actually bundled
 
-| Component | License and obligation |
-| --- | --- |
-| QEMU 9.2.4 | Emulator as a whole GPL-2.0; individual files include GPL-compatible licenses, TCG includes BSD/MIT. Firmware has separate licenses. [Exact upstream LICENSE](https://github.com/qemu/qemu/blob/v9.2.4/LICENSE) |
-| Linux kernel | GPL-2.0-only overall, with syscall exception and file-specific license expressions. [Kernel rules](https://www.kernel.org/doc/html/latest/process/license-rules.html) |
-| BusyBox | GPL-2.0-only. [BusyBox license](https://busybox.net/license.html) |
-| GLib | LGPL-2.1-or-later; preserve license and notices, including relinking/replacement obligations. [GLib COPYING](https://gitlab.gnome.org/GNOME/glib/-/blob/main/COPYING) |
-| libffi if required | MIT. [License](https://github.com/libffi/libffi/blob/master/LICENSE) |
-| PCRE2 if required | BSD-3-Clause core, with additional notices per source distribution. [License](https://github.com/PCRE2Project/pcre2/blob/master/LICENCE.md) |
-| zlib | Zlib license. [License](https://zlib.net/zlib_license.html) |
-| libfdt | Dual GPL-2.0-or-later / BSD-2-Clause, use the BSD alternative for linked library. [Source](https://git.kernel.org/pub/scm/utils/dtc/dtc.git/tree/libfdt/libfdt.h) |
+Read from the pinned minirootfs APK database and the kernel/firmware `.PKGINFO`,
+not inferred from project names. Full immutable source recipe links, versions and
+archive SHA-256 values are in [guest-provenance.json](guest-provenance.json), also
+packaged as `assets/vm/provenance.json`. Kernel config is extracted to
+`out/guest/kernel.config` by the preparation script.
 
-Pin versions and examine the actual source archives' per-file licenses before
-adding those libraries. Choose and document the guest libc's license too; no
-choice is silently made here. Networking dependencies are intentionally absent.
+| Package | Version | License expression | Exact Alpine source recipe |
+| --- | --- | --- | --- |
+| alpine-baselayout | 3.7.2-r0 | GPL-2.0-only | [15b3b781](https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout) |
+| alpine-baselayout-data | 3.7.2-r0 | GPL-2.0-only | [15b3b781](https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout) |
+| alpine-keys | 2.6-r0 | MIT | [b9f23bec](https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f23becced4d7b3ccc0fa0f28530243ccd314a0/main/alpine-keys) |
+| alpine-release | 3.23.6-r0 | MIT | [8608c797](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8608c79733409c3aa716f7985d1cb45aedba55bd/main/alpine-base) |
+| apk-tools | 3.0.8-r0 | GPL-2.0-only | [286502dc](https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools) |
+| busybox | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
+| busybox-binsh | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
+| ca-certificates-bundle | 20260909-r0 | MPL-2.0 AND MIT | [c733d58a](https://gitlab.alpinelinux.org/alpine/aports/-/tree/c733d58a9d16316e7fb6a49e65f28ecda365c56b/main/ca-certificates) |
+| libapk | 3.0.8-r0 | GPL-2.0-only | [286502dc](https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools) |
+| libcrypto3 | 3.5.8-r0 | Apache-2.0 | [2b4b2590](https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl) |
+| libssl3 | 3.5.8-r0 | Apache-2.0 | [2b4b2590](https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl) |
+| musl | 1.2.5-r23 | MIT | [8aef0c37](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl) |
+| musl-utils | 1.2.5-r23 | MIT AND BSD-2-Clause AND GPL-2.0-or-later | [8aef0c37](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl) |
+| scanelf | 1.3.8-r2 | GPL-2.0-only | [3912b4fa](https://gitlab.alpinelinux.org/alpine/aports/-/tree/3912b4fa83437852312ad3c37a00229ff59fab1c/main/pax-utils) |
+| ssl_client | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
+| zlib | 1.3.2-r0 | Zlib | [f8c94d2e](https://gitlab.alpinelinux.org/alpine/aports/-/tree/f8c94d2e1d318ab29eb4ac5f00225341c877ed65/main/zlib) |
+| linux-lts | 6.18.53-r0 | GPL-2.0-only | [954466b9](https://gitlab.alpinelinux.org/alpine/aports/-/tree/954466b9df0970b27514a32affccaac99d3c620e/main/linux-lts) |
+| opensbi | 1.7-r0 | BSD-2-Clause | [eec9e283](https://gitlab.alpinelinux.org/alpine/aports/-/tree/eec9e28336c49b027111785d50fed1a04fe01b02/main/opensbi) |
 
-## Shipping QEMU in an APK
+## Native integration and distribution
 
-Running QEMU in a separate process does **not** remove GPL obligations for the
-QEMU binary in the APK. A matching source archive must include the exact QEMU
-source, changes/patches, build/install scripts, configs and dependency information
-needed to reproduce it. Use GPL section 3(a) distribution with corresponding
-source alongside each binary release rather than relying on a link to a moving
-upstream branch or assuming that source can be provided later.
+The selected RVVM library revision is MPL-2.0, **not** the GPL-3.0-or-later v0.6
+release. The full `src/main.c` and `src/rvvm_user_main.c` CLI programs are not built.
+The CMake source set only includes the MPL library and selected devices. libvterm
+is MIT. No upstream source modifications are made; CMake selects features and
+routes RVVM diagnostics through a small Android adapter. Exact source archives
+and hashes are in `scripts/prepare-native.py`. Preserve upstream notices and make
+these pinned sources and build scripts available with a distributed binary.
+MPL permits larger works under other terms while keeping covered files under MPL:
+[license sections 3.1–3.3](https://www.mozilla.org/MPL/2.0/),
+[Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
-Preserve QEMU's license notices and the license information of all linked code.
-If GLib or another LGPL component is linked statically, include sufficient
-relinkable application objects/build materials and permit relinking with a
-modified library; a stripped executable and upstream URL alone are insufficient.
-If distributed dynamically, retain the applicable replacement/relinking rights
-and source obligations. Audit the actual linkage before the first native APK.
+Linux/BusyBox/apk-tools and other guest packages are separate programs, but packaging
+them in an APK still carries their licenses. For a public binary release, provide
+**complete corresponding source alongside it**: every applicable source archive,
+the exact aports recipes/patches/configs at the commits above, Flyby guest scripts,
+and required build materials. Fetch the versions and checksummed distfiles specified
+by those APKBUILD files; preserve their notices. A generic upstream URL, this
+inventory, or just the kernel config is not a complete GPL source distribution.
+This branch does not publish a GitHub binary release or claim that such a release
+source bundle has been assembled. Do not publish a release until that bundle and
+physical ARM64 acceptance tests are complete.
 
-Guest Linux and BusyBox are separate programs inside an initramfs; they have
-their own corresponding-source obligations even though Android does not link
-them. Provide exact kernel/BusyBox sources, configs, modifications and initramfs
-construction scripts with a binary release. Do not package unused QEMU firmware.
-
-The frontend uses Apache-2.0, consistent with its Kotlin/AndroidX dependencies.
-Do not relicense the combined frontend as GPL-2.0-only: Apache-2.0 and GPLv2-only
-have compatibility restrictions ([Apache guidance](https://www.apache.org/licenses/GPL-compatibility.html)).
-The intended distribution is independent programs communicating through standard
-argv/serial/QMP protocols, not a JNI-linked combination. QEMU keeps its GPL
-license; packaging both in an APK does not waive corresponding-source duties.
-Review the actual implemented boundary before a binary release; merely putting
-code in another process is not by itself a universal license exemption
-([GNU FAQ](https://www.gnu.org/licenses/old-licenses/gpl-2.0-faq.html#MereAggregation)).
+GPL obligations for the guest do not disappear because it is emulated. Conversely,
+separate guest programs do not change Flyby's original Apache-2.0 license. There is
+no linked QEMU/GLib/libfdt dependency in the implemented runtime. See the historical
+Phase 1 QEMU document only for the superseded proposal.

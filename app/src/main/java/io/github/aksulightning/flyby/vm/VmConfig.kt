@@ -12,4 +12,3 @@ data class VmConfig(val memoryMiB: Int = 512, val cpuCount: Int = 1) {
         }
     }
 }
-

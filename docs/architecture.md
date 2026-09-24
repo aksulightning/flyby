@@ -1,84 +1,74 @@
-# Phase 1 architecture
+# Architecture
 
-`MainActivity` renders Compose `MainScreen` or `TerminalScreen`. `FlybyApplication`
-owns one `VmManager`, its coroutine scope and its `StateFlow<VmStatus>`, so rotation
-does not create another manager. UI observes flows with lifecycle-aware collection.
-This ownership preserves state across Activity recreation **only**. It is not a
-substitute for a foreground service or protection against Android process death.
+`MainActivity (bind/unbind) -> VmService -> VmManager -> NativeVmController -> JNI -> RVVM`
 
-`VmManager` implements `TerminalSession`. UI sees bounded diagnostic output and
-the terminal input contract; it never sees a `Process`, file descriptor or shell.
-The transcript is limited to 32,768 UTF-16 code units and handles UTF-8 sequences
-split across chunks. It is explicitly not an ANSI terminal emulator.
+`VmService` owns the coroutine scope, manager, native runtime and `TerminalEmulator`.
+A binding is only a view onto that session. The explicit Start intent starts the
+foreground service before provisioning files or allocating RAM. Unbinding an
+Activity does not stop a started service. Stop/error removes the notification,
+releases the wake lock and calls stopSelf; a bound UI can still inspect its terminal.
+START_NOT_STICKY avoids silently substituting a fresh VM after process death.
 
-`QemuCommandBuilder` validates config and files, then returns a `List<String>`.
-Paths are canonicalized, checked for root containment (including symlinks and
-prefix siblings), and required to be readable, nonempty files. Executables must
-be under the package-installed native directory. Application-owned roots are
-trusted inputs; never accept these roots from future settings/import UI. A future
-import must copy via SAF into private storage, then validate the copied file.
+The Activity observes `StateFlow<VmStatus>`. `TerminalSession` hides runtime handles
+from UI. `VmManager` retains the Phase 1 mutex/cancellation/cleanup state machine:
+STOPPED/ERROR -> STARTING -> RUNNING -> STOPPING -> STOPPED, with failures -> ERROR.
+RUNNING means native execution has started, not that Linux finished booting. The
+`LINUX_BOOT` log identifies the actual guest shell marker. Duplicate starts and
+restarts during cleanup are rejected. A cleanup failure blocks reuse until retried.
 
-RAM defaults to 512 MiB, allowed range 128–2048. CPUs default to 1, range 1–4.
-No user-controlled free-form QEMU flags exist. Terminal input is never a command
-line argument and never passes through a host shell.
+Guest provisioning runs under STARTING and can be cancelled. The package's resource
+hashes are checked before installing fixed filenames inside app-private storage.
+Both Kotlin paths and native sizes/Image headers are validated. Configuration has
+future broad bounds but `validateRuntime` enforces current 256–1024 MiB / one CPU.
+No UI-supplied path, host shell, external process or broad storage permission exists.
 
-## State machine
+## JNI and concurrency
 
-| Current state | Action/event | Next state |
-| --- | --- | --- |
-| STOPPED or ERROR | Start, no active job | STARTING |
-| STARTING | Validation/spawn failure | ERROR |
-| STARTING | Controller confirms spawn | RUNNING |
-| STARTING or RUNNING | Stop | STOPPING |
-| RUNNING | Exit 0 | STOPPED |
-| RUNNING | Exit nonzero | ERROR |
-| STOPPING | Exit or cancellation cleanup | STOPPED |
-| Any active state | Cleanup fails | ERROR |
+JNI uses checked monotonically increasing IDs in native registries. A call takes
+shared ownership, so destroying a handle cannot free memory underneath a concurrent
+read. Closed/invalid handles throw Java exceptions. C++ exceptions are caught at
+JNI boundaries. RVVM owns native vCPU/event-loop threads; no instructions cross JNI.
+Main RAM uses RVVM native allocation, not the Kotlin heap. Thread shutdown joins
+before RAM/UART objects are freed. ART retains signal handling; RVVM crash signal
+handlers, JIT, KVM, GUI, VFIO and host isolation are disabled.
 
-Starts are serialized by a mutex. An active job rejects duplicate Start. Stop
-during startup cancels startup and waits for cleanup; Stop while running asks
-the controller for shutdown, then falls back to cancellation/force-stop after
-five seconds. Final state publication happens after cleanup.
+The UART callback uses preallocated bounded queues (64 KiB input, 1 MiB output),
+never per-byte JNI callbacks. The controller waits on a condition variable and
+coalesces output for approximately 16 ms. WFI sleeps using RVVM's timer/condition
+variable implementation. libvterm processes each batch under its own lock. UI gets
+screen cells and invalidates once per batch. A 32,768-character diagnostic transcript
+and 2,000-line terminal history survive Activity recreation in the service.
 
-## Process boundary: not connected yet
+The second UART waits for the guest control daemon's READY handshake before
+exposing queued input. This prevents Linux's UART initialization from discarding
+an early resize or shutdown. It carries only fixed Stop and numeric resize requests;
+management never writes into the user's shell. Guest shutdown is followed by native
+cleanup. After ten seconds, cancellation falls back to stop/join without a guest
+shutdown. With the current RAM filesystem this discards transient state.
 
-`QemuController` specifies cancellation-safe spawn, output delivery, suspending
-exit waiting, serial input, graceful stop and force-stop/reaping. Tests inject a
-fake **only in test sources**. Production has no controller in Phase 1: Start
-reports the missing QEMU executable; even manually installing files cannot make
-the app claim a VM is running. No `Hello from Linux` message is synthesized.
+## Foreground execution
 
-The next controller must use `ProcessBuilder(arguments)` with separate readers
-for stdout and stderr on IO dispatchers, and blocking `waitFor` on IO (not busy
-polling). It must not return from cleanup with a live child. Use a dedicated QMP
-Unix socket for guest `system_powerdown`, followed by timed process termination;
-do not inject `poweroff` into a user's shell. The current CLI intentionally has
-no QMP endpoint until that controller is implemented and tested.
+Manifest: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `WAKE_LOCK`,
+`POST_NOTIFICATIONS`; non-exported `VmService`, `specialUse` type and the SDK-defined
+`android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE`. Start originates from a visible
+Activity. Notification opens Flyby and provides Stop. A partial wake lock lasts
+only as long as active execution/startup/cleanup. Normal Activity lifecycle does
+not own these resources. Android can still terminate the process. Play distribution
+would require review of the declared special-use case; approval is not claimed.
 
-Before wiring a controller to UI, add a started foreground service with a
-notification channel and Stop action. At target 35, declare the real
-`FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_SPECIAL_USE` permissions, the service
-type `specialUse`, and `android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE` describing
-the user-started Linux VM. Start it from the visible Activity, enter foreground
-immediately, and stop it after reaping the VM. This is a proposed fit for the
-use case, not an assertion of Google Play approval. Do not use `dataSync` to
-sidestep service duration rules. Decide restart behavior explicitly; the MVP
-should not silently restart a guest after host process death.
+Sources: [service types](https://developer.android.com/develop/background-work/services/fgs/service-types),
+[Android 14 declarations](https://developer.android.com/about/versions/14/changes/fgs-types-required).
 
-## Logs
+## Diagnostics and errors
 
-Manager events use logcat tag `FlybyVM`: `VM_START`, `VM_STOP`, `VM_EXIT`,
-`QEMU_EXIT_CODE`. Phase 2 must add `QEMU_STDERR` from its dedicated diagnostic
-reader. Input payloads are never logged. A controller implementation must bound
-any diagnostic buffer and not interpret stderr as guest terminal escape sequences.
+`FlybyVM`: VM_CREATE, VM_START, VM_STOP, VM_EXIT, NATIVE_EXIT_CODE, LINUX_BOOT,
+CONSOLE_CONNECTED, NATIVE_ERROR. `FlybyRVVM` receives upstream native diagnostics
+through an Android-only CMake logging adapter. Input payloads are not logged.
+Missing resources, invalid images, native RAM allocation failure and startup
+exceptions become ERROR. The terminal retains boot output; detected kernel panic
+or a five-minute boot timeout becomes an error and triggers cleanup. Extreme native
+allocator failures/internal core assertions may still abort in this in-process
+architecture; they are a limitation, not normal error handling.
 
-## Later phases
-
-After Android ARM64 spawn and `Hello from Linux` boot pass, implement terminal
-emulation, key modifiers, resize propagation and copy/paste. Select and identify
-the license of the terminal library before adding it; no Termux dependency exists.
-Only then add persistent block storage, outbound user networking and settings.
-
-Sources:
-- [Android foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types)
-- [Android 14 service type requirements](https://developer.android.com/about/versions/14/changes/fgs-types-required)
+`Vm::pause/resume` exist and are host-tested. Full process-death save/restore is not
+exposed: adding snapshot persistence requires a versioned guest/device state format.

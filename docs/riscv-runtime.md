@@ -7,7 +7,8 @@ because upstream's v0.6 release is GPL-3.0-or-later, not MPL. The GPL command-li
 entry points are excluded. See `native/CMakeLists.txt` for the exact source set.
 The small board builds with Android NDK 27.2.12479018 for arm64-v8a and on Linux.
 Upstream's CMake directory assumptions are avoided with our own source selection.
-There are no upstream source patches. JIT, KVM, GUI, network, VFIO and process
+There are no upstream source patches. An Android-only CMake logging adapter sends
+upstream diagnostics to logcat. JIT, KVM, GUI, network, VFIO and process
 isolation are disabled; ART retains ownership of host signals.
 
 RVVM implements integer, multiply/divide, atomics, compressed, F/D floating-point,
@@ -35,7 +36,7 @@ The single board definition is in `native/runtime/vm.h`:
 | syscon poweroff/reset | 0x00100000 |
 
 No PCI, disk, display or network device is needed for this RAM-root milestone.
-A private second UART carries `stop` and validated `resize ROWS COLS` requests to
+A private second UART waits for a guest READY handshake, then carries `stop` and validated `resize ROWS COLS` requests to
 `/etc/flyby-control`. It never runs Android shell commands or injects management
 commands into the user's interactive shell. Stop asks BusyBox init to shut down;
 the Android controller will fall back to stopping/joining the native threads.

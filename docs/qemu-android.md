@@ -1,3 +1,6 @@
+> Historical Phase 1 proposal. Superseded by the embedded RV64 runtime.
+> QEMU is not built, linked or used by Phase 2. See [riscv-runtime.md](riscv-runtime.md).
+
 # Android ARM64 QEMU: next milestone
 
 Status: source/build-system investigation and Android packaging settings are

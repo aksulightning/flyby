@@ -1,117 +1,146 @@
 # Flyby
 
-Phase 2 development: the embedded RV64 interpreter now boots an actual Alpine
-3.23.6 shell in the host smoke test and builds with Android NDK ARM64. Android
-service/UI integration is in progress. See [RV64 runtime](docs/riscv-runtime.md).
-The Phase 1 QEMU proposal below is historical and is being replaced.
-
-
-Flyby is a lightweight QEMU-based Linux terminal environment for Android. It focuses on running an ARM64 Linux guest with a fast, simple terminal interface without requiring root access, GPU acceleration, or a graphical desktop.
+Flyby is a lightweight, local Linux terminal environment for Android. An embedded
+native RISC-V interpreter runs Alpine Linux without root, KVM, a graphical desktop,
+Termux, a remote server, or QEMU.
 
 ## Current stage
 
-Phase 1: Android foundation with Compose UI, observable VM state management,
-validated configuration/command construction and a tested QEMU controller
-contract. **No QEMU or Linux binaries are bundled yet. This is not a bootable VM
-release.** Start checks the expected runtime and reports the missing QEMU file;
-it never simulates Linux boot. Terminal is a selectable diagnostic preview with
-disabled extra keys, not a working terminal emulator.
+Phase 2 implementation: **Start → native RV64 VM → OpenSBI → Linux → Alpine root
+shell**. The actual guest boots and accepts commands in the host integration tests.
+The ARM64 Android library, debug APK, unit tests and device-test APK build locally.
+**No physical Android device was available. Android UI/IME, background and screen-off
+behavior remain device acceptance gates; Phase 2 is not declared device-verified.**
 
-## Building
+The Compose UI retains Start / Stop / Terminal. The terminal uses libvterm for
+ANSI, colors, cursor movement, UTF-8, alternate screen and 2,000 lines of scrollback.
+It supports Enter, Backspace, Ctrl, Alt, Tab, Esc, arrows, copy/paste and guest resize.
+A started foreground service owns the VM and terminal independently of Activities.
 
-Use a full **JDK 17** (including javac), Android SDK 35 and Build Tools 35.0.0.
-Set `ANDROID_HOME` or an untracked `local.properties` with `sdk.dir`. The standard
-Gradle wrapper pins Gradle 8.11.1 and its distribution checksum. AGP is 8.9.2,
-Kotlin/Compose compiler 2.1.20, Compose BOM 2025.03.01, minSdk 26 and targetSdk 35.
+## Build the Android app
 
-```sh
-sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-./gradlew testDebugUnitTest assembleDebug lintDebug
-```
-
-The primary native ABI is arm64-v8a; NDK 27.2.12479018 is pinned for the next
-milestone. Phase 1 needs no native QEMU compilation or CMake. The generated APK
-is `app/build/outputs/apk/debug/app-debug.apk`. Build artifacts, signing material,
-machine paths, downloaded sources and guest/native binaries are ignored by Git.
-
-## Architecture and next steps
-
-Compose UI → `VmManager` / `TerminalSession` → `QemuController` interface.
-`FlybyApplication` owns the manager independently of Activity instances. States
-are STOPPED, STARTING, RUNNING, STOPPING and ERROR. Starts are serialized; stop
-and failure paths have tests. Defaults: 1 vCPU, 512 MiB, guest aarch64.
-
-Before connecting the production controller, add a foreground service, channel,
-ongoing notification and correct target-35 service declarations. Application
-ownership alone does not guarantee Android background survival. See
-[architecture](docs/architecture.md) for transitions, process contracts and logs.
-
-The planned QEMU integration is a separate Android/bionic PIE child process
-packaged under `jniLibs/arm64-v8a`. It uses TCG, `virt`, headless PL011 serial and
-structured argv, without a host shell. No root, KVM or Termux dependency exists.
-See [QEMU integration decision](docs/qemu-android.md).
-
-## QEMU and guest builds
-
-The next milestone is an Android ARM64 build of **QEMU 9.2.4**,
-`aarch64-softmmu` only. Its real configure/Meson options and required dependencies
-have been inspected. Run the prerequisite check against the source tree:
+Keep the Phase 1 toolchain: **JDK 17**, Gradle 8.11.1, AGP 8.9.2, Kotlin 2.1.20,
+Compose BOM 2025.03.01, minSdk 26, compile/targetSdk 35. Native ABI: **arm64-v8a**.
+Set `ANDROID_HOME`; local SDK paths and signing material must not be committed.
+Python 3 and HTTPS access are needed for the verified provisioning scripts.
 
 ```sh
-ANDROID_NDK_HOME=/path/to/ndk/27.2.12479018 \
-  scripts/check-native-environment.sh /path/to/qemu-9.2.4
+sdkmanager 'platforms;android-35' 'build-tools;35.0.0' \
+  'ndk;27.2.12479018' 'cmake;3.22.1'
+python3 scripts/prepare-native.py
+python3 scripts/prepare-alpine-riscv64.py
+./gradlew test assembleDebug lintDebug
 ```
 
-This is a prerequisite check, **not a working QEMU build script**. Android GLib
-and libfdt builds, bionic fixes, ELF/packaging checks and physical-device execution
-remain to be implemented. [Native build preparation](docs/qemu-android.md)
-documents the concrete next steps and inspected flags.
+APK: `app/build/outputs/apk/debug/app-debug.apk`.
+The APK contains `libflyby.so`, OpenSBI, the Linux Image and an Alpine initramfs;
+there is no first-launch network download. Start verifies/copies the packaged
+resources into `filesDir/vm/default/` on an IO dispatcher. An APK build fails
+explicitly if guest resources have not been prepared.
 
-The subsequent guest is an ARM64 kernel plus a BusyBox initramfs. Console
-`ttyAMA0` was checked against QEMU's PL011 UART and the Linux driver.
-[Guest build requirements](docs/guest-linux.md) specify `/init`, mounts, the real
-`Hello from Linux` greeting, controlling tty and boot smoke-test acceptance. No
-guest-build success or interactive shell is claimed in this phase.
+## Native and guest provisioning
 
-## Physical device testing
+The emulator is **RVVM**, pinned to commit
+`ce8ca7c00ba4058e5f26811057573b3ff23e9316`, compiled as an MPL-2.0 library.
+Its GPL command-line tools are excluded. This staging revision has the required
+library license and Linux support; its API is deliberately pinned. There is no JIT.
 
-Install the APK with `adb install -r`, open Flyby and confirm Linux VM / Stopped.
-Press Start: the expected Phase 1 result is an actionable missing-runtime error.
-Rotate the Activity and verify the state/error survives, then navigate to
-Terminal and Back. See [validation](docs/validation.md) for the full checklist.
+`prepare-native.py` downloads checksum-verified RVVM and **libvterm 0.3.3 (MIT)**
+source archives. `native/CMakeLists.txt` selects the interpreter and minimal board.
+For a standalone Android native build:
 
-Local debug build and JVM tests have passed. No physical Android device was
-available: UI rendering, native execution, guest boot and background behavior
-have **not** been device-tested.
+```sh
+scripts/build-native-android.sh
+```
 
-## Tests and CI
+`prepare-alpine-riscv64.py` downloads checksum-pinned official Alpine artifacts:
+**Alpine 3.23.6 riscv64**, **linux-lts 6.18.53-r0**, **OpenSBI 1.7-r0**. It extracts
+the firmware and Image, then builds the initramfs without root or mounting images.
+Boot uses a generated device tree, CLINT, PLIC and NS16550 UART (`ttyS0`).
+The development guest intentionally opens an automatic root shell. This is root
+inside the VM, not Android root. A second UART carries shutdown/resize requests,
+with a readiness handshake to avoid losing requests during boot.
 
-25 unit tests cover config bounds, unsafe/missing/empty paths, symlink escapes,
-structured argv including shell metacharacters, state transitions, duplicate
-start, cancellation during startup, timeout/force-stop, failed cleanup, input
-routing and split UTF-8/bounded diagnostics. Test controllers are only fixtures;
-they are not evidence of a Linux boot.
+Details: [native runtime and memory map](docs/riscv-runtime.md),
+[architecture](docs/architecture.md), [guest resources](docs/guest-linux.md).
+The old QEMU proposal is archived in `docs/qemu-android.md`; it is not built or used.
 
-`.github/workflows/android.yml` runs unit tests, debug build and lint using
-Java 17 and SDK 35 on pushes and PRs. Full native QEMU builds are deliberately
-not in CI yet; no unverified native pipeline is advertised.
+## Test on the host
+
+With CMake >=3.22 and a C/C++ compiler:
+
+```sh
+cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
+cmake --build out/host -j2
+ctest --test-dir out/host --output-on-failure
+python3 scripts/smoke-boot.py
+```
+
+These run the **same native interpreter and board** used by Android, not a fake
+controller. They check initialization, invalid images, duplicate start, Linux and
+Alpine boot, serial commands, Ctrl+C, resize, pause/resume, idle CPU usage, graceful
+shutdown and restart. Terminal tests cover ANSI/cursor/color/history/UTF-8 behavior.
+The original Phase 1 lifecycle tests remain, adapted to `VmController`; the obsolete
+QEMU argument/path fixtures are retained only under `src/test` as historical
+regression coverage and are never packaged into the APK.
+
+GitHub Actions provisions the exact inputs, runs native/boot tests, Gradle unit
+tests, debug APK build and lint. No binaries or downloaded vendor trees are in Git.
+
+## Run on a physical ARM64 Android device
+
+```sh
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n io.github.aksulightning.flyby/.MainActivity
+adb logcat -s FlybyVM FlybyRVVM
+```
+
+Press **Start**. Boot output appears in Terminal; wait for `root@flyby:~#`.
+Run `uname -a`, `cat /etc/os-release`, `ls`, `cd /`, `echo hello` and `free`.
+Tap the terminal to show the keyboard; swipe to scroll; long press or Copy copies
+the visible screen. Ctrl/Alt buttons apply to the next key. Stop is on MainScreen
+and the ongoing notification. Graceful shutdown has a 10-second deadline followed
+by native thread cleanup. Closing an Activity does not request Stop.
+
+The service declares Android's `specialUse` foreground type and a documented subtype,
+not `dataSync`. Notification permission is requested on Android 13+; denial does
+not prevent the foreground VM, but limits notification visibility. A partial wake
+lock is held only while active and released on stop/error/service destruction.
+It allows screen-off execution but consumes battery. Android may still kill the
+process; RAM state is then lost. No automatic restart or snapshot is claimed.
+
+An SDK-only device integration runner is included (built, **not run here**):
+
+```sh
+./gradlew assembleDebugAndroidTest
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w \
+  io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation
+```
+
+See [validation and manual acceptance](docs/validation.md). Screen-off and OEM
+battery behavior still need a physical-device check in addition to the runner.
 
 ## Known limitations
 
-No Linux boot, interactive terminal emulator, foreground service, persistent
-guest disk or networking yet. No QEMU process backend is connected. No settings
-UI, terminal resize or host process-death recovery. Native ABI is intentionally
-ARM64 only. No production/stable or alpha release is being made before the
-actual Start → boot → interactive shell path passes on physical ARM64 Android.
+- Android execution, actual keyboard/IME rendering and lifecycle behavior have not
+  been verified on a device in this environment. No stable/alpha release is published.
+- RAM-root only: files are lost on VM shutdown. No persistent disk or networking yet.
+- One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. No settings UI.
+- Interpreter performance depends on the device. The host idle check is not an
+  Android benchmark. RVVM's staging API must be reviewed before any version update.
+- Copy copies the visible screen; character-range selection is not implemented.
+  Scrollback is bounded; resize does not reflow old history lines.
+- Expected initialization failures become errors, but in-process native bugs or
+  extreme host memory exhaustion can still terminate the app. This is not an
+  audited sandbox for hostile guest kernels. Android process death loses the VM.
 
 ## Licenses
 
-Flyby Android frontend source is Apache-2.0. AndroidX, Kotlin, coroutines and Gradle are
-Apache-2.0; JUnit 4 is EPL-1.0 and Hamcrest BSD-3-Clause. QEMU as a whole is
-GPL-2.0; planned Linux and BusyBox guest components are GPL-2.0-only overall.
-No terminal emulator dependency has been selected.
-
-See [licenses and redistribution](docs/licenses.md) for exact sources, dependency
-licenses, separate-process implications, LGPL relinking considerations and
-corresponding-source requirements. A future binary release must include exact
-source/configs/patches/build materials; upstream links alone are insufficient.
+Flyby source: **Apache-2.0**. RVVM library: **MPL-2.0**. libvterm: **MIT**.
+Linux and BusyBox: **GPL-2.0-only**. OpenSBI: **BSD-2-Clause**. Alpine contains
+additional packages; exact versions/licenses/source revisions are documented in
+[licenses](docs/licenses.md). Building with these libraries does not relicense
+Flyby's original source. Distributing a guest-containing APK carries the guest's
+source/notice obligations: provide complete corresponding sources/configs/patches
+alongside any binary release. This branch publishes source, not a binary release.

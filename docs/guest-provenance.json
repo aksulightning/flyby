@@ -1,0 +1,162 @@
+{
+  "artifacts": {
+    "linux-lts.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.23/main/riscv64/linux-lts-6.18.53-r0.apk",
+      "sha256": "fd8a989452f0e9979b14315409c98f2192d7889236af9a922ce19c092c6a86d5"
+    },
+    "opensbi.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.23/main/riscv64/opensbi-1.7-r0.apk",
+      "sha256": "d0794002fd39d2fe3637e4448d0829e961ccfc2b50dd55280bcfb87536cad5b8"
+    },
+    "alpine-minirootfs.tar.gz": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/riscv64/alpine-minirootfs-3.23.6-riscv64.tar.gz",
+      "sha256": "e3fab77da4d4a1bb7784dc6800343e48ebd15f23ecb4008438d6ccef6acdecd9"
+    }
+  },
+  "packages": [
+    {
+      "name": "alpine-baselayout",
+      "version": "3.7.2-r0",
+      "license": "GPL-2.0-only",
+      "origin": "alpine-baselayout",
+      "commit": "15b3b78187b3808104f98f765e9632e0b09281a7",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout"
+    },
+    {
+      "name": "alpine-baselayout-data",
+      "version": "3.7.2-r0",
+      "license": "GPL-2.0-only",
+      "origin": "alpine-baselayout",
+      "commit": "15b3b78187b3808104f98f765e9632e0b09281a7",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout"
+    },
+    {
+      "name": "alpine-keys",
+      "version": "2.6-r0",
+      "license": "MIT",
+      "origin": "alpine-keys",
+      "commit": "b9f23becced4d7b3ccc0fa0f28530243ccd314a0",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f23becced4d7b3ccc0fa0f28530243ccd314a0/main/alpine-keys"
+    },
+    {
+      "name": "alpine-release",
+      "version": "3.23.6-r0",
+      "license": "MIT",
+      "origin": "alpine-base",
+      "commit": "8608c79733409c3aa716f7985d1cb45aedba55bd",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8608c79733409c3aa716f7985d1cb45aedba55bd/main/alpine-base"
+    },
+    {
+      "name": "apk-tools",
+      "version": "3.0.8-r0",
+      "license": "GPL-2.0-only",
+      "origin": "apk-tools",
+      "commit": "286502dc74df00f907f93b0563867630dcc139e5",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools"
+    },
+    {
+      "name": "busybox",
+      "version": "1.37.0-r30",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "1e823a60eb85606954b3a5af5f8e5bbd1ea680cf",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox"
+    },
+    {
+      "name": "busybox-binsh",
+      "version": "1.37.0-r30",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "1e823a60eb85606954b3a5af5f8e5bbd1ea680cf",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox"
+    },
+    {
+      "name": "ca-certificates-bundle",
+      "version": "20260909-r0",
+      "license": "MPL-2.0 AND MIT",
+      "origin": "ca-certificates",
+      "commit": "c733d58a9d16316e7fb6a49e65f28ecda365c56b",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c733d58a9d16316e7fb6a49e65f28ecda365c56b/main/ca-certificates"
+    },
+    {
+      "name": "libapk",
+      "version": "3.0.8-r0",
+      "license": "GPL-2.0-only",
+      "origin": "apk-tools",
+      "commit": "286502dc74df00f907f93b0563867630dcc139e5",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools"
+    },
+    {
+      "name": "libcrypto3",
+      "version": "3.5.8-r0",
+      "license": "Apache-2.0",
+      "origin": "openssl",
+      "commit": "2b4b2590f782b95276d31dcaaf41554b1a597a0b",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl"
+    },
+    {
+      "name": "libssl3",
+      "version": "3.5.8-r0",
+      "license": "Apache-2.0",
+      "origin": "openssl",
+      "commit": "2b4b2590f782b95276d31dcaaf41554b1a597a0b",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl"
+    },
+    {
+      "name": "musl",
+      "version": "1.2.5-r23",
+      "license": "MIT",
+      "origin": "musl",
+      "commit": "8aef0c37b0ad23dc4137f0e4755b97a59dc698b8",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl"
+    },
+    {
+      "name": "musl-utils",
+      "version": "1.2.5-r23",
+      "license": "MIT AND BSD-2-Clause AND GPL-2.0-or-later",
+      "origin": "musl",
+      "commit": "8aef0c37b0ad23dc4137f0e4755b97a59dc698b8",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl"
+    },
+    {
+      "name": "scanelf",
+      "version": "1.3.8-r2",
+      "license": "GPL-2.0-only",
+      "origin": "pax-utils",
+      "commit": "3912b4fa83437852312ad3c37a00229ff59fab1c",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3912b4fa83437852312ad3c37a00229ff59fab1c/main/pax-utils"
+    },
+    {
+      "name": "ssl_client",
+      "version": "1.37.0-r30",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "1e823a60eb85606954b3a5af5f8e5bbd1ea680cf",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2-r0",
+      "license": "Zlib",
+      "origin": "zlib",
+      "commit": "f8c94d2e1d318ab29eb4ac5f00225341c877ed65",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f8c94d2e1d318ab29eb4ac5f00225341c877ed65/main/zlib"
+    },
+    {
+      "name": "linux-lts",
+      "version": "6.18.53-r0",
+      "license": "GPL-2.0-only",
+      "origin": "linux-lts",
+      "commit": "954466b9df0970b27514a32affccaac99d3c620e",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/954466b9df0970b27514a32affccaac99d3c620e/main/linux-lts"
+    },
+    {
+      "name": "opensbi",
+      "version": "1.7-r0",
+      "license": "BSD-2-Clause",
+      "origin": "opensbi",
+      "commit": "eec9e28336c49b027111785d50fed1a04fe01b02",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/eec9e28336c49b027111785d50fed1a04fe01b02/main/opensbi"
+    }
+  ]
+}
