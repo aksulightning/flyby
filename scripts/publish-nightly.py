@@ -18,14 +18,26 @@ def main():
     signer = pathlib.Path(os.environ['ANDROID_HOME'])/'build-tools/35.0.0/apksigner'
     certificates = subprocess.check_output([str(signer),'verify','--print-certs',str(apk)],text=True)
     fingerprint = next(line for line in certificates.splitlines() if line.startswith('Signer #1 certificate SHA-256 digest:'))
+    # The workflow deletes and restores this key from cache before this step.
+    # Prove the restored key actually signed the APK, not just that a cache exists.
+    certificate = subprocess.check_output(['keytool','-exportcert','-keystore',str(ROOT/'out/signing/debug.keystore'),
+        '-storepass','android','-alias','androiddebugkey'])
+    if fingerprint.rsplit(': ',1)[-1] != hashlib.sha256(certificate).hexdigest():
+        raise RuntimeError('Restored development key does not match the APK signer')
     (OUT/'nightly-signing.sha256').write_text(fingerprint+'\n')
     # Cache eviction must not silently change the certificate between nightlies.
     releases = json.loads(gh('api',f'repos/{repo}/releases?per_page=100'))
     previous = next((r for r in releases if r['tag_name'].startswith('nightly-') and not r['draft']),None)
+    superseded = False
     if previous:
         old = OUT/'previous-signing'; old.mkdir(exist_ok=True)
         gh('release','download',previous['tag_name'],'--repo',repo,'--pattern','nightly-signing.sha256','--dir',str(old),'--clobber')
-        if (old/'nightly-signing.sha256').read_text().strip() != fingerprint:
+        old_fingerprint = (old/'nightly-signing.sha256').read_text().strip()
+        # One explicitly documented correction: the very first release used AGP's
+        # implicit key path and the post-job cache was empty. Its key is unrecoverable.
+        superseded = previous['tag_name']=='nightly-18-1cb501e' and old_fingerprint.endswith(
+            'dc02a6d9d0d8e28544bee10d80fde216094e7c209701677e6fd173ff7fc4055c')
+        if old_fingerprint != fingerprint and not superseded:
             raise RuntimeError('Nightly signing certificate changed. Restore the original development key before publishing.')
     assets = [apk,source,OUT/'nightly-signing.sha256']
     checksums = OUT/'SHA256SUMS'
@@ -58,4 +70,12 @@ upstream source archives, patches and configurations for the bundled Linux/users
     # gh uploads all assets into a draft before publishing the prerelease.
     print(gh('release','create',tag,*map(str,assets),str(checksums),'--repo',repo,'--target',revision,
              '--prerelease','--title',f'Flyby {tag}','--notes-file',str(notes)))
+    if superseded:
+        correction = OUT/'superseded-notes.md'
+        correction.write_text(f'Superseded by https://github.com/{repo}/releases/tag/{tag} .\n\n'
+            'This initial build used an ephemeral development signer that was not cached. '
+            'Use the corrected nightly above for the supported update channel. Export data before '
+            'uninstalling this build; Android cannot update it in place with the corrected signer.\n\n'+previous['body'])
+        gh('release','edit',previous['tag_name'],'--repo',repo,'--title','Superseded: initial nightly 18',
+           '--notes-file',str(correction))
 if __name__ == '__main__': main()

@@ -103,10 +103,19 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       # Development signing only. Never use this cache for a production signing key.
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4, MIT
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4, MIT
+        id: signing
         with:
-          path: ~/.android/debug.keystore
-          key: flyby-nightly-debug-signing-v1
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+      - name: Provision explicit development signing key
+        run: |
+          mkdir -p out/signing
+          if [ ! -s out/signing/debug.keystore ]; then
+            keytool -genkeypair -keystore out/signing/debug.keystore -storetype JKS \
+              -alias androiddebugkey -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
+          fi
       - name: Prepare guest and complete corresponding sources
         run: |
           python3 scripts/prepare-native.py
@@ -114,10 +123,22 @@ jobs:
           python3 scripts/bundle-sources.py
       - name: Build identifiable ARM64 nightly
         run: |
-          ./gradlew --no-daemon assembleDebug \
+          ./gradlew --no-daemon -PflybyNightly=true assembleDebug \
             -PflybyVersionName="0.2.0-nightly.${GITHUB_RUN_NUMBER}+${GITHUB_SHA:0:7}" \
             -PflybyVersionCode="$((10000 + GITHUB_RUN_NUMBER))" \
             -PflybyCommit="$GITHUB_SHA"
+      - uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809
+        if: steps.signing.outputs.cache-hit != 'true'
+        with:
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+      - name: Require a real signing-key cache roundtrip
+        run: rm out/signing/debug.keystore
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809
+        with:
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+          fail-on-cache-miss: true
       - name: Publish verified development prerelease
         env:
           GH_TOKEN: ${{ github.token }}

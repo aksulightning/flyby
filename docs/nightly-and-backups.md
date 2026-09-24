@@ -15,8 +15,11 @@ Android API 35 runtime jobs pass. Pushes to `codex/riscv-phase2` and manual runs
 that branch produce nightlies; PRs cannot publish. This is a tested-build channel,
 not a daily timer (scheduled workflows would need to live on the default branch).
 
-Nightlies use a development debug key retained in Actions cache; it is never
-committed. This is not production signing and must not be used for trusted
+Nightlies use an explicit `out/signing/debug.keystore` selected with
+`-PflybyNightly=true`, retained in Actions cache; it is never committed. Before publication the job saves the key, deletes the local copy, restores it
+from cache and compares its public certificate to the APK signer. A cache miss or
+fingerprint mismatch stops publication. The password
+used by keytool is Android's public default debug password, not a production secret. This is not production signing and must not be used for trusted
 production distribution. Before publishing a later nightly, the script compares
 its signer against the previous nightly; missing/changed keys stop publication.
 Cache eviction needs restoration of the original key or an explicit channel
@@ -82,3 +85,13 @@ UI selection, full-system boot, service export/import and restored /etc content
 after another boot. Its file URI fixture exercises service I/O without pretending
 to test every Storage Access Framework provider. Physical ARM64 and real external
 provider testing remain required before a stable release.
+
+## Initial signing correction
+
+`nightly-18-1cb501e` booted and passed acceptance but AGP's implicit key path did not
+match the post-job cache path; its ephemeral key was not retained. It is superseded
+by the first nightly with explicit key provisioning and verified pre-publication
+cache save. This one known tag/fingerprint migration is recorded in the publisher;
+all subsequent signer mismatches still stop publication. An installation of nightly
+18 cannot update in place to the corrected signer. Export its disk before removing
+it; this limitation does not affect disk backup compatibility.

@@ -27,6 +27,12 @@ android {
         ndk { abiFilters += abi }
         externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
+    if (providers.gradleProperty("flybyNightly").orNull == "true") {
+        signingConfigs.getByName("debug") {
+            storeFile = file("../out/signing/debug.keystore")
+            require(storeFile!!.isFile) { "Provision the nightly development key before building" }
+        }
+    }
     buildFeatures { compose = true; buildConfig = true }
     sourceSets.getByName("main").assets.srcDir("../docs/licenses")
     compileOptions {
