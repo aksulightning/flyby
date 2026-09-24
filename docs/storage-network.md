@@ -35,7 +35,7 @@ Run `python3 scripts/test-storage.py` after the native build. It boots two separ
 RVVM processes with one disposable disk, writes a unique token to `/root` and
 `/data`, shuts down, and verifies both files in the second boot. This test passed
 locally. The Android instrumentation runner performs a Stop/Start `/root` check
-as well; its execution result must be checked in CI.
+as well; it passed on Android API 35 x86_64 in CI (run 36025172275).
 
 ## Network
 
@@ -63,5 +63,6 @@ the real guest. Android CI invokes the same command through TerminalSession usin
 
 Local verification reached a DHCP lease and NETWORK_READY. Direct UDP DNS is
 unavailable in this execution workspace (downloads here use a host HTTPS proxy),
-so external DNS/HTTP/HTTPS acceptance is delegated to CI rather than falsely
-reported as locally passing. See docs/validation.md for final CI results.
+so external DNS/HTTP/HTTPS was tested in GitHub CI instead. Both the native host
+and Android API 35 x86_64 guest tests passed. See docs/validation.md for the exact
+run and physical-device limitations.

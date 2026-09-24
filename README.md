@@ -6,11 +6,15 @@ Termux, a remote server, or QEMU.
 
 ## Current stage
 
-Phase 2 implementation: **Start → native RV64 VM → OpenSBI → Linux → Alpine root
-shell**. The actual guest boots and accepts commands in the host integration tests.
-The ARM64 Android library, debug APK, unit tests and device-test APK build locally.
-**No physical Android device was available. Android UI/IME, background and screen-off
-behavior remain device acceptance gates; Phase 2 is not declared device-verified.**
+**Start → native RV64 VM → OpenSBI → Linux → Alpine root shell**, with a
+persistent `/root` and `/data` disk and outbound user-mode networking.
+
+Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
+input, Alpine shell, DNS/HTTP/HTTPS, Activity recreation/background/return, session
+identity, Stop/Start disk persistence and graceful Stop. The default **ARM64** APK
+and NDK library build; 36 JVM tests per variant and native/guest tests pass.
+**Physical ARM64 hardware, keyboard apps and screen-off/OEM power behavior remain
+acceptance gates. No stable/alpha release is published.**
 
 The Compose UI retains Start / Stop / Terminal. The terminal uses libvterm for
 ANSI, colors, cursor movement, UTF-8, alternate screen and 2,000 lines of scrollback.
@@ -84,8 +88,8 @@ The original Phase 1 lifecycle tests remain, adapted to `VmController`; the obso
 QEMU argument/path fixtures are retained only under `src/test` as historical
 regression coverage and are never packaged into the APK.
 
-GitHub Actions provisions the exact inputs, runs native/boot tests, Gradle unit
-tests, debug APK build and lint. No binaries or downloaded vendor trees are in Git.
+GitHub Actions provisions the exact inputs, runs native/boot/persistence/network tests,
+Gradle unit tests, debug APK build and lint, plus a separate Android API 35 runtime job. No binaries or downloaded vendor trees are in Git.
 
 ## Run on a physical ARM64 Android device
 
@@ -112,10 +116,8 @@ process; RAM state is then lost. No automatic restart or snapshot is claimed.
 An SDK-only device integration runner is included:
 
 ```sh
-./gradlew assembleDebugAndroidTest
-adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb shell am instrument -w \
-  io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation
+./gradlew assembleDebug assembleDebugAndroidTest
+python3 scripts/test-android.py --network
 ```
 
 See [validation and manual acceptance](docs/validation.md). Screen-off and OEM
@@ -123,8 +125,8 @@ battery behavior still need a physical-device check in addition to the runner.
 
 ## Known limitations
 
-- Android execution, actual keyboard/IME rendering and lifecycle behavior have not
-  been verified on a device in this environment. No stable/alpha release is published.
+- Android emulator execution passes; physical ARM64 hardware, keyboard apps and
+  screen-off/OEM behavior still need testing. No stable/alpha release is published.
 - `/root` and `/data` persist; other rootfs changes and package installs do not.
 - User-mode outbound networking is implemented; no forwarding or network settings UI.
 - One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. No settings UI.
@@ -149,7 +151,7 @@ alongside any binary release. This branch publishes source, not a binary release
 ## Persistent disk milestone
 
 A 256 MiB raw ext4 disk now preserves `/data` and `/root` across VM restarts.
-Host two-boot persistence tests pass. User-mode networking adds DHCP, DNS and
-outbound TCP; a guest command checks HTTP/HTTPS. See [storage and networking](docs/storage-network.md)
+Host two-boot and Android restart persistence tests pass. DHCP, DNS, HTTP and
+HTTPS pass on the host CI and inside Android. See [storage and networking](docs/storage-network.md)
 for provisioning, limits and validation. Android runtime CI uses an explicit
 `-PflybyAbi=x86_64` test build; default APKs remain ARM64.

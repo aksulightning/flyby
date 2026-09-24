@@ -12,7 +12,7 @@
 | `python3 scripts/smoke-boot.py` | Real RISC-V Linux → Alpine shell; commands and poweroff passed |
 | `./gradlew test` | 31 JVM tests per debug/release variant passed |
 | `./gradlew assembleDebug` | Debug APK generated |
-| `./gradlew assembleDebugAndroidTest` | SDK-only device runner APK generated; not executed |
+| `./gradlew assembleDebugAndroidTest` | SDK-only runner APK generated; execution verified in CI below |
 | `./gradlew lintDebug` | No errors; existing dependency-update advisory retained |
 | `llvm-readelf` on packaged native libraries | AArch64; all LOAD segment alignments 0x4000 (16 KiB) |
 | `adb devices -l` | No connected device/emulator |
@@ -63,12 +63,12 @@ in `out/smoke-boot.log`; generated logs are not committed.
 
 ## Not verified here
 
-No Android device or emulator was connected. APK installation, actual ARM64 Android
-execution, JNI on ART, UI drawing/IME, Activity reconnect, foreground notifications,
-screen-off operation and OEM battery restrictions have **not** been run on a device.
-The instrumented runner only has a successful build, not a passing execution result.
-Allocation-failure recovery and Android process-death behavior were not fault-injected.
-Phase 2 is not declared fully accepted until the physical-device gates pass.
+No physical Android device was connected locally. Android API 35 x86_64 execution
+on GitHub Actions is now verified below, including JNI on ART, Start UI, terminal
+IME input and Activity/background lifecycle. Physical ARM64 execution, actual
+keyboard apps, screen-off operation and OEM battery restrictions remain untested.
+Allocation-failure recovery and abrupt Android process-death filesystem recovery
+were not fault-injected. Full physical-device acceptance is still outstanding.
 
 ## Device acceptance
 
@@ -111,3 +111,36 @@ Phase 2 is not declared fully accepted until the physical-device gates pass.
 The extended Android Start/IME/storage/network acceptance execution is tracked in
 GitHub Actions. Physical ARM64, actual keyboard app behavior, screen-off/OEM power
 management and abrupt process-death filesystem recovery still require device tests.
+
+## Final Android acceptance — passed
+
+Code commit `c866e3ea61528f6a3c81f88163a50d451a3e17f4`:
+[GitHub run 36025172275](https://github.com/aksulightning/flyby/actions/runs/36025172275).
+Both `build` and `android-runtime` jobs succeeded. The latter installed both test
+APKs on Android API 35 x86_64 and returned:
+
+```
+PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=true,
+duplicate start, Activity recreate/background/return, session identity,
+persistent /root after restart and Stop
+INSTRUMENTATION_CODE: -1
+```
+
+The test unbinds its own service connection while Activity is backgrounded. It
+requires the same service/terminal object on return, sends real shell commands,
+checks `/etc/os-release`, verifies outbound DNS/HTTP/HTTPS, writes a unique file,
+stops, boots again and verifies that file. Terminal IME also prints the ordinary
+text `Kernel panic`, exercising the fix for falsely interpreting user output as a
+kernel crash. Native invalid-handle/missing-resource errors in this test are
+intentional negative checks, not unexpected failures.
+
+Local final build: `./gradlew clean test assembleDebug assembleDebugAndroidTest
+lintDebug`, then `assembleDebug` after removing stale generated aapt intermediates.
+All tasks passed; 36 tests per debug/release variant, zero failures/errors. The APK
+contains only arm64-v8a native libraries, the gzip-encoded `disk.seed`, and no stale
+uncompressed disk asset. `apksigner verify` and `zipalign -c -P 16 4` passed.
+
+APK: `app/build/outputs/apk/debug/app-debug.apk` (37,507,413 bytes).
+SHA-256: `e6a8f79a88ac74c8aaae91565d5a5d6854b7909ed50c8a6232f14487813429f6`.
+This is an ARM64 build artifact; the successful execution above used the explicit
+x86_64 CI test build. These must not be confused with physical ARM64 validation.
