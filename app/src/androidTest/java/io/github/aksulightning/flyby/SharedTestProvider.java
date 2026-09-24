@@ -15,7 +15,8 @@ public class SharedTestProvider extends DocumentsProvider {
     private File root() {
         File root = new File(getContext().getFilesDir(), "shared-test");
         root.mkdirs();
-        return root;
+        try { return root.getCanonicalFile(); }
+        catch (IOException e) { throw new IllegalStateException(e); }
     }
     private File file(String id) throws FileNotFoundException {
         if (!id.equals("root") && !id.startsWith("root/")) throw new FileNotFoundException();

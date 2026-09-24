@@ -15,7 +15,7 @@ See [nightly downloads and disk backups](docs/nightly-and-backups.md).
 Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
 input, Alpine shell, DNS/HTTP/HTTPS, Activity recreation/background/return, session
 identity, Stop/Start disk persistence and graceful Stop. The default **ARM64** APK
-and NDK library build; 39 JVM tests per variant and native/guest tests pass.
+and NDK library build; JVM tests for both variants and native/guest tests run in CI.
 **Physical ARM64 hardware, keyboard apps and screen-off/OEM power behavior remain
 acceptance gates. Nightlies are development prereleases, not stable releases.**
 

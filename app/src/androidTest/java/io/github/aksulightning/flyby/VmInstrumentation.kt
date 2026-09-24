@@ -63,6 +63,7 @@ class VmInstrumentation : Instrumentation() {
             observedService = vmService
             waitForIdleSync()
             val sharedUri = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
+            check(io.github.aksulightning.flyby.shared.AndroidSharedTree(targetContext.contentResolver, sharedUri).root().id == "root") { "Fixture root document ID must be stable" }
             runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(sharedUri.toString())) }
             clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
