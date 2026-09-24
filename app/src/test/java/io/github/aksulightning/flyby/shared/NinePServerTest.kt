@@ -63,6 +63,15 @@ class NinePServerTest {
         assertEquals(107, exchange(server, 122) { i(1) }[4].toInt())
         assertTrue("root" in tree.entries)
     }
+    @Test fun removingNonemptyDirectoryCannotInvokeRecursiveProviderDelete() {
+        val tree = Tree(); tree.entries["folder"] = SharedTree.Entry("folder", "folder", true)
+        val server = NinePServer(tree); attach(server)
+        exchange(server, 110) { i(1); i(2); s(1); str("folder") }
+        val error = exchange(server, 122) { i(2) }
+        assertEquals(107, error[4].toInt())
+        assertEquals("Directory not empty", error.copyOfRange(9, error.size).toString(Charsets.UTF_8))
+        assertTrue("folder" in tree.entries); assertTrue("hello" in tree.entries)
+    }
     @Test fun missingFileReturnsTheErrnoStringRequiredByLinuxCreate() {
         val server = NinePServer(Tree()); attach(server)
         val error = exchange(server, 110) { i(1); i(2); s(1); str("does-not-exist") }

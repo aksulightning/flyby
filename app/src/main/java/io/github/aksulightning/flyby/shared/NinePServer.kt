@@ -18,7 +18,7 @@ interface SharedTree {
     fun truncate(id: String, size: Long)
 }
 
-class NinePServer(private val tree: SharedTree) {
+class NinePServer(private val tree: SharedTree, private val log: (String) -> Unit = {}) {
     private class ProtocolError(val wireText: String) : Exception()
     private data class Fid(var entry: SharedTree.Entry, val parents: List<SharedTree.Entry>, var mode: Int? = null, var listing: List<ByteArray>? = null)
     private val fids = mutableMapOf<Int, Fid>()
@@ -43,6 +43,7 @@ class NinePServer(private val tree: SharedTree) {
     private fun handle(bytes: ByteArray): ByteArray {
         val input = Reader(bytes.copyOfRange(4, bytes.size))
         val type = input.u8(); val tag = input.u16()
+        if (type == 100 || type == 104) log("SHARED_HANDSHAKE op=$type")
         val out = Writer()
         try {
             when (type) {
@@ -133,7 +134,11 @@ class NinePServer(private val tree: SharedTree) {
                 120 -> { require(fids.remove(input.i32()) != null) { "Unknown fid" } }
                 122 -> {
                     val f = fids.remove(input.i32()) ?: error("Unknown fid")
-                    require(f.parents.isNotEmpty()) { "Cannot remove share root" }; tree.remove(f.entry.id)
+                    require(f.parents.isNotEmpty()) { "Cannot remove share root" }
+                    // SAF deleteDocument may recurse. 9P remove/rmdir must never do so.
+                    if (f.entry.directory && tree.children(f.entry.id).isNotEmpty())
+                        throw ProtocolError("Directory not empty")
+                    tree.remove(f.entry.id)
                 }
                 124 -> { val record = stat(tree.stat(fid(input.i32()).entry.id)); out.u16(record.size); out.bytes(record) }
                 126 -> { // wstat: name and length are the document operations SAF can represent
@@ -168,6 +173,7 @@ class NinePServer(private val tree: SharedTree) {
                 is IllegalArgumentException -> "Invalid argument"
                 else -> "Input/output error"
             }
+            if (type == 104 || failure is SecurityException) log("SHARED_ERROR op=$type ${failure.javaClass.simpleName}: $error")
             // Never return a provider exception's private paths or document IDs.
             return packet(107, tag, Writer().apply { string(error) }.data())
         }

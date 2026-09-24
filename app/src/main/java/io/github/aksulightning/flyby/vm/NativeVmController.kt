@@ -30,7 +30,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
             DiskImage.validate(files.directory, files.mode)
             log("VM_CREATE")
             try {
-                shared = sharedTree()?.let { it.root(); NinePServer(it) }
+                shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
                 handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
@@ -73,6 +73,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
                 tail = (tail + batch.toString(Charsets.UTF_8)).takeLast(8192)
                 if (!booted) {
                     check("Initramfs unpacking failed" !in tail) { "Guest initramfs could not be unpacked. See Terminal." }
+                    check("FLYBY_SHARED_ERROR" !in tail) { "Shared folder could not be mounted. Check folder access in Settings and see Terminal." }
                     check("FLYBY_STORAGE_ERROR" !in tail) { "Persistent disk could not be mounted. See Terminal; disk was not reformatted." }
                     if ("FLYBY_ALPINE_READY" in tail) { booted = true; log("LINUX_BOOT Alpine shell ready") }
                 }

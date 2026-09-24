@@ -75,7 +75,7 @@ modprobe 9pnet_fd && modprobe 9p || { echo FLYBY_SHARED_ERROR; exit 1; }
 mkdir -p /shared
 exec 4<> /dev/ttyS2
 stty raw -echo <&4
-mount -t 9p -o trans=fd,rfdno=4,wfdno=4,version=9p2000,msize=8192,cache=none,access=any,nodev,nosuid shared /shared || { echo FLYBY_SHARED_ERROR; exit 1; }
+mount -t 9p -o debug=0x1,trans=fd,rfdno=4,wfdno=4,version=9p2000,msize=8192,cache=none,access=any,nodev,nosuid shared /shared || { echo FLYBY_SHARED_ERROR; exit 1; }
 echo FLYBY_SHARED_READY
 ''', 0o755)
     file('init', '''#!/bin/busybox sh
