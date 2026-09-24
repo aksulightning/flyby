@@ -40,7 +40,7 @@ def initramfs(rootfs, kernel_package):
             elif item.isfile() or item.islnk(): data, mode = tar.extractfile(item).read(), stat.S_IFREG | item.mode
             else: raise ValueError(f'Unexpected archive entry: {name}')
             entries[name] = (mode, data)
-    # Only ext4 and its exact dependencies, from the matching kernel package.
+    # Only the required filesystem and network modules from the matching kernel.
     with tarfile.open(kernel_package, ignore_zeros=True) as tar:
         dep_name = next(n for n in tar.getnames() if n.endswith('/modules.dep'))
         prefix = dep_name.removesuffix('modules.dep')
@@ -50,7 +50,8 @@ def initramfs(rootfs, kernel_package):
             if name in selected: return
             selected.add(name)
             for dep in dependencies[name].split(): include(dep)
-        include(next(n for n in dependencies if n.endswith('/ext4.ko.gz')))
+        for module in ('ext4', 'realtek', 'r8169', 'af_packet'):
+            include(next(n for n in dependencies if n.endswith('/'+module+'.ko.gz')))
         for name in sorted(selected):
             path = prefix + name.removesuffix('.gz')
             for parent in pathlib.PurePosixPath(path).parents:
@@ -58,7 +59,10 @@ def initramfs(rootfs, kernel_package):
             entries[path] = (stat.S_IFREG | 0o644, gzip.decompress(tar.extractfile(prefix + name).read()))
         dep_data = ''.join(f"{n.removesuffix('.gz')}: {' '.join(d.removesuffix('.gz') for d in dependencies[n].split())}\n" for n in sorted(selected))
         entries[dep_name] = (stat.S_IFREG | 0o644, dep_data.encode())
-    def file(name, value, mode=0o644): entries[name] = (stat.S_IFREG | mode, value.encode())
+    def file(name, value, mode=0o644):
+        for parent in pathlib.PurePosixPath(name).parents:
+            if str(parent) != '.': entries.setdefault(str(parent), (stat.S_IFDIR | 0o755, b''))
+        entries[name] = (stat.S_IFREG | mode, value.encode())
     file('init', '''#!/bin/busybox sh
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 mount -t proc proc /proc
@@ -77,6 +81,7 @@ ttyS0::respawn:/bin/sh -l
 ''')
     file('etc/flyby-boot', '''#!/bin/sh
 printf '\\nHello from Linux\\n'
+/etc/flyby-network &
 cat /etc/os-release
 if grep -q 'flyby.disk=1' /proc/cmdline; then
     modprobe ext4 || { echo FLYBY_STORAGE_ERROR; exit 1; }
@@ -95,6 +100,37 @@ export TERM=xterm-256color
 export PS1='root@flyby:\\w# '
 printf '\\nFLYBY_ALPINE_READY\\n'
 ''')
+    file('etc/flyby-network', """#!/bin/sh
+modprobe af_packet || { echo FLYBY_NETWORK_ERROR; exit 1; }
+modprobe realtek || { echo FLYBY_NETWORK_ERROR; exit 1; }
+modprobe r8169 || { echo FLYBY_NETWORK_ERROR; exit 1; }
+ip link set lo up
+ip link set eth0 up
+# Do not delay the interactive shell while offline; bounded DHCP runs in background.
+udhcpc -i eth0 -n -q -t 5 -T 2 -s /etc/flyby-dhcp || echo FLYBY_NETWORK_OFFLINE
+""", 0o755)
+    file('etc/flyby-dhcp', """#!/bin/sh
+case "$1" in
+    deconfig) ip addr flush dev "$interface" ;;
+    bound|renew)
+        ifconfig "$interface" "$ip" netmask "$subnet"
+        for gateway in $router; do ip route replace default via "$gateway" dev "$interface"; break; done
+        : > /etc/resolv.conf
+        for server in $dns; do echo "nameserver $server" >> /etc/resolv.conf; done
+        echo FLYBY_NETWORK_READY
+        ;;
+esac
+""", 0o755)
+    file('usr/local/bin/flyby-network-check', """#!/bin/sh
+set -e
+# HTTPS keeps certificate verification enabled and uses the packaged Alpine CA bundle.
+nslookup dl-cdn.alpinelinux.org
+wget -T 20 -q -O /tmp/flyby-http http://dl-cdn.alpinelinux.org/alpine/MIRRORS.txt
+test -s /tmp/flyby-http
+wget -T 20 -q -O /tmp/flyby-https https://dl-cdn.alpinelinux.org/alpine/MIRRORS.txt
+test -s /tmp/flyby-https
+printf '\\nFLYBY_NETWORK_OK\\n'
+""", 0o755)
     # Dedicated second UART. Commands never enter the user's shell or host shell.
     file('etc/flyby-control', '''#!/bin/sh
 exec 3<> /dev/ttyS1

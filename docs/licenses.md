@@ -91,3 +91,8 @@ Phase 1 QEMU document only for the superseded proposal.
 Android runtime CI uses ReactiveCircus/android-emulator-runner at
 `a421e43855164a8197daf9d8d40fe71c6996bb0d`, Apache-2.0 (Yang Chen).
 Its upstream LICENSE was inspected before use. It is a CI tool, not packaged in Flyby.
+
+The NVMe, PCI, Goldfish RTC, RTL8169 and user socket network modules come from
+the same pinned MPL-2.0 RVVM source. Host disk provisioning uses e2fsprogs mke2fs
+(GPL-2.0), a build tool not packaged in the APK. Added kernel modules come from
+the already documented GPL-2.0 Linux artifact; no new guest packages are added.

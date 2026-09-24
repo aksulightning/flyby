@@ -21,7 +21,7 @@ def main():
         for apk in ("apk/debug/app-debug.apk", "apk/androidTest/debug/app-debug-androidTest.apk"):
             print(adb("install", "-r", "-g", str(ROOT / "app/build/outputs" / apk)))
         adb("logcat", "-c")
-        result = adb("shell", "am", "instrument", "-w", "-r",
+        result = adb("shell", "am", "instrument", "-w", "-r", *(["-e", "network", "true"] if "--network" in sys.argv else []),
                      "io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation",
                      timeout=420)
         (OUT / "instrumentation.txt").write_text(result)

@@ -43,6 +43,7 @@ jobs:
           ctest --test-dir out/host --output-on-failure
           python3 scripts/smoke-boot.py
           python3 scripts/test-storage.py
+          python3 scripts/test-network.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 
@@ -79,4 +80,4 @@ jobs:
           arch: x86_64
           ram-size: 3072M
           disable-linux-hw-accel: false
-          script: python3 scripts/test-android.py
+          script: python3 scripts/test-android.py --network

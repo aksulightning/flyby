@@ -35,3 +35,32 @@ RVVM processes with one disposable disk, writes a unique token to `/root` and
 `/data`, shuts down, and verifies both files in the second boot. This test passed
 locally. The Android instrumentation runner performs a Stop/Start `/root` check
 as well; its execution result must be checked in CI.
+
+## Network
+
+The board includes RVVM's RTL8169 PCI NIC and **`tap_user.c`**, its MPL-2.0
+userspace socket network backend. Despite the upstream filename, this build does
+not compile `tap_linux.c`, open `/dev/net/tun`, create host TAP interfaces, or use
+root/bridges. Android needs only the normal `INTERNET` permission. No incoming
+port forwards are configured. The guest shares the app's outbound network access.
+
+The matching `r8169`, `realtek` PHY and `af_packet` modules are included. A bounded
+BusyBox DHCP request runs in the background so an offline network does not hold up
+the shell. RVVM leases `192.168.0.100/24`, gateway `192.168.0.1`, DNS `1.1.1.1` and
+`8.8.8.8`. This initial DNS setup is RVVM's default, not Android Private DNS
+integration; networks blocking those resolvers require guest `/etc/resolv.conf`
+configuration. Run `/etc/flyby-network` to retry DHCP. There is no network settings
+UI, forwarding, VPN bypass or automatic proxy configuration.
+
+A Goldfish RTC at `0x00101000`, IRQ 7 supplies host wall time for TLS verification.
+`flyby-network-check` runs DNS lookup plus HTTP and HTTPS downloads of Alpine's
+mirror list. HTTPS uses the packaged Alpine CA bundle and its ssl_client; no
+certificate verification bypass is set. The script only prints NETWORK_OK after
+both nonempty downloads succeed. `python3 scripts/test-network.py` invokes it in
+the real guest. Android CI invokes the same command through TerminalSession using
+`python3 scripts/test-android.py --network` (omit --network for offline devices).
+
+Local verification reached a DHCP lease and NETWORK_READY. Direct UDP DNS is
+unavailable in this execution workspace (downloads here use a host HTTPS proxy),
+so external DNS/HTTP/HTTPS acceptance is delegated to CI rather than falsely
+reported as locally passing. See docs/validation.md for final CI results.

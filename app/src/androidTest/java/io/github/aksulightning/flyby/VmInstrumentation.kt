@@ -4,6 +4,11 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.*
 import android.os.*
+import android.view.View
+import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
+import android.view.inputmethod.EditorInfo
+import io.github.aksulightning.flyby.terminal.TerminalView
 import io.github.aksulightning.flyby.nativebridge.NativeBridge
 import io.github.aksulightning.flyby.service.VmService
 import io.github.aksulightning.flyby.vm.VmState
@@ -15,7 +20,12 @@ import java.util.concurrent.TimeUnit
  * adb shell am instrument -w io.github.aksulightning.flyby.test/io.github.aksulightning.flyby.VmInstrumentation
  */
 class VmInstrumentation : Instrumentation() {
-    override fun onCreate(arguments: Bundle?) { super.onCreate(arguments); start() }
+    private var checkNetwork = false
+    override fun onCreate(arguments: Bundle?) {
+        super.onCreate(arguments)
+        checkNetwork = arguments?.getString("network") == "true"
+        start()
+    }
     override fun onStart() {
         var activity: Activity? = null
         var service: VmService? = null
@@ -42,8 +52,16 @@ class VmInstrumentation : Instrumentation() {
             bound = targetContext.bindService(Intent(targetContext, VmService::class.java), connection, Context.BIND_AUTO_CREATE)
             check(connected.await(10, TimeUnit.SECONDS)) { "Service bind timed out" }
             val vmService = checkNotNull(service)
-            targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
+            clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            var terminalView: TerminalView? = null
+            await(10_000) { runOnMainSync { terminalView = findTerminal(checkNotNull(activity).window.decorView) }; terminalView != null }
+            runOnMainSync {
+                val input = checkNotNull(terminalView).onCreateInputConnection(EditorInfo())
+                input.commitText("printf '\\nFLYBY_IME_OK\\n'", 1)
+                input.performEditorAction(EditorInfo.IME_ACTION_NONE)
+            }
+            await(15_000) { "\nFLYBY_IME_OK\r\n" in vmService.session.transcript.value }
             val terminal = vmService.session.emulator
             check(vmService.vm.status.value.state == VmState.RUNNING)
             // Duplicate Start must retain the exact same terminal and running guest.
@@ -72,6 +90,11 @@ class VmInstrumentation : Instrumentation() {
             check(service === vmService) { "Service was replaced while backgrounded" }
             check(vmService.vm.status.value.state == VmState.RUNNING)
             check(vmService.session.emulator === terminal)
+            if (checkNetwork) {
+                await(30_000) { "FLYBY_NETWORK_READY" in vmService.session.transcript.value }
+                runBlocking { vmService.session.sendInput("flyby-network-check\n".toByteArray()) }
+                await(90_000) { "\nFLYBY_NETWORK_OK\r\n" in vmService.session.transcript.value }
+            }
             val token = "persist-${SystemClock.elapsedRealtime()}"
             runBlocking { vmService.session.sendInput("echo $token > /root/device-persist; sync; printf '\\nFLYBY_WRITE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_WRITE_OK\r\n" in vmService.session.transcript.value }
@@ -84,7 +107,7 @@ class VmInstrumentation : Instrumentation() {
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, Alpine shell, duplicate start, Activity recreate/background/return, session identity, persistent /root after restart and Stop\n")
+            report.putString("stream", "PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root after restart and Stop\n")
         } catch (failure: Throwable) {
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
             report.putString("stream", "FAIL: ${failure.stackTraceToString()}\n")
@@ -94,6 +117,24 @@ class VmInstrumentation : Instrumentation() {
             runOnMainSync { activity?.finish() }
         }
         finish(result, report)
+    }
+    private fun clickStart() {
+        await(10_000) {
+            val nodes = uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Start").orEmpty()
+            var clicked = false
+            for (node in nodes) {
+                if (node.text?.toString() != "Start") continue
+                var target: AccessibilityNodeInfo? = node
+                while (target != null && !target.isClickable) target = target.parent
+                if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { clicked = true; break }
+            }
+            clicked
+        }
+    }
+    private fun findTerminal(view: View): TerminalView? {
+        if (view is TerminalView) return view
+        if (view is ViewGroup) for (i in 0 until view.childCount) findTerminal(view.getChildAt(i))?.let { return it }
+        return null
     }
     private fun await(timeout: Long, condition: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + timeout

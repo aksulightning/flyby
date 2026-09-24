@@ -12,6 +12,7 @@ constexpr uint64_t Clint = 0x02000000, Plic = 0x0c000000, Uart = 0x10000000;
 constexpr uint64_t ControlUart = 0x10001000, Syscon = 0x00100000;
 constexpr uint64_t PciEcam = 0x30000000, PciIo = 0x03000000;
 constexpr uint64_t PciMemory = 0x40000000, PciMemorySize = 0x40000000;
+constexpr uint64_t Rtc = 0x00101000;
 class Vm {
   public:
     Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "");

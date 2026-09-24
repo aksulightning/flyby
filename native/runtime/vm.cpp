@@ -1,6 +1,7 @@
 #include "vm.h"
 extern "C" {
 #include <devices/ns16550a.h>
+#include <devices/rtl8169.h>
 #include <rvvm/rvvm.h>
 #include <rvvm/rvvm_board.h>
 #include <rvvm/rvvm_fdt.h>
@@ -129,12 +130,12 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         !rvvm_ns16550a_init(m, &impl->console.dev, Uart, 0, irq, 1) ||
         !rvvm_ns16550a_init(m, &impl->control.dev, ControlUart, 0, irq, 2))
         throw std::runtime_error("Native board initialization failed");
-    if (!diskPath.empty()) {
-        const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
-        if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
-            !rvvm_nvme_init_auto(m, diskPath.c_str()))
-            throw std::runtime_error("Cannot attach persistent NVMe disk");
-    }
+    const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
+    if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
+        !rvvm_rtc_goldfish_init(m, Rtc, irq, 7) || !rtl8169_init_auto(m))
+        throw std::runtime_error("Cannot initialize PCI, RTC or userspace networking");
+    if (!diskPath.empty() && !rvvm_nvme_init_auto(m, diskPath.c_str()))
+        throw std::runtime_error("Cannot attach persistent NVMe disk");
     if (!rvvm_load_firmware(m, (dir + "/firmware").c_str()) ||
         !rvvm_load_kernel(m, (dir + "/kernel").c_str()) ||
         !rvvm_write_ram(m, InitrdBase, initrd.data(), initrd.size()))

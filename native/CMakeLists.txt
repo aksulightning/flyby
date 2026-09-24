@@ -8,18 +8,18 @@ if(NOT EXISTS "${RVVM}/include/rvvm/rvvm.h")
   message(FATAL_ERROR "Run python3 scripts/prepare-native.py first")
 endif()
 # Upstream CMake uses CMAKE_SOURCE_DIR and overwrites RVVM_SRC_DIR. Keep a
-# small explicit board here; no CLI (GPL), GUI, networking, JIT, or host devices.
+# small explicit board here; no CLI (GPL), GUI, JIT, host TAP, or host device passthrough.
 file(GLOB RVVM_CORE "${RVVM}/src/core/*.c")
 file(GLOB RVVM_UTIL "${RVVM}/src/util/*.c")
 file(GLOB RVVM_CPU "${RVVM}/src/cpu/*.c")
-list(FILTER RVVM_UTIL EXCLUDE REGEX "/networking.c$")
 list(FILTER RVVM_CPU EXCLUDE REGEX "/riscv32_interpreter.c$")
 add_library(rvvm STATIC ${RVVM_CORE} ${RVVM_UTIL} ${RVVM_CPU}
   ${RVVM}/src/devices/riscv-aclint.c ${RVVM}/src/devices/riscv-plic.c
   ${RVVM}/src/devices/ns16550a.c ${RVVM}/src/devices/syscon.c
-  ${RVVM}/src/devices/nvme.c)
+  ${RVVM}/src/devices/nvme.c ${RVVM}/src/devices/rtc-goldfish.c
+  ${RVVM}/src/devices/rtl8169.c ${RVVM}/src/devices/tap_user.c)
 target_include_directories(rvvm PUBLIC ${RVVM}/include ${RVVM}/src ${RVVM}/src/util)
-target_compile_definitions(rvvm PRIVATE USE_RV64=1 USE_FPU=1 USE_FDT=1 RVVM_VERSION="flyby-ce8ca7c")
+target_compile_definitions(rvvm PRIVATE USE_RV64=1 USE_FPU=1 USE_FDT=1 USE_NET=1 RVVM_VERSION="flyby-ce8ca7c")
 target_compile_options(rvvm PRIVATE -O2 -frounding-math -fno-math-errno)
 target_link_libraries(rvvm PUBLIC m dl)
 if(NOT ANDROID)

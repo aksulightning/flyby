@@ -125,7 +125,8 @@ battery behavior still need a physical-device check in addition to the runner.
 
 - Android execution, actual keyboard/IME rendering and lifecycle behavior have not
   been verified on a device in this environment. No stable/alpha release is published.
-- RAM-root only: files are lost on VM shutdown. No persistent disk or networking yet.
+- `/root` and `/data` persist; other rootfs changes and package installs do not.
+- User-mode outbound networking is implemented; no forwarding or network settings UI.
 - One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. No settings UI.
 - Interpreter performance depends on the device. The host idle check is not an
   Android benchmark. RVVM's staging API must be reviewed before any version update.
@@ -148,6 +149,7 @@ alongside any binary release. This branch publishes source, not a binary release
 ## Persistent disk milestone
 
 A 256 MiB raw ext4 disk now preserves `/data` and `/root` across VM restarts.
-Host two-boot persistence tests pass. See [storage and networking](docs/storage-network.md)
+Host two-boot persistence tests pass. User-mode networking adds DHCP, DNS and
+outbound TCP; a guest command checks HTTP/HTTPS. See [storage and networking](docs/storage-network.md)
 for provisioning, limits and validation. Android runtime CI uses an explicit
 `-PflybyAbi=x86_64` test build; default APKs remain ARM64.

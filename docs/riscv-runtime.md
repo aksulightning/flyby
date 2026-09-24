@@ -8,7 +8,7 @@ entry points are excluded. See `native/CMakeLists.txt` for the exact source set.
 The small board builds with Android NDK 27.2.12479018 for arm64-v8a and on Linux.
 Upstream's CMake directory assumptions are avoided with our own source selection.
 There are no upstream source patches. An Android-only CMake logging adapter sends
-upstream diagnostics to logcat. JIT, KVM, GUI, network, VFIO and process
+upstream diagnostics to logcat. JIT, KVM, GUI, host TAP, VFIO and process
 isolation are disabled; ART retains ownership of host signals.
 
 RVVM implements integer, multiply/divide, atomics, compressed, F/D floating-point,
@@ -35,12 +35,15 @@ The single board definition is in `native/runtime/vm.h`:
 | NS16550 control | 0x10001000, PLIC IRQ 2, Linux ttyS1 |
 | syscon poweroff/reset | 0x00100000 |
 
-No PCI, disk, display or network device is needed for this RAM-root milestone.
+PCI ECAM at `0x30000000` exposes NVMe storage and RTL8169 networking; INTx IRQs
+are 3–6. The MMIO window is `0x40000000–0x7fffffff`, IO base `0x03000000`.
+Goldfish RTC at `0x00101000`, IRQ 7 provides real time. See
+[storage/network](storage-network.md) for filesystem and socket backend details.
 A private second UART waits for a guest READY handshake, then carries `stop` and validated `resize ROWS COLS` requests to
 `/etc/flyby-control`. It never runs Android shell commands or injects management
 commands into the user's interactive shell. Stop asks BusyBox init to shut down;
 the Android controller will fall back to stopping/joining the native threads.
-RAM-root changes disappear on shutdown. Guest `poweroff` is also supported.
+Changes outside `/root` and `/data` disappear on shutdown. Guest `poweroff` is also supported.
 
 ## Reproduce native and guest inputs
 
@@ -52,7 +55,7 @@ cmake --build out/host -j2
 python3 scripts/smoke-boot.py
 ```
 
-Python 3, CMake >=3.22, a C/C++ compiler and HTTPS access are required. Downloads
+Python 3, mke2fs, CMake >=3.22, a C/C++ compiler and HTTPS access are required. Downloads
 are cached in `out/downloads`; all archives are SHA-256 pinned. Generated files
 and third-party source downloads are ignored by Git. No unidentified binaries
 are committed. The native archive URLs and hashes are in `prepare-native.py`.
@@ -65,7 +68,7 @@ has built-in initramfs/gzip/devtmpfs/8250 console support. Exact package archive
 hashes and URLs are in the script. The generated asset manifest pins the final
 firmware, kernel and initrd copied to app-private storage.
 
-**Development guest:** automatic root shell, no login, no network. This is the
+**Development guest:** automatic root shell, no login; outbound user networking. This is the
 actual Alpine userspace (`/etc/os-release`), not an imitation string. The boot
 script prints `FLYBY_ALPINE_READY` from the login shell. The smoke test then sends
 commands and checks their output before powering off. Root applies only inside
