@@ -1,5 +1,11 @@
 # Flyby
 
+Phase 2 development: the embedded RV64 interpreter now boots an actual Alpine
+3.23.6 shell in the host smoke test and builds with Android NDK ARM64. Android
+service/UI integration is in progress. See [RV64 runtime](docs/riscv-runtime.md).
+The Phase 1 QEMU proposal below is historical and is being replaced.
+
+
 Flyby is a lightweight QEMU-based Linux terminal environment for Android. It focuses on running an ARM64 Linux guest with a fast, simple terminal interface without requiring root access, GPU acceleration, or a graphical desktop.
 
 ## Current stage

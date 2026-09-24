@@ -17,3 +17,6 @@ app/src/main/jniLibs/
 app/src/main/assets/vm/
 out/
 .DS_Store
+
+# Verified third-party sources and generated guest resources
+native/vendor/

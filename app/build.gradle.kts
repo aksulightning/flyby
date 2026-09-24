@@ -16,6 +16,7 @@ android {
         versionCode = 1
         versionName = "0.1.0-dev"
         ndk { abiFilters += "arm64-v8a" }
+        externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
     buildFeatures { compose = true }
     compileOptions {
@@ -27,13 +28,14 @@ android {
         // MVP targets physical ARM64 Android, not ChromeOS/x86 translation.
         disable += "ChromeOsAbiSupport"
     }
-    packaging {
-        jniLibs {
-            // The future PIE executable is installed read-only by PackageManager.
-            useLegacyPackaging = true
-            keepDebugSymbols += "**/libqemu-system-aarch64.so"
+    externalNativeBuild {
+        cmake {
+            path = file("../native/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
+    androidResources { noCompress += listOf("kernel", "firmware", "initrd") }
+
 }
 
 dependencies {
