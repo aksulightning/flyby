@@ -33,7 +33,7 @@ def boot(command, marker, name):
                 for key, _ in selector.select(1):
                     data = key.fileobj.read1(65536)
                     log.write(data); log.flush(); buffer += data
-                if b'FLYBY_STORAGE_ERROR' in buffer or b'Kernel panic' in buffer:
+                if b'FLYBY_STORAGE_ERROR' in buffer or b'Kernel panic' in buffer or b'Initramfs unpacking failed' in buffer:
                     raise RuntimeError(f'Guest boot failed: {name}')
                 network_ready = '--network' not in sys.argv or b'FLYBY_NETWORK_READY' in buffer
                 if not sent and b'FLYBY_ALPINE_READY' in buffer and network_ready:

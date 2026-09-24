@@ -2,7 +2,7 @@
 
 ## Storage
 
-The app installs a 256 MiB raw ext4 seed into `filesDir/vm/default/disk.raw` only
+The app installs a 1 GiB complete Alpine ext4 seed into `filesDir/vm/default/system.raw` only
 when the disk does not exist. It verifies the decompressed size and SHA-256,
 fsyncs a temporary file and atomically renames it. Existing disks are never
 replaced on APK/guest updates, including when they are corrupt. Symlinks and
@@ -15,12 +15,13 @@ INTx IRQs 3–6. These constants live in `native/runtime/vm.h`; RVVM generates t
 PCI device tree. The pinned Alpine kernel has built-in PCI/NVMe and its exact
 ext4/jbd2/mbcache/crc16 modules are extracted into the initramfs.
 
-In default DATA mode the guest mounts this disk at `/data` and binds `/data/root`
-onto `/root`; the remaining initramfs is temporary. Settings also offers SYSTEM
-mode: a separate 1 GiB `system.raw` mounted at `/` through initramfs `switch_root`.
+Legacy DATA mode mounted `disk.raw` at `/data` and bound `/data/root` onto `/root`.
+The current default SYSTEM disk is mounted at `/` through initramfs `switch_root`.
+Disk Creator supports a fresh 1–100 GiB installation; the previous DATA disk is retained.
+See [settings and sharing](settings-and-sharing.md) for `/shared` and variable disk sizes.
 It preserves /etc, /usr and installed packages. See [whole-system backups](nightly-and-backups.md). Stop asks BusyBox init to sync/unmount before
 poweroff; forced termination can still require filesystem recovery. There is no
-automatic formatting, destructive repair or disk reset.
+automatic formatting or destructive repair. Disk Creator explicitly confirms replacement.
 
 `prepare-alpine-riscv64.py` now requires host `mke2fs` (e2fsprogs, GPL-2.0;
 Ubuntu: `sudo apt-get install e2fsprogs`). It creates an unmounted seed, with fixed

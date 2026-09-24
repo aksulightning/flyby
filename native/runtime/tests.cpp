@@ -55,6 +55,7 @@ static std::string waitFor(flyby::Vm &vm, const std::string &pattern, int second
     while (Clock::now() < end) {
         auto b = vm.output(100);
         out.append(b.begin(), b.end());
+        check(out.find("Initramfs unpacking failed") == std::string::npos, "Initramfs was corrupted during boot");
         if (out.find(pattern) != std::string::npos)
             return out;
         if (!vm.running())

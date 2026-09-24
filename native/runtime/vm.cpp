@@ -124,7 +124,9 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         throw std::invalid_argument("Invalid RISC-V Linux Image header");
     auto fw = load(dir + "/firmware", 2 * 1024 * 1024);
     auto initrd = load(dir + "/initrd", 64 * 1024 * 1024);
-    const uint64_t initrdBase = (RamBase + (uint64_t(memoryMiB) << 20) - initrd.size()) & ~uint64_t(4095);
+    // RVVM serializes its device tree at the very top of RAM during reset.
+    constexpr uint64_t fdtReserve = 2 * 1024 * 1024;
+    const uint64_t initrdBase = (RamBase + (uint64_t(memoryMiB) << 20) - fdtReserve - initrd.size()) & ~uint64_t(4095);
     if (initrdBase < KernelBase + kernel.size() + 2 * 1024 * 1024)
         throw std::runtime_error("Guest kernel and initrd do not fit in the selected RAM");
     impl->machine = rvvm_create_machine(size_t(memoryMiB) << 20, cpus, "rv64");

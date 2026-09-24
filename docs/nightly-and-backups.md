@@ -35,28 +35,30 @@ ANSI canvas; the app chrome and settings follow the selected Material color sche
 
 ## Whole-system persistence
 
-Stop Linux, then Settings → Persistent disk → **Whole system · 1 GiB**.
+Whole-system persistence is now the default. Stop Linux, then use Settings →
+**Disk Creator** to create a fresh 1–100 GiB Alpine disk (replacement is confirmed).
 Start boots the packaged kernel/initramfs, loads ext4, mounts the NVMe disk and
 `switch_root`s into Alpine on that disk. `/etc`, `/usr`, `/root`, the APK package
 database and installed packages persist across Stop/Start. `/run` and `/tmp` are
 RAM-backed; `/proc`, `/sys` and `/dev` are virtual. Kernel and firmware are bundled
 app resources, not updated by installing a kernel inside the guest.
 
-DATA (`disk.raw`, 256 MiB) and SYSTEM (`system.raw`, 1 GiB) are **separate disks** in
-`filesDir/vm/default`. Switching modes preserves both but does not migrate files.
+Legacy DATA (`disk.raw`, 256 MiB) and SYSTEM (`system.raw`, 1–100 GiB) are **separate disks**
+in `filesDir/vm/default`. DATA is retained but no longer offered as a mode in Settings;
+there is no automatic migration. Export important legacy files with the previous app version.
 Initial SYSTEM content is the same pinned Alpine minirootfs/modules/control tools
 as the initramfs. Provisioning uses mke2fs/debugfs without root, mounts or fakeroot.
 Seeds are verified and installed once; updates never silently reformat user disks.
 Raw images are sparse on Android filesystems that support holes, but need space
-as guest writes fill them. Disk capacity is fixed in this milestone.
+as guest writes fill them. New SYSTEM disks expand ext4 to their configured capacity at first boot.
 
 ## Export and import
 
-Stop Linux. In Settings, select the disk mode, then **Export disk** and choose a
+Stop Linux. In Settings, choose **Export disk** and choose a
 file with Android's document picker. This creates a compressed `.flyby` backup.
-To restore: select the matching mode → **Import disk** → choose the backup →
+To restore a SYSTEM backup: **Import disk** → choose the backup →
 confirm **Replace disk**. The foreground service owns the transfer, holds a wake
-lock only during work and reports progress. VM Start and mode changes are blocked
+lock only during work and reports progress. VM Start and storage changes are blocked
 while copying; no broad storage permission is requested.
 
 A backup contains a versioned header, disk type, guest compatibility ID, exact raw

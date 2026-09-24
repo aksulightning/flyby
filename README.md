@@ -7,9 +7,9 @@ Termux, a remote server, or QEMU.
 ## Current stage
 
 **Start → native RV64 VM → OpenSBI → Linux → Alpine root shell**, with a
-persistent `/root` and `/data` disk and outbound user-mode networking.
-Settings now offers **Night / Light / Follow device**, an optional **whole-system
-1 GiB root disk**, and disk **Export / Import** through Android documents.
+persistent Alpine system disk and outbound user-mode networking.
+Settings offers **128–768 MiB RAM**, **1–100 GiB Disk Creator**, Android folder
+sharing at **/shared**, terminal appearance, offline licenses and disk **Export / Import**.
 See [nightly downloads and disk backups](docs/nightly-and-backups.md).
 
 Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
@@ -130,10 +130,11 @@ battery behavior still need a physical-device check in addition to the runner.
 
 - Android emulator execution passes; physical ARM64 hardware, keyboard apps and
   screen-off/OEM behavior still need testing. Nightlies are development builds.
-- Default DATA mode keeps `/root` and `/data`; SYSTEM mode keeps the entire root
-  filesystem, including package installs. Kernel/firmware stay app-managed.
+- The SYSTEM disk keeps the entire root filesystem, including package installs.
+  Legacy DATA disks remain untouched but are no longer selectable in Settings.
+  Kernel/firmware stay app-managed.
 - User-mode outbound networking is implemented; no forwarding or network settings UI.
-- One vCPU; native RAM supports 256–1024 MiB, default 512 MiB. CPU/RAM controls are not yet exposed.
+- One vCPU; RAM is configurable from 128–768 MiB, default 512 MiB.
 - Interpreter performance depends on the device. The host idle check is not an
   Android benchmark. RVVM's staging API must be reviewed before any version update.
 - Copy copies the visible screen; character-range selection is not implemented.
@@ -155,7 +156,8 @@ corresponding-source bundle before it publishes a prerelease.
 
 ## Persistent disk milestone
 
-A 256 MiB raw ext4 disk now preserves `/data` and `/root` across VM restarts.
+The initial milestone used a 256 MiB DATA disk for `/data` and `/root`.
+The current default is a complete Alpine SYSTEM disk; existing DATA files are retained.
 Host two-boot and Android restart persistence tests pass. DHCP, DNS, HTTP and
 HTTPS pass on the host CI and inside Android. See [storage and networking](docs/storage-network.md)
 for provisioning, limits and validation. Android runtime CI uses an explicit

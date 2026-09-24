@@ -72,6 +72,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
                 output(batch)
                 tail = (tail + batch.toString(Charsets.UTF_8)).takeLast(8192)
                 if (!booted) {
+                    check("Initramfs unpacking failed" !in tail) { "Guest initramfs could not be unpacked. See Terminal." }
                     check("FLYBY_STORAGE_ERROR" !in tail) { "Persistent disk could not be mounted. See Terminal; disk was not reformatted." }
                     if ("FLYBY_ALPINE_READY" in tail) { booted = true; log("LINUX_BOOT Alpine shell ready") }
                 }

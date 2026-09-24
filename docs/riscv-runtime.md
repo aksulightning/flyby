@@ -27,12 +27,13 @@ The single board definition is in `native/runtime/vm.h`:
 | --- | --- |
 | RAM / OpenSBI entry | 0x80000000, 512 MiB default |
 | Linux Image | 0x80200000 (RVVM RV64 loader and OpenSBI fw_jump agree) |
-| initramfs | 0x88000000, up to 64 MiB |
+| initramfs | Page-aligned below a 2 MiB top-of-RAM device-tree reservation; kernel overlap checked |
 | Device tree | RVVM generates it at the top of RAM |
 | CLINT timer | 0x02000000, 10 MHz |
 | PLIC | 0x0c000000 |
 | NS16550 console | 0x10000000, PLIC IRQ 1, Linux ttyS0 |
 | NS16550 control | 0x10001000, PLIC IRQ 2, Linux ttyS1 |
+| NS16550 shared folder | 0x10002000, PLIC IRQ 8, Linux ttyS2; optional private 9P channel |
 | syscon poweroff/reset | 0x00100000 |
 
 PCI ECAM at `0x30000000` exposes NVMe storage and RTL8169 networking; INTx IRQs

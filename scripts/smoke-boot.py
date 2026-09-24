@@ -15,6 +15,7 @@ try:
     if not data: break
     output.write(data);output.flush();buffer+=data
     sys.stdout.buffer.write(data);sys.stdout.flush()
+   if b'Initramfs unpacking failed' in buffer: raise RuntimeError('Corrupt initramfs; see '+str(log))
    if b'FLYBY_ALPINE_READY' in buffer and not sent:
     proc.stdin.write(b"uname -a; cat /etc/os-release; ls /; cd /; echo FLYBY_INPUT_OK; free; printf '\\033[31mRED\\033[0m\\n'\n")
     proc.stdin.flush();sent=True;buffer=b''
