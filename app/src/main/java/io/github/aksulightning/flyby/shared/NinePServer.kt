@@ -23,6 +23,7 @@ class NinePServer(private val tree: SharedTree, private val log: (String) -> Uni
     private data class Fid(var entry: SharedTree.Entry, val parents: List<SharedTree.Entry>, var mode: Int? = null, var listing: List<ByteArray>? = null)
     private val fids = mutableMapOf<Int, Fid>()
     private val qids = mutableMapOf<String, Long>()
+    private var nextQid = 1L
     private var msize = MAX_MESSAGE
     private var pending = byteArrayOf()
 
@@ -139,6 +140,7 @@ class NinePServer(private val tree: SharedTree, private val log: (String) -> Uni
                     if (f.entry.directory && tree.children(f.entry.id).isNotEmpty())
                         throw ProtocolError("Directory not empty")
                     tree.remove(f.entry.id)
+                    qids.remove(f.entry.id)
                 }
                 124 -> { val record = stat(tree.stat(fid(input.i32()).entry.id)); out.u16(record.size); out.bytes(record) }
                 126 -> { // wstat: name and length are the document operations SAF can represent
@@ -154,7 +156,7 @@ class NinePServer(private val tree: SharedTree, private val log: (String) -> Uni
                             throw java.nio.file.FileAlreadyExistsException(name)
                         val oldId = f.entry.id
                         val renamed = tree.rename(oldId, name)
-                        qids[oldId]?.let { qids[renamed.id] = it }
+                        qids.remove(oldId)?.let { qids[renamed.id] = it }
                         fids.values.filter { it.entry.id == oldId }.forEach { it.entry = renamed }
                     }
                 }
@@ -181,7 +183,7 @@ class NinePServer(private val tree: SharedTree, private val log: (String) -> Uni
     private fun fid(id: Int) = fids[id] ?: error("Unknown fid")
     private fun qid(out: Writer, entry: SharedTree.Entry) {
         out.u8(if (entry.directory) 0x80 else 0); out.i32(0)
-        out.i64(qids.getOrPut(entry.id) { qids.size.toLong() + 1 })
+        out.i64(qids.getOrPut(entry.id) { nextQid++ })
     }
     private fun stat(entry: SharedTree.Entry): ByteArray {
         val body = Writer().apply {

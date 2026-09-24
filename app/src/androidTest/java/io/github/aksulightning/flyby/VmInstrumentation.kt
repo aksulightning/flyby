@@ -72,7 +72,8 @@ class VmInstrumentation : Instrumentation() {
                 "[ \"\$(cat /shared/from-android)\" = android-data ] && " +
                 "echo linux-data > /shared/from-linux && mkdir /shared/sub && " +
                 "echo nested > /shared/sub/old && mv /shared/sub/old /shared/sub/renamed && " +
-                "cat /shared/sub/renamed && rm /shared/sub/renamed && rmdir /shared/sub && " +
+                "echo replacement > /shared/sub/old && [ \"\$(cat /shared/sub/renamed)\" = nested ] && " +
+                "[ \"\$(cat /shared/sub/old)\" = replacement ] && rm /shared/sub/renamed /shared/sub/old && rmdir /shared/sub && " +
                 "printf '\\nFLYBY_SHARED_IO_OK\\n'\n").toByteArray()) }
             await(30_000) { "\nFLYBY_SHARED_IO_OK\r\n" in vmService.session.transcript.value }
             val sharedBackend = io.github.aksulightning.flyby.shared.AndroidSharedTree(targetContext.contentResolver, sharedUri)
@@ -175,7 +176,7 @@ class VmInstrumentation : Instrumentation() {
             runBlocking { vmService.vm.stop() }
             backup.delete()
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, Start UI, Alpine shell, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, full system root, service export/import, restored /etc after restart and Stop\n")
+            report.putString("stream", "PASS: JNI validation, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart and Stop\n")
         } catch (failure: Throwable) {
             report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())

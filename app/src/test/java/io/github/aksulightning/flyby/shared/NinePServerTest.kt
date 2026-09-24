@@ -17,7 +17,7 @@ class NinePServerTest {
         override fun write(id: String, offset: Long, data: ByteArray): Int { contents[id] = data; return data.size }
         override fun create(parent: String, name: String, directory: Boolean) = SharedTree.Entry(name, name, directory).also { entries[name] = it; contents[name] = byteArrayOf() }
         override fun remove(id: String) { entries.remove(id); contents.remove(id) }
-        override fun rename(id: String, name: String) = entries.getValue(id).copy(name = name).also { entries[id] = it }
+        override fun rename(id: String, name: String) = entries.remove(id)!!.copy(id = name, name = name).also { entries[name] = it; contents[name] = contents.remove(id)!! }
         override fun truncate(id: String, size: Long) { contents[id] = contents.getValue(id).copyOf(size.toInt()) }
     }
     private class Message {
@@ -62,6 +62,26 @@ class NinePServerTest {
         assertFalse("new" in tree.entries)
         assertEquals(107, exchange(server, 122) { i(1) }[4].toInt())
         assertTrue("root" in tree.entries)
+    }
+    @Test fun recreatedPathsNeverAliasTheRenamedFileInLinux() {
+        val server = NinePServer(Tree()); attach(server)
+        exchange(server, 110) { i(1); i(2); s(0) }
+        val created = exchange(server, 114) { i(2); str("original"); i(0x1a4); b(2) }
+        val oldQid = ByteBuffer.wrap(created, 12, 8).order(ByteOrder.LITTLE_ENDIAN).long
+        val statBody = Message().apply {
+            s(65535); i(-1); bytes(ByteArray(13) { -1 }); i(-1); i(-1); i(-1); l(-1)
+            str("renamed"); str(""); str(""); str("")
+        }.out.toByteArray()
+        val renamed = exchange(server, 126) { i(2); s(statBody.size + 2); s(statBody.size); bytes(statBody) }
+        assertEquals(127, renamed[4].toInt())
+        exchange(server, 110) { i(1); i(3); s(0) }
+        val recreated = exchange(server, 114) { i(3); str("original"); i(0x1a4); b(2) }
+        val newQid = ByteBuffer.wrap(recreated, 12, 8).order(ByteOrder.LITTLE_ENDIAN).long
+        assertNotEquals(oldQid, newQid)
+        exchange(server, 122) { i(3) }
+        exchange(server, 110) { i(1); i(4); s(0) }
+        val again = exchange(server, 114) { i(4); str("original"); i(0x1a4); b(2) }
+        assertTrue(ByteBuffer.wrap(again, 12, 8).order(ByteOrder.LITTLE_ENDIAN).long > newQid)
     }
     @Test fun removingNonemptyDirectoryCannotInvokeRecursiveProviderDelete() {
         val tree = Tree(); tree.entries["folder"] = SharedTree.Entry("folder", "folder", true)
