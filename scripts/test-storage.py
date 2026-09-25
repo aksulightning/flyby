@@ -9,6 +9,7 @@ import subprocess
 import time
 import uuid
 import sys
+from module_checks import FILESYSTEM_MODULE_CHECKS
 
 ROOT = Path(__file__).resolve().parents[1]
 GUEST = ROOT / 'app/src/main/assets/vm'
@@ -67,11 +68,11 @@ if __name__ == '__main__':
         edge = "grep -qx 'PRETTY_NAME=\"Alpine Linux edge\"' /etc/os-release && " + \
             "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/main' /etc/apk/repositories && " + \
             "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/community' /etc/apk/repositories && "
-        boot(capacity + edge + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
+        boot(FILESYSTEM_MODULE_CHECKS + capacity + edge + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
              '\r\nSYSTEM_WRITE_OK\r\n', 'write.log')
         boot(verify + f"[ \"$(cat /etc/flyby-persist-test)\" = {TOKEN} ] && [ \"$(cat /usr/local/persist-test)\" = {TOKEN} ] && grep '/dev/nvme0n1 / ext4' /proc/mounts && printf '\\nSYSTEM_PERSIST_OK\\n'",
              '\r\nSYSTEM_PERSIST_OK\r\n', 'read.log')
-        print('PASS: full ext4 root survives fresh RVVM process; package test=' + str('--network' in sys.argv))
+        print('PASS: overlay copy-up, FUSE device and persistent ext4 root; package test=' + str('--network' in sys.argv))
         sys.exit(0)
     boot(f"echo {TOKEN} > /root/persist-test; echo {TOKEN} > /data/persist-test; sync; printf '\\nWRITE_OK\\n'",
          '\r\nWRITE_OK\r\n', 'write.log')

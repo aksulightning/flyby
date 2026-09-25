@@ -54,7 +54,7 @@ def initramfs(rootfs, kernel_package, system_root, expected_release='Alpine Linu
             if name in selected: return
             selected.add(name)
             for dep in dependencies[name].split(): include(dep)
-        for module in ('ext4', 'realtek', 'r8169', 'af_packet', '9p', '9pnet', '9pnet_fd'):
+        for module in ('ext4', 'overlay', 'fuse', 'realtek', 'r8169', 'af_packet', '9p', '9pnet', '9pnet_fd'):
             include(next(n for n in dependencies if n.endswith('/'+module+'.ko.gz')))
         for name in sorted(selected):
             path = prefix + name.removesuffix('.gz')

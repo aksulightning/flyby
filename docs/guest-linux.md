@@ -26,8 +26,13 @@ and a respawning private control daemon on ttyS1. The shell prints
 `FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. This is an intentional development
 autologin root environment, no password/login management. Alpine's default SSL CA
 bundle is retained for HTTPS. The RTL8169 NIC uses RVVM user-mode sockets.
-Matching ext4, realtek PHY, r8169 and af_packet kernel modules are extracted from
-the pinned linux-lts APK, together with their transitive dependencies.
+Matching ext4, overlay, fuse, realtek PHY, r8169, af_packet and 9p kernel modules
+are extracted from the pinned linux-lts APK, together with their transitive
+dependencies. OverlayFS and FUSE are available in the initramfs and newly created
+Minimal and Service disks via `modprobe overlay` and `modprobe fuse`. Existing
+persistent disks retain their previous module files. FUSE userspace programs are
+installed separately with apk as needed. Both image tests verify OverlayFS copy-up
+and opening `/dev/fuse` after loading the modules.
 
 The firmware, Image, FDT and initrd layout is in `native/runtime/vm.h` and
 [the runtime document](riscv-runtime.md). Serial console is NS16550 `ttyS0`, verified
