@@ -30,6 +30,9 @@ def member(path, name):
 def initramfs(rootfs, kernel_package, system_root):
     entries = {}
     with tarfile.open(rootfs) as tar:
+        # tarfile resolves the archive's /etc/os-release -> /usr/lib/os-release link.
+        if b'PRETTY_NAME="Alpine Linux edge"' not in tar.extractfile('./etc/os-release').read():
+            raise ValueError('The bundled root filesystem must be Alpine Edge')
         for item in tar:
             name = item.name.removeprefix('./').rstrip('/')
             if not name: continue
@@ -63,8 +66,6 @@ def initramfs(rootfs, kernel_package, system_root):
         for parent in pathlib.PurePosixPath(name).parents:
             if str(parent) != '.': entries.setdefault(str(parent), (stat.S_IFDIR | 0o755, b''))
         entries[name] = (stat.S_IFREG | mode, value.encode())
-    if b'PRETTY_NAME="Alpine Linux edge"' not in entries['etc/os-release'][1]:
-        raise ValueError('The bundled root filesystem must be Alpine Edge')
     # Explicit Edge repositories in both initramfs and the full persistent seed.
     # Keep testing opt-in; never mix a stable branch into this installation.
     file('etc/apk/repositories', BASE+'main\n'+BASE+'community\n')
