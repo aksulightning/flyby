@@ -2,10 +2,14 @@
 """Collect pinned Alpine recipes, all SHA512-listed sources, native sources and Flyby.
 Fails closed: a nightly must not publish if a required corresponding source is missing.
 """
-import hashlib, io, json, pathlib, re, shutil, subprocess, tarfile, urllib.request
+import hashlib, io, json, pathlib, re, shutil, subprocess, tarfile, urllib.request, urllib.error
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT/'out/corresponding-source'
 CACHE = ROOT/'out/source-downloads'
+# Exact upstream location from the pinned OpenSBI APKBUILD (not mirrored by Alpine).
+UPSTREAM_SOURCES = {
+    'opensbi-1.9.tar.gz': 'https://github.com/riscv/opensbi/archive/refs/tags/v1.9.tar.gz',
+}
 
 def download(url, path):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -20,6 +24,22 @@ def digest(path, algorithm='sha256'):
     with path.open('rb') as stream:
         while chunk := stream.read(1024*1024): h.update(chunk)
     return h.hexdigest()
+
+def source_archive(name, expected):
+    # Edge prunes older distfiles. The pinned snapshot may share the exact same
+    # upstream source with a stable release. These are source mirrors only;
+    # the guest's binary package repositories always remain Edge.
+    urls = [f'https://distfiles.alpinelinux.org/distfiles/{branch}/{name}' for branch in ('edge', 'v3.24', 'v3.23')]
+    if name in UPSTREAM_SOURCES: urls.append(UPSTREAM_SOURCES[name])
+    for url in urls:
+        try:
+            path = download(url, CACHE/expected/name)
+        except urllib.error.HTTPError as failure:
+            if failure.code == 404: continue
+            raise
+        if digest(path, 'sha512') != expected: raise ValueError(f'Source checksum mismatch: {name}')
+        return path
+    raise FileNotFoundError(f'Pinned source unavailable: {name}')
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
@@ -46,7 +66,7 @@ def main():
             if '/' in name or name in ('.','..'): raise ValueError('Unsafe source filename')
             path = dest/name
             if not path.exists():
-                path = download('https://distfiles.alpinelinux.org/distfiles/edge/'+name, CACHE/name)
+                path = source_archive(name, expected)
                 shutil.copy2(path, dest/name)
                 path = dest/name
             if digest(path, 'sha512') != expected: raise ValueError(f'Source checksum mismatch: {origin}/{name}')

@@ -81,6 +81,11 @@ by those APKBUILD files; preserve their notices. A generic upstream URL, this
 inventory, or just the kernel config is not a complete GPL source distribution.
 `scripts/bundle-sources.py` assembles all SHA512-listed distfiles and the exact
 aports directories, plus native archives, Flyby source and kernel config. The
+source downloader checks Edge first, then Alpine's v3.24/v3.23 source mirrors for
+older files pruned from Edge. Every file must match the pinned recipe's SHA512;
+OpenSBI 1.9 uses the exact upstream archive URL in its APKBUILD when Alpine has no
+mirror copy, with the same SHA512 verification. These source fallbacks do not add
+stable binary repositories to the guest. The
 nightly job fails closed if this source bundle cannot be built and uploads it
 alongside the APK. Physical ARM64 acceptance remains required for a stable release;
 the user-requested nightly is explicitly a development prerelease.
