@@ -16,6 +16,14 @@ storage.OUT.mkdir(parents=True, exist_ok=True)
 storage.DISK = storage.OUT/'disk.raw'
 with gzip.open(storage.GUEST/'service.seed', 'rb') as source, storage.DISK.open('wb') as target:
     shutil.copyfileobj(source, target)
+def boot(command, marker, log):
+    try:
+        storage.boot(command, marker, log)
+    except BaseException:
+        print((storage.OUT/log).read_text(errors='replace')[-20000:], flush=True)
+        raise
+
+
 # The test service writes start/stop evidence so shutdown tests prove OpenRC ran
 # stop hooks before powering off, rather than merely retaining flushed writes.
 service = '''#!/sbin/openrc-run
@@ -24,8 +32,8 @@ stop() { echo stopped >> /root/service-events; }
 '''
 checks = "[ \"$(readlink /proc/1/exe)\" = /sbin/openrc-init ] && apk info -e openrc openrc-init && rc-service flyby-control status && "
 setup = f"printf %s {shlex.quote(service)} > /etc/init.d/flyby-test && chmod +x /etc/init.d/flyby-test && "
-storage.boot(checks + setup + "rc-service flyby-test start && rc-service flyby-test status && rc-service flyby-test stop && rc-service flyby-test restart && rc-update add flyby-test default && printf '\\nSERVICE_WRITE_OK\\n'",
+boot(checks + setup + "rc-service flyby-test start && rc-service flyby-test status && rc-service flyby-test stop && rc-service flyby-test restart && rc-update add flyby-test default && printf '\\nSERVICE_WRITE_OK\\n'",
              '\r\nSERVICE_WRITE_OK\r\n', 'create.log')
-storage.boot(checks + "rc-service flyby-test status && [ \"$(cat /root/service-events | tr '\\n' ,)\" = started,stopped,started,stopped,started, ] && printf '\\nSERVICE_PERSIST_OK\\n'",
+boot(checks + "i=0; until rc-service flyby-test status >/dev/null 2>&1; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; " + checks + "rc-service flyby-test status && [ \"$(cat /root/service-events | tr '\\n' ,)\" = started,stopped,started,stopped,started, ] && printf '\\nSERVICE_PERSIST_OK\\n'",
              '\r\nSERVICE_PERSIST_OK\r\n', 'restart.log')
 print('PASS: OpenRC PID1, service start/stop/restart, shutdown hook and boot persistence')
