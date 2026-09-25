@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Two separate RVVM processes must share actual ext4 data, not retained RAM."""
 import gzip
+import base64
 import os
 from pathlib import Path
 import selectors
@@ -9,6 +10,7 @@ import subprocess
 import time
 import uuid
 import sys
+import textwrap
 from module_checks import FILESYSTEM_MODULE_CHECKS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,8 +41,17 @@ def boot(command, marker, name):
                 network_ready = '--network' not in sys.argv or b'FLYBY_NETWORK_READY' in buffer
                 if not sent and b'FLYBY_ALPINE_READY' in buffer and network_ready:
                     assert b'FLYBY_STORAGE_READY' in buffer
-                    proc.stdin.write(command.encode() + b'\n'); proc.stdin.flush()
+                    # BusyBox's interactive editor truncates long input lines.
+                    # Transfer a script over bounded lines instead; base64 cannot
+                    # contain the heredoc delimiter, regardless of shell quoting.
+                    encoded = base64.b64encode(command.encode()).decode()
+                    packet = "base64 -d > /tmp/flyby-accept.sh <<'FLYBY_TEST_EOF'\n" + \
+                        '\n'.join(textwrap.wrap(encoded, 256)) + \
+                        "\nFLYBY_TEST_EOF\nsh /tmp/flyby-accept.sh || printf '\\nFLYBY_TEST_FAILED\\n'\n"
+                    proc.stdin.write(packet.encode()); proc.stdin.flush()
                     sent = True; buffer = b''
+                if sent and b'\r\nFLYBY_TEST_FAILED\r\n' in buffer:
+                    raise RuntimeError(f'Guest assertion failed: {name}')
                 if sent and marker.encode() in buffer:
                     proc.stdin.write(b'poweroff\n'); proc.stdin.flush()
                     # communicate drains output, avoiding pipe-fill deadlock during shutdown.
