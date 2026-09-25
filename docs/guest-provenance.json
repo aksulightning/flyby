@@ -13,6 +13,42 @@
     "alpine-minirootfs.tar.gz": {
       "url": "https://dl-cdn.alpinelinux.org/alpine/edge/releases/riscv64/alpine-minirootfs-20260805-riscv64.tar.gz",
       "sha256": "fc8f2160b00fea310db5c2e49f8f57582ae5e3f870e7e6ef3859db6ed6682e5a"
+    },
+    "openrc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-0.63.2-r1.apk",
+      "sha256": "4c0db28380ddd12ba945262fbe1d652200efa6cd2617f16782673ab02f996fc4"
+    },
+    "openrc-init.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-init-0.63.2-r1.apk",
+      "sha256": "7508f057a792e797b7835791ce284b49c281504d77c11a7723c51954faf2f9bd"
+    },
+    "openrc-user.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-user-0.63.2-r1.apk",
+      "sha256": "d4cc2a5a276461259944363e12b346d8602fba38195e5bdc171d54d62619b663"
+    },
+    "libcap2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libcap2-2.78-r0.apk",
+      "sha256": "5b750d8ab948fedeb2c4b2eb94e04ef72c6025a5e68595c2401d6824b61f3483"
+    },
+    "busybox-ifupdown.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/busybox-ifupdown-1.38.0-r7.apk",
+      "sha256": "8e821df3c3694f4a0c325361837de1cbca5ac2e23752a91c928076da3767fb9d"
+    }
+  },
+  "build_tools": {
+    "apk-tools-static": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-3.0.8-r0.apk",
+      "sha256": "673f1bfb22136fc42ca035321cf731a4ad0452c000928666cb39a138f0c277bf"
+    }
+  },
+  "images": {
+    "minimal": {
+      "seed": "system.seed",
+      "init": "BusyBox"
+    },
+    "service": {
+      "seed": "service.seed",
+      "init": "OpenRC"
     }
   },
   "packages": [
@@ -22,6 +58,10 @@
       "license": "GPL-2.0-only",
       "origin": "alpine-baselayout",
       "commit": "60a7585bbab2fa0f762504eb617dbca90216e31f",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout"
     },
     {
@@ -30,6 +70,10 @@
       "license": "GPL-2.0-only",
       "origin": "alpine-baselayout",
       "commit": "60a7585bbab2fa0f762504eb617dbca90216e31f",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout"
     },
     {
@@ -38,6 +82,10 @@
       "license": "MIT",
       "origin": "alpine-keys",
       "commit": "b9f23becced4d7b3ccc0fa0f28530243ccd314a0",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f23becced4d7b3ccc0fa0f28530243ccd314a0/main/alpine-keys"
     },
     {
@@ -46,6 +94,10 @@
       "license": "MIT",
       "origin": "alpine-base",
       "commit": "5aad27a98146f1557e9e3408f615c59d44a41acb",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5aad27a98146f1557e9e3408f615c59d44a41acb/main/alpine-base"
     },
     {
@@ -54,6 +106,10 @@
       "license": "GPL-2.0-only",
       "origin": "apk-tools",
       "commit": "1397144f807abac6f9df704d21a1f71827df13b6",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools"
     },
     {
@@ -62,6 +118,10 @@
       "license": "GPL-2.0-only",
       "origin": "busybox",
       "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
     },
     {
@@ -70,6 +130,10 @@
       "license": "GPL-2.0-only",
       "origin": "busybox",
       "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
     },
     {
@@ -78,6 +142,10 @@
       "license": "MPL-2.0 AND MIT",
       "origin": "ca-certificates",
       "commit": "5f8337afea8674524d360be5fdb513e7e57fcc29",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5f8337afea8674524d360be5fdb513e7e57fcc29/main/ca-certificates"
     },
     {
@@ -86,6 +154,10 @@
       "license": "GPL-2.0-only",
       "origin": "apk-tools",
       "commit": "1397144f807abac6f9df704d21a1f71827df13b6",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools"
     },
     {
@@ -94,6 +166,10 @@
       "license": "Apache-2.0",
       "origin": "openssl",
       "commit": "35c0d1f2b314f647008595f681786813760da191",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl"
     },
     {
@@ -102,6 +178,10 @@
       "license": "Apache-2.0",
       "origin": "openssl",
       "commit": "35c0d1f2b314f647008595f681786813760da191",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl"
     },
     {
@@ -110,6 +190,10 @@
       "license": "MIT",
       "origin": "musl",
       "commit": "b0c8ea10e8f29cabe336b2e5d864124940e126ab",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl"
     },
     {
@@ -118,6 +202,10 @@
       "license": "MIT AND BSD-2-Clause AND GPL-2.0-or-later",
       "origin": "musl",
       "commit": "b0c8ea10e8f29cabe336b2e5d864124940e126ab",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl"
     },
     {
@@ -126,6 +214,10 @@
       "license": "GPL-2.0-only",
       "origin": "pax-utils",
       "commit": "c61801eeacb3ffcd9c2025b09e402153bb93fb39",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c61801eeacb3ffcd9c2025b09e402153bb93fb39/main/pax-utils"
     },
     {
@@ -134,6 +226,10 @@
       "license": "GPL-2.0-only",
       "origin": "busybox",
       "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
     },
     {
@@ -142,6 +238,10 @@
       "license": "Zlib",
       "origin": "zlib",
       "commit": "f248b33b5943c7dc69bf691031d7612ab2e8ed93",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f248b33b5943c7dc69bf691031d7612ab2e8ed93/main/zlib"
     },
     {
@@ -150,6 +250,10 @@
       "license": "GPL-2.0-only",
       "origin": "linux-lts",
       "commit": "e4f5708adc6a4e631b7dde47106bab095d5f1914",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4f5708adc6a4e631b7dde47106bab095d5f1914/main/linux-lts"
     },
     {
@@ -158,7 +262,66 @@
       "license": "BSD-2-Clause",
       "origin": "opensbi",
       "commit": "e3e95307fe4ab08caf28babdaac0b11e2cedb305",
+      "images": [
+        "minimal",
+        "service"
+      ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e3e95307fe4ab08caf28babdaac0b11e2cedb305/main/opensbi"
+    },
+    {
+      "name": "openrc",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "openrc-init",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "openrc-user",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "libcap2",
+      "version": "2.78-r0",
+      "license": "BSD-3-Clause OR GPL-2.0-only",
+      "origin": "libcap",
+      "commit": "0c35848136c4c16a1b1672cb812efa88fffef1c2",
+      "images": [
+        "service"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/0c35848136c4c16a1b1672cb812efa88fffef1c2/main/libcap"
+    },
+    {
+      "name": "busybox-ifupdown",
+      "version": "1.38.0-r7",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "768a1e8764c8ddda36995c2a4ba8ab9a9c78ef91",
+      "images": [
+        "service"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/768a1e8764c8ddda36995c2a4ba8ab9a9c78ef91/main/busybox"
     }
   ]
 }

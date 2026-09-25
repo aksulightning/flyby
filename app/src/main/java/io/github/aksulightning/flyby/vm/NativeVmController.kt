@@ -20,7 +20,6 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
     private var handle = 0L
-    private var bootTimeoutNanos = 300_000_000_000L
     private var shared: NinePServer? = null
     private var output: (ByteArray) -> Unit = {}
 
@@ -32,8 +31,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
             log("VM_CREATE")
             try {
                 shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
-                bootTimeoutNanos = if (config.upgradeEdge) 1_200_000_000_000L else 300_000_000_000L
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null, config.upgradeEdge)
+                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 NativeBridge.startVm(handle)
@@ -56,7 +54,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
         try {
         var tail = ""
         var booted = false
-        val bootDeadline = System.nanoTime() + bootTimeoutNanos
+        val bootDeadline = System.nanoTime() + 300_000_000_000L
         while (NativeBridge.runningVm(id)) {
             currentCoroutineContext().ensureActive()
             val first = NativeBridge.readVm(id, 50)

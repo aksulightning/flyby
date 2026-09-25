@@ -22,7 +22,7 @@ class VmManager(
     private val scope: CoroutineScope,
     private val controller: VmController? = null,
     private val log: (String) -> Unit = {},
-    private val shutdownTimeoutMs: Long = 5_000,
+    private val shutdownTimeoutMs: Long = 30_000,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val onOutput: (ByteArray) -> Unit = {},
     private val onReset: () -> Unit = {},

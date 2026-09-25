@@ -171,3 +171,5 @@ Settings now includes RAM (128–768 MiB), a complete Alpine Disk Creator
 (1–100 GiB), Android folder selection for `/shared`, terminal customization and
 an offline Licenses screen. See [settings and sharing](docs/settings-and-sharing.md)
 for upgrade behavior, storage semantics and validation.
+
+Disk Creator offers **Minimal Alpine** (the existing Alpine Edge system with BusyBox init) and **Service Alpine** (Alpine Edge with OpenRC init and service management). Minimal remains the default; choosing an image only affects a newly created disk after replacement confirmation.

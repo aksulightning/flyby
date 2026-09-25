@@ -30,11 +30,11 @@ object GuestResources {
         DiskImage.prepare(root, manifest.getString(mode.fileName), mode) { context.assets.open("vm/${mode.seedName}") }
         GuestFiles(root, mode).validated()
     }
-    suspend fun createSystem(context: Context, gib: Int) = withContext(Dispatchers.IO) {
+    suspend fun createSystem(context: Context, gib: Int, image: ImageVariant = ImageVariant.MINIMAL) = withContext(Dispatchers.IO) {
         val root = File(context.filesDir, "vm/default").apply { check(mkdirs() || isDirectory) }
         check(root.canonicalFile.toPath().startsWith(context.filesDir.canonicalFile.toPath()))
         val manifest = JSONObject(context.assets.open("vm/manifest.json").bufferedReader().use { it.readText() })
-        DiskImage.createSystem(root, manifest.getString("system.raw"), gib) { context.assets.open("vm/system.seed") }
+        DiskImage.createSystem(root, manifest.getString("${image.seed}.raw"), gib) { context.assets.open("vm/${image.seed}.seed") }
     }
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")

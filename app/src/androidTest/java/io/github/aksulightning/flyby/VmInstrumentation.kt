@@ -162,25 +162,23 @@ class VmInstrumentation : Instrumentation() {
             }
             sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             clickText("Settings")
-            clickText("Upgrade current disk to Edge", scroll = true)
-            clickText("Start Edge upgrade")
-            await(300_000) { "FLYBY_EDGE_ALREADY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
-            check(pickerSettings.state.value.memoryMiB == 128) { "Upgrade must not change saved RAM" }
-            runBlocking { vmService.vm.stop() }
-            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
-            clickText("Settings")
             clickText("Night")
             val preferences = (targetContext.applicationContext as FlybyApplication).settings
             check(preferences.state.value.theme == ThemeMode.DARK)
             check(preferences.state.value.disk == DiskMode.SYSTEM)
+            clickText("Service Alpine", scroll = true)
+            clickText("Create Service Alpine disk", scroll = true)
+            clickText("Cancel")
             runOnMainSync {
-                vmService.onStartCommand(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, 2), 0, 0)
+                vmService.onStartCommand(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, 2).putExtra(VmService.EXTRA_IMAGE, "SERVICE"), 0, 0)
             }
             await(180_000) { !vmService.transfer.value.busy }
             check(File(targetContext.filesDir, "vm/default/system.raw").length() == 2L * 1024 * 1024 * 1024)
             check(preferences.state.value.diskGiB == 2)
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
             await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_SYSTEM_READY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            runBlocking { vmService.session.sendInput("[ \"\$(cat /proc/1/comm)\" = openrc-init ] && rc-service flyby-control status && printf '\\nFLYBY_OPENRC_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_OPENRC_OK\r\n" in vmService.session.transcript.value }
             runOnMainSync { check(!vmService.setMemory(768)); check(!vmService.setSharedTree(null)) }
             runBlocking { vmService.session.sendInput("echo $token > /etc/flyby-system-test; sync; printf '\\nFLYBY_SYSTEM_WRITE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_SYSTEM_WRITE_OK\r\n" in vmService.session.transcript.value }

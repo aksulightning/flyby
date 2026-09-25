@@ -84,3 +84,7 @@ FLYBY_RAM_MIB=128 FLYBY_DISK_GIB=2 python3 scripts/test-storage.py --system
 FLYBY_RAM_MIB=768 FLYBY_DISK_GIB=100 python3 scripts/test-storage.py --system
 python3 scripts/test-android.py --network
 ```
+
+Disk Creator selects Minimal Alpine (BusyBox init, default) or Service Alpine
+(OpenRC init). This selection only controls the next disk creation. Both images
+use the same disk format and backup flow; creating either requires confirmation.

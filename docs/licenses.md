@@ -112,3 +112,14 @@ No new Android runtime dependencies are introduced by settings or disk transfer.
 The networked persistence smoke test installs `tree` from Edge (GPL-2.0-or-later,
 [Alpine recipe](https://github.com/alpinelinux/aports/blob/master/main/tree/APKBUILD))
 into a disposable test disk. It is not present in either seed or the released APK.
+
+## Service Alpine additions
+
+Service Alpine includes OpenRC/openrc-init/openrc-user 0.63.2-r1 (BSD-2-Clause),
+libcap2 2.78-r0 (BSD-3-Clause OR GPL-2.0-only), and the busybox-ifupdown 1.38.0-r7
+placeholder (GPL-2.0-only). Exact package licenses, recipe commits, artifact
+checksums and image membership are recorded in `guest-provenance.json` and the
+APK's offline license menu. The corresponding source bundle includes these
+recipes and their upstream sources as well as the Minimal Alpine sources.
+The pinned x86_64 apk-tools-static is only a build tool; it is not shipped in
+either guest image. OpenRC's full license is shown in the license menu.

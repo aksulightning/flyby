@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Pinned Alpine artifacts -> deterministic development initramfs. No root/tools needed."""
 import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
+from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
@@ -69,14 +70,6 @@ def initramfs(rootfs, kernel_package, system_root, expected_release='Alpine Linu
     # Explicit Edge repositories in both initramfs and the full persistent seed.
     # Keep testing opt-in; never mix a stable branch into this installation.
     file('etc/apk/repositories', repository_base+'main\n'+repository_base+'community\n')
-    file('etc/flyby-upgrade-edge', (ROOT/'native/guest/upgrade-edge.sh').read_text(), 0o755)
-    file('etc/flyby-upgrade-init', '''#!/bin/sh
-if ! /run/flyby/upgrade-edge; then
-    echo FLYBY_EDGE_UPGRADE_FAILED
-    echo 'Edge upgrade did not complete. Read the error above, then retry from Settings or restore your exported backup.'
-fi
-exec /sbin/init
-''', 0o755)
     helper = ROOT / 'out/guest/flyby-grow-root'
     helper.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-static', '-s', '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector', '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start',
@@ -111,14 +104,6 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     mkdir -p /newroot/run /newroot/tmp /newroot/dev /newroot/proc /newroot/sys
     mount -t tmpfs tmpfs /newroot/run || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -t tmpfs -o mode=1777 tmpfs /newroot/tmp || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
-    # Use current APK helpers even when the persistent root predates Edge support.
-    if grep -q 'flyby.upgrade-edge=1' /proc/cmdline; then
-        modprobe af_packet && modprobe realtek && modprobe r8169 || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
-        mkdir -p /newroot/run/flyby
-        cp /etc/flyby-upgrade-edge /newroot/run/flyby/upgrade-edge
-        cp /etc/flyby-upgrade-init /newroot/run/flyby/upgrade-init
-        cp /etc/flyby-dhcp /newroot/run/flyby/upgrade-dhcp
-    fi
     # Mount from the current initrd so older persistent roots also support sharing.
     /etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     if grep -q 'flyby.shared=1' /proc/cmdline; then
@@ -128,9 +113,6 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     mount -o move /dev /newroot/dev || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /sys /newroot/sys || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /proc /newroot/proc || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
-    if [ -x /newroot/run/flyby/upgrade-init ]; then
-        exec switch_root /newroot /run/flyby/upgrade-init
-    fi
     exec switch_root /newroot /sbin/init
 fi
 /etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
@@ -249,17 +231,22 @@ def provenance(paths):
         fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
         packages.append(dict(name=fields['P'], version=fields['V'], license=fields['L'],
                              origin=fields['o'], commit=fields['c']))
-    for name in ['linux-lts.apk', 'opensbi.apk']:
+    for name in ['linux-lts.apk', 'opensbi.apk', *SERVICE_PACKAGES]:
         fields = dict(line.split(' = ', 1) for line in member(paths[name], '.PKGINFO').decode().splitlines() if ' = ' in line)
         packages.append(dict(name=fields['pkgname'], version=fields['pkgver'], license=fields['license'],
-                             origin=fields['origin'], commit=fields['commit']))
+                             origin=fields['origin'], commit=fields['commit'], images=['service'] if name in SERVICE_PACKAGES else ['minimal', 'service']))
     for package in packages:
+        package.setdefault('images', ['minimal', 'service'])
         package['source_recipe'] = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{package['commit']}/main/{package['origin']}"
     return dict(branch='edge', rootfs_snapshot='20260805',
-                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in ARTIFACTS.items()}, packages=packages)
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES).items()},
+                build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
+                images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC')},
+                packages=packages)
 
 def main():
-    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in ARTIFACTS.items()}
+    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES).items()}
+    apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
     metadata = provenance(paths)
     DEST.mkdir(parents=True, exist_ok=True)
     # aapt transparently expands .gz assets and strips their suffix. Keep gzip bytes
@@ -275,8 +262,9 @@ def main():
     (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.53-0-lts'))
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
+    build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
-    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root')]:
+    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root')]:
         disk = config_dir/(name+'-seed.raw')
         disk.unlink(missing_ok=True)
         with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)

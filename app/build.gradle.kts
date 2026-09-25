@@ -68,7 +68,7 @@ dependencies {
 
 val verifyGuestAssets by tasks.registering {
     doLast {
-        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.seed", "system.seed").forEach { name ->
+        listOf("kernel", "firmware", "initrd", "manifest.json", "disk.seed", "system.seed", "service.seed").forEach { name ->
             check(file("src/main/assets/vm/$name").let { it.isFile && it.length() > 0 }) {
                 "Guest assets missing. Run python3 scripts/prepare-alpine-riscv64.py before assembling an APK."
             }
@@ -85,7 +85,7 @@ val verifyDebugApkAssets by tasks.registering {
     dependsOn("packageDebug")
     doLast {
         ZipFile(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile).use { apk ->
-            for (name in listOf("disk.seed", "system.seed")) {
+            for (name in listOf("disk.seed", "system.seed", "service.seed")) {
             val seed = checkNotNull(apk.getEntry("assets/vm/$name")) { "Disk seed missing from APK" }
             apk.getInputStream(seed).use {
                 check(it.read() == 0x1f && it.read() == 0x8b) { "APK disk seed must retain its gzip encoding" }

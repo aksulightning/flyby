@@ -15,3 +15,7 @@ requirements are in the Flyby repository, docs/licenses.md.
 This development guest has an automatic root shell. Its system disk persists; /run and /tmp are temporary.
 The Flyby guest filesystem-growth helper and SAF/9P bridge are original Apache-2.0 code.
 The guest helper is freestanding and links no C library.
+
+Service Alpine includes OpenRC (BSD-2-Clause). Its full license is available in
+OpenRC-BSD-2-Clause.txt. Additional package notices and exact sources are recorded
+in vm/provenance.json and the release corresponding-source archive.

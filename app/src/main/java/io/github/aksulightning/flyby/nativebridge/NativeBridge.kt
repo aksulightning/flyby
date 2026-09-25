@@ -3,7 +3,7 @@ package io.github.aksulightning.flyby.nativebridge
 /** Opaque checked IDs, never raw pointers. Native registry holds shared ownership per call. */
 object NativeBridge {
     init { System.loadLibrary("flyby") }
-    external fun createVm(directory: String, memoryMiB: Int, cpus: Int, fullSystem: Boolean = false, sharedFolder: Boolean = false, upgradeEdge: Boolean = false): Long
+    external fun createVm(directory: String, memoryMiB: Int, cpus: Int, fullSystem: Boolean = false, sharedFolder: Boolean = false): Long
     external fun startVm(id: Long)
     external fun runningVm(id: Long): Boolean
     external fun requestStopVm(id: Long)

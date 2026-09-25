@@ -115,12 +115,10 @@ struct Vm::Impl {
     }
 };
 Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
-       bool fullSystem, bool sharedFolder, bool upgradeEdge)
+       bool fullSystem, bool sharedFolder)
     : impl(std::make_unique<Impl>()) {
     if (memoryMiB < 128 || memoryMiB > 768 || cpus != 1)
         throw std::invalid_argument("RV64 requires 128–768 MiB and one CPU in this milestone");
-    if (upgradeEdge && (!fullSystem || diskPath.empty()))
-        throw std::invalid_argument("Edge upgrade requires a persistent system disk");
     auto kernel = load(dir + "/kernel", 120 * 1024 * 1024);
     if (kernel.size() < 64 || std::memcmp(kernel.data() + 56, "RSC\x05", 4))
         throw std::invalid_argument("Invalid RISC-V Linux Image header");
@@ -162,8 +160,6 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         command += " flyby.root=1";
     if (sharedFolder)
         command += " flyby.shared=1";
-    if (upgradeEdge)
-        command += " flyby.upgrade-edge=1";
     rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {

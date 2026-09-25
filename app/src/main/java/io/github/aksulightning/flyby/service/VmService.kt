@@ -102,10 +102,8 @@ class VmService : Service() {
     @SuppressLint("WakelockTimeout")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START, ACTION_UPGRADE_EDGE -> {
+            ACTION_START -> {
                 if (storage.value.busy) return START_NOT_STICKY
-                val upgradeEdge = intent.action == ACTION_UPGRADE_EDGE
-                if (upgradeEdge && !idle()) return START_NOT_STICKY
                 // Must run synchronously before provisioning assets or initializing native RAM.
                 val notification = notification()
                 if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -117,8 +115,7 @@ class VmService : Service() {
                     ).apply { setReferenceCounted(false); acquire() }
                 }
                 scope.launch {
-                    val memory = if (upgradeEdge) maxOf(512, settings.state.value.memoryMiB) else settings.state.value.memoryMiB
-                    val accepted = vm.start(VmConfig(memoryMiB = memory, upgradeEdge = upgradeEdge)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
+                    val accepted = vm.start(VmConfig(memoryMiB = settings.state.value.memoryMiB)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
                     if (!accepted && vm.status.value.state in listOf(VmState.STOPPED, VmState.ERROR)) {
                         releaseWakeLock()
                         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -132,16 +129,19 @@ class VmService : Service() {
                 if (!idle()) return START_NOT_STICKY
                 val gib = intent.getIntExtra(EXTRA_DISK_GIB, 0)
                 if (gib !in 1..100) return START_NOT_STICKY
-                storage.value = Transfer(busy = true, message = "Creating Alpine system disk")
+                val image = intent.getStringExtra(EXTRA_IMAGE)?.let { value ->
+                    ImageVariant.entries.firstOrNull { it.name == value } ?: return START_NOT_STICKY
+                } ?: ImageVariant.MINIMAL
+                storage.value = Transfer(busy = true, message = "Creating ${image.title} system disk")
                 if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                 else startForeground(NOTIFICATION, notification())
                 started = true
                 wakeLock = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Flyby:DiskCreator")
                     .apply { setReferenceCounted(false); acquire() }
                 scope.launch {
-                    var result = "Alpine disk created ($gib GiB). Start Linux to expand its filesystem."
+                    var result = "${image.title} disk created ($gib GiB). Start Linux to expand its filesystem."
                     try {
-                        GuestResources.createSystem(this@VmService, gib)
+                        GuestResources.createSystem(this@VmService, gib, image)
                         settings.diskSize(gib)
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) { result = "Disk creation failed: ${failure.message}" }
@@ -232,12 +232,12 @@ class VmService : Service() {
     }
     private fun log(message: String) { Log.i("FlybyVM", message) }
     companion object {
+        const val EXTRA_IMAGE = "image"
         const val ACTION_CREATE = "io.github.aksulightning.flyby.CREATE_DISK"
         const val EXTRA_DISK_GIB = "diskGiB"
         const val ACTION_EXPORT = "io.github.aksulightning.flyby.EXPORT"
         const val ACTION_IMPORT = "io.github.aksulightning.flyby.IMPORT"
         const val ACTION_START = "io.github.aksulightning.flyby.START"
-        const val ACTION_UPGRADE_EDGE = "io.github.aksulightning.flyby.UPGRADE_EDGE"
         const val ACTION_STOP = "io.github.aksulightning.flyby.STOP"
         private const val CHANNEL = "flyby_linux"
         private const val NOTIFICATION = 1

@@ -113,15 +113,7 @@ class MainActivity : ComponentActivity() {
                         LicensesScreen({ licensesVisible = false }, content)
                     } else if (settingsVisible) {
                         SettingsScreen(settings, idle, transfer, preferences,
-                            { connected?.setMemory(it) }, { createDisk(it) },
-                            {
-                                settingsVisible = false
-                                terminalVisible = true
-                                try {
-                                    connectionError = null
-                                    startForegroundService(Intent(this, VmService::class.java).setAction(VmService.ACTION_UPGRADE_EDGE))
-                                } catch (failure: RuntimeException) { connectionError = "Cannot start Edge upgrade: ${failure.message}" }
-                            },
+                            { connected?.setMemory(it) }, { gib, image -> createDisk(gib, image) },
                             { sharedPicker.launch(settings.sharedTree?.let(android.net.Uri::parse)) },
                             { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },
@@ -163,10 +155,10 @@ class MainActivity : ComponentActivity() {
             else "Cannot select shared folder: stop Linux before changing the shared folder"
         }
     }
-    private fun createDisk(gib: Int) {
+    private fun createDisk(gib: Int, image: io.github.aksulightning.flyby.vm.ImageVariant) {
         try {
             connectionError = null
-            startForegroundService(Intent(this, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, gib))
+            startForegroundService(Intent(this, VmService::class.java).setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, gib).putExtra(VmService.EXTRA_IMAGE, image.name))
         } catch (failure: RuntimeException) { connectionError = "Cannot create disk: ${failure.message}" }
     }
     private fun disconnectSharedFolder() {
