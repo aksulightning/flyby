@@ -8,7 +8,7 @@ MODULE_GROUPS = {
     'firewall': (
         'nf_conntrack', 'nf_nat', 'nf_tables', 'nft_ct', 'nft_chain_nat', 'nft_nat',
         'nft_masq', 'nft_redir', 'nft_reject', 'nft_reject_inet', 'nft_log', 'nft_limit',
-        'nft_compat', 'xt_conntrack', 'xt_MASQUERADE', 'xt_addrtype', 'xt_comment', 'xt_tcpudp',
+        'nf_log_syslog', 'nft_compat', 'xt_conntrack', 'xt_MASQUERADE', 'xt_addrtype', 'xt_comment', 'xt_tcpudp',
     ),
 }
 GUEST_MODULES = tuple(module for group in MODULE_GROUPS.values() for module in group)

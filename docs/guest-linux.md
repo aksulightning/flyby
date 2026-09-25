@@ -37,7 +37,7 @@ included for modprobe and kernel-triggered module requests.
 | Filesystems and disk images | `ext4`, `overlay`, `fuse`, `loop`, `squashfs`, `vfat`, `exfat`, `nls_cp437`, `nls_utf8` |
 | Virtual networks | `tun`, `veth`, `bridge`, `br_netfilter`, `8021q`, `dummy` |
 | VPN | `wireguard` and its crypto/tunnel dependencies |
-| Firewall and NAT | `nf_conntrack`, `nf_nat`, `nf_tables`, `nft_ct`, `nft_chain_nat`, `nft_nat`, `nft_masq`, `nft_redir`, `nft_reject`, `nft_reject_inet`, `nft_log`, `nft_limit`, `nft_compat`, `xt_conntrack`, `xt_MASQUERADE`, `xt_addrtype`, `xt_comment`, `xt_tcpudp` |
+| Firewall and NAT | `nf_conntrack`, `nf_nat`, `nf_tables`, `nft_ct`, `nft_chain_nat`, `nft_nat`, `nft_masq`, `nft_redir`, `nft_reject`, `nft_reject_inet`, `nft_log`, `nf_log_syslog`, `nft_limit`, `nft_compat`, `xt_conntrack`, `xt_MASQUERADE`, `xt_addrtype`, `xt_comment`, `xt_tcpudp` |
 | VM devices and shared folder | `realtek`, `r8169`, `af_packet`, `9p`, `9pnet`, `9pnet_fd` |
 
 The additional modules are available on demand; they are not all loaded at boot.
