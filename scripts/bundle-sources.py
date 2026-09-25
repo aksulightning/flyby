@@ -46,7 +46,7 @@ def main():
             if '/' in name or name in ('.','..'): raise ValueError('Unsafe source filename')
             path = dest/name
             if not path.exists():
-                path = download('https://distfiles.alpinelinux.org/distfiles/v3.23/'+name, CACHE/name)
+                path = download('https://distfiles.alpinelinux.org/distfiles/edge/'+name, CACHE/name)
                 shutil.copy2(path, dest/name)
                 path = dest/name
             if digest(path, 'sha512') != expected: raise ValueError(f'Source checksum mismatch: {origin}/{name}')

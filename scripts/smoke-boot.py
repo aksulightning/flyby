@@ -17,9 +17,9 @@ try:
     sys.stdout.buffer.write(data);sys.stdout.flush()
    if b'Initramfs unpacking failed' in buffer: raise RuntimeError('Corrupt initramfs; see '+str(log))
    if b'FLYBY_ALPINE_READY' in buffer and not sent:
-    proc.stdin.write(b"uname -a; cat /etc/os-release; ls /; cd /; echo FLYBY_INPUT_OK; free; printf '\\033[31mRED\\033[0m\\n'\n")
+    proc.stdin.write(b"uname -a; cat /etc/os-release /etc/apk/repositories; ls /; cd /; echo FLYBY_INPUT_OK; free; printf '\\033[31mRED\\033[0m\\n'\n")
     proc.stdin.flush();sent=True;buffer=b''
-   if sent and b'\r\nFLYBY_INPUT_OK\r\n' in buffer and b'Mem:' in buffer and b'ID=alpine' in buffer and b'riscv64 Linux' in buffer and b'\x1b[31mRED\x1b[0m' in buffer:
+   if sent and b'\r\nFLYBY_INPUT_OK\r\n' in buffer and b'Mem:' in buffer and b'PRETTY_NAME="Alpine Linux edge"' in buffer and b'/edge/main\r\n' in buffer and b'/edge/community\r\n' in buffer and b'riscv64 Linux' in buffer and b'\x1b[31mRED\x1b[0m' in buffer:
     checked=True;proc.stdin.write(b'poweroff\n');proc.stdin.flush();break
    if proc.poll() is not None: break
   if not checked: raise RuntimeError('Alpine interactive shell did not pass smoke test; see '+str(log))

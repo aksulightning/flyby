@@ -6,9 +6,9 @@ Alpine archives. These generated resources are packaged into the APK, not Git.
 `out/downloads` caches the original archives. No random prebuilt image is accepted.
 
 Inputs:
-- Alpine minirootfs 3.23.6 riscv64 (`releases/riscv64` under Alpine v3.23).
-- Alpine linux-lts 6.18.53-r0: gzip-compressed Image and its package kernel config.
-- Alpine OpenSBI 1.7-r0: `generic/firmware/fw_jump.bin`.
+- Alpine Edge minirootfs 20260805 riscv64 (`edge/releases/riscv64`).
+- Alpine Edge linux-lts 6.18.53-r0: gzip-compressed Image and its package kernel config.
+- Alpine Edge OpenSBI 1.9-r0: `generic/firmware/fw_jump.bin`.
 
 Exact URLs/checksums are source-controlled in the script. Kernel config confirms
 built-in initramfs, gzip, devtmpfs and 8250 serial console. Optional ISA features
@@ -40,3 +40,41 @@ powers off. `ctest` additionally tests the private resize/Stop path and Ctrl+C.
 Failure keeps serial diagnostics in `out/smoke-boot.log`. The root filesystem is
 in RAM except `/root` and `/data`, which use the private ext4/NVMe disk. See
 [storage/network](storage-network.md) for seed generation, lifecycle and tests.
+
+## Edge and existing installations
+
+New installations and Disk Creator use the official Edge 20260805 snapshot
+(`VERSION_ID=3.25.0_alpha20260805`, `PRETTY_NAME="Alpine Linux edge"`).
+Both initramfs and SYSTEM seed configure exactly these repositories:
+
+```text
+https://dl-cdn.alpinelinux.org/alpine/edge/main
+https://dl-cdn.alpinelinux.org/alpine/edge/community
+```
+
+`testing` is not enabled by default. Build inputs remain version/checksum-pinned;
+`apk update` fetches the current Edge package indexes. Edge packages can change
+between builds and runtime upgrades. If a pinned package disappears upstream,
+refresh the pin and provenance together and run the acceptance tests again;
+never silently accept different bytes for the same pin.
+
+Updating the Android app retains an existing SYSTEM disk and its repository
+configuration. Disk Creator makes a fresh Edge installation after confirmation,
+replacing that disk. Export it first if its files or installed packages are needed.
+
+To migrate an existing stock Flyby Alpine installation in place instead, export
+its system disk in Settings, start Linux, then follow Alpine's
+[release-branch upgrade procedure](https://wiki.alpinelinux.org/wiki/Upgrading_Alpine_Linux_to_a_new_release_branch):
+
+```sh
+cp -p /etc/apk/repositories /etc/apk/repositories.before-edge
+printf '%s\n' \
+  https://dl-cdn.alpinelinux.org/alpine/edge/main \
+  https://dl-cdn.alpinelinux.org/alpine/edge/community > /etc/apk/repositories
+apk update && apk add --upgrade apk-tools && apk upgrade --available
+```
+
+Check that the upgrade succeeds, then Stop and Start Linux. The app supplies the
+kernel/firmware; installing a guest kernel package does not change the boot image.
+Custom or pinned packages may need manual resolution. The migration is opt-in and
+requires networking; the app does not run package upgrades on an existing disk.

@@ -61,12 +61,14 @@ scripts/build-native-android.sh
 ```
 
 `prepare-alpine-riscv64.py` downloads checksum-pinned official Alpine artifacts:
-**Alpine 3.23.6 riscv64**, **linux-lts 6.18.53-r0**, **OpenSBI 1.7-r0**. It extracts
+**Alpine Edge riscv64 (20260805 snapshot)**, **linux-lts 6.18.53-r0**, **OpenSBI 1.9-r0**. It extracts
 the firmware and Image, then builds the initramfs without root or mounting images.
 Boot uses a generated device tree, CLINT, PLIC and NS16550 UART (`ttyS0`).
 The development guest intentionally opens an automatic root shell. This is root
 inside the VM, not Android root. A second UART carries shutdown/resize requests,
 with a readiness handshake to avoid losing requests during boot.
+
+Existing disks retain their current Alpine installation. See [Edge migration](docs/guest-linux.md#edge-and-existing-installations) for an in-place upgrade or create a fresh disk in Settings.
 
 Details: [native runtime and memory map](docs/riscv-runtime.md),
 [architecture](docs/architecture.md), [guest resources](docs/guest-linux.md).

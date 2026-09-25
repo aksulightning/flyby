@@ -64,7 +64,10 @@ if __name__ == '__main__':
         install = "apk add --no-cache tree && " if '--network' in sys.argv else ""
         verify = "apk info -e tree && tree --version && " if '--network' in sys.argv else ""
         capacity = f"[ \"$(df -k / | awk 'END {{print $2}}')\" -gt {int(gib * 1024**2 * .85)} ] && "
-        boot(capacity + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
+        edge = "grep -qx 'PRETTY_NAME=\"Alpine Linux edge\"' /etc/os-release && " + \
+            "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/main' /etc/apk/repositories && " + \
+            "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/community' /etc/apk/repositories && "
+        boot(capacity + edge + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
              '\r\nSYSTEM_WRITE_OK\r\n', 'write.log')
         boot(verify + f"[ \"$(cat /etc/flyby-persist-test)\" = {TOKEN} ] && [ \"$(cat /usr/local/persist-test)\" = {TOKEN} ] && grep '/dev/nvme0n1 / ext4' /proc/mounts && printf '\\nSYSTEM_PERSIST_OK\\n'",
              '\r\nSYSTEM_PERSIST_OK\r\n', 'read.log')

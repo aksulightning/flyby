@@ -4,15 +4,15 @@ import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subp
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
-BASE = 'https://dl-cdn.alpinelinux.org/alpine/v3.23/'
+BASE = 'https://dl-cdn.alpinelinux.org/alpine/edge/'
 ARTIFACTS = {
- 'linux-lts.apk': ('main/riscv64/linux-lts-6.18.53-r0.apk', 'fd8a989452f0e9979b14315409c98f2192d7889236af9a922ce19c092c6a86d5'),
- 'opensbi.apk': ('main/riscv64/opensbi-1.7-r0.apk', 'd0794002fd39d2fe3637e4448d0829e961ccfc2b50dd55280bcfb87536cad5b8'),
- 'alpine-minirootfs.tar.gz': ('releases/riscv64/alpine-minirootfs-3.23.6-riscv64.tar.gz', 'e3fab77da4d4a1bb7784dc6800343e48ebd15f23ecb4008438d6ccef6acdecd9'),
+ 'linux-lts.apk': ('main/riscv64/linux-lts-6.18.53-r0.apk', 'eeadfce6e7a3740ffda666b1d694ef23ecc04007b4f989198208fe61e6b0fda3'),
+ 'opensbi.apk': ('main/riscv64/opensbi-1.9-r0.apk', 'a27f535aeb52580a7c2b531999fef249e8d402af25e276e6c269188c38889c3c'),
+ 'alpine-minirootfs.tar.gz': ('releases/riscv64/alpine-minirootfs-20260805-riscv64.tar.gz', 'fc8f2160b00fea310db5c2e49f8f57582ae5e3f870e7e6ef3859db6ed6682e5a'),
 }
 def fetch(name, url, digest):
-    CACHE.mkdir(parents=True, exist_ok=True)
-    path = CACHE / name
+    path = CACHE / digest / name
+    path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         tmp = path.with_suffix('.partial')
         with urllib.request.urlopen(url, timeout=90) as source, tmp.open('wb') as target:
@@ -63,6 +63,11 @@ def initramfs(rootfs, kernel_package, system_root):
         for parent in pathlib.PurePosixPath(name).parents:
             if str(parent) != '.': entries.setdefault(str(parent), (stat.S_IFDIR | 0o755, b''))
         entries[name] = (stat.S_IFREG | mode, value.encode())
+    if b'PRETTY_NAME="Alpine Linux edge"' not in entries['etc/os-release'][1]:
+        raise ValueError('The bundled root filesystem must be Alpine Edge')
+    # Explicit Edge repositories in both initramfs and the full persistent seed.
+    # Keep testing opt-in; never mix a stable branch into this installation.
+    file('etc/apk/repositories', BASE+'main\n'+BASE+'community\n')
     helper = ROOT / 'out/guest/flyby-grow-root'
     helper.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-static', '-s', '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector', '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start',
@@ -230,7 +235,8 @@ def provenance(paths):
                              origin=fields['origin'], commit=fields['commit']))
     for package in packages:
         package['source_recipe'] = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{package['commit']}/main/{package['origin']}"
-    return dict(artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in ARTIFACTS.items()}, packages=packages)
+    return dict(branch='edge', rootfs_snapshot='20260805',
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in ARTIFACTS.items()}, packages=packages)
 
 def main():
     paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in ARTIFACTS.items()}

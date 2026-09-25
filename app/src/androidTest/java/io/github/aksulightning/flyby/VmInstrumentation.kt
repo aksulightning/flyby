@@ -86,7 +86,10 @@ class VmInstrumentation : Instrumentation() {
             clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             await(30_000) { "FLYBY_SHARED_READY" in vmService.session.transcript.value }
+            check("PRETTY_NAME=\"Alpine Linux edge\"" in vmService.session.transcript.value)
             runBlocking { vmService.session.sendInput((
+                "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/main' /etc/apk/repositories && " +
+                "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/community' /etc/apk/repositories && " +
                 "[ \"\$(cat /shared/from-android)\" = android-data ] && " +
                 "echo linux-data > /shared/from-linux && mkdir /shared/sub && " +
                 "echo nested > /shared/sub/old && mv /shared/sub/old /shared/sub/renamed && " +

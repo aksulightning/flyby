@@ -53,9 +53,11 @@ def main():
 Install the uniquely named **arm64-v8a.apk** asset below. Settings shows this version and commit.
 
 - Night / Light / Follow device appearance.
-- Optional whole-system persistent 1 GiB Alpine root disk; installed packages and /etc survive Stop/Start.
+- Alpine Edge riscv64 guest with Edge main/community repositories; new installations and Disk Creator use the pinned Edge seed. Existing disks are preserved, not automatically upgraded.
+- RAM 128–768 MiB and Disk Creator 1–100 GiB; the complete system and installed packages survive Stop/Start.
 - Export/import the selected disk through Android's document picker. Stop Linux first; import replaces that disk after validation.
-- Existing /root + /data storage remains available as a separate disk.
+- Android folder picker exposes a shared folder at /shared; old Home/Data disk files are retained separately.
+- Offline licenses and terminal font, spacing, cursor, extra-key and screen-awake settings.
 
 Verified by the required host/unit/build and API 35 Android emulator jobs:
 https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}

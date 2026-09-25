@@ -14,8 +14,8 @@ bounds. The initrd is placed near the top of the selected RAM with an overlap
 check against the kernel, instead of a fixed address outside a 128 MiB machine.
 
 Disk Creator accepts an integer from 1 to 100 GiB (binary units, matching the RAM
-units). **Create Alpine disk** opens a replacement confirmation. While stopped,
-a foreground service decompresses and verifies the complete Alpine ext4 seed in a
+units). **Create Alpine Edge disk** opens a replacement confirmation. While stopped,
+a foreground service decompresses and verifies the complete Alpine Edge ext4 seed in a
 private staging directory, sparsely extends the image, fsyncs it and atomically
 replaces `system.raw`. Failure before replacement retains the previous disk.
 Creation is a fresh installation, not resizing the existing user filesystem.

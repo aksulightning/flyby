@@ -40,24 +40,24 @@ packaged as `assets/vm/provenance.json`. Kernel config is extracted to
 
 | Package | Version | License expression | Exact Alpine source recipe |
 | --- | --- | --- | --- |
-| alpine-baselayout | 3.7.2-r0 | GPL-2.0-only | [15b3b781](https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout) |
-| alpine-baselayout-data | 3.7.2-r0 | GPL-2.0-only | [15b3b781](https://gitlab.alpinelinux.org/alpine/aports/-/tree/15b3b78187b3808104f98f765e9632e0b09281a7/main/alpine-baselayout) |
+| alpine-baselayout | 3.7.2-r1 | GPL-2.0-only | [60a7585b](https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout) |
+| alpine-baselayout-data | 3.7.2-r1 | GPL-2.0-only | [60a7585b](https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout) |
 | alpine-keys | 2.6-r0 | MIT | [b9f23bec](https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f23becced4d7b3ccc0fa0f28530243ccd314a0/main/alpine-keys) |
-| alpine-release | 3.23.6-r0 | MIT | [8608c797](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8608c79733409c3aa716f7985d1cb45aedba55bd/main/alpine-base) |
-| apk-tools | 3.0.8-r0 | GPL-2.0-only | [286502dc](https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools) |
-| busybox | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
-| busybox-binsh | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
-| ca-certificates-bundle | 20260909-r0 | MPL-2.0 AND MIT | [c733d58a](https://gitlab.alpinelinux.org/alpine/aports/-/tree/c733d58a9d16316e7fb6a49e65f28ecda365c56b/main/ca-certificates) |
-| libapk | 3.0.8-r0 | GPL-2.0-only | [286502dc](https://gitlab.alpinelinux.org/alpine/aports/-/tree/286502dc74df00f907f93b0563867630dcc139e5/main/apk-tools) |
-| libcrypto3 | 3.5.8-r0 | Apache-2.0 | [2b4b2590](https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl) |
-| libssl3 | 3.5.8-r0 | Apache-2.0 | [2b4b2590](https://gitlab.alpinelinux.org/alpine/aports/-/tree/2b4b2590f782b95276d31dcaaf41554b1a597a0b/main/openssl) |
-| musl | 1.2.5-r23 | MIT | [8aef0c37](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl) |
-| musl-utils | 1.2.5-r23 | MIT AND BSD-2-Clause AND GPL-2.0-or-later | [8aef0c37](https://gitlab.alpinelinux.org/alpine/aports/-/tree/8aef0c37b0ad23dc4137f0e4755b97a59dc698b8/main/musl) |
-| scanelf | 1.3.8-r2 | GPL-2.0-only | [3912b4fa](https://gitlab.alpinelinux.org/alpine/aports/-/tree/3912b4fa83437852312ad3c37a00229ff59fab1c/main/pax-utils) |
-| ssl_client | 1.37.0-r30 | GPL-2.0-only | [1e823a60](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1e823a60eb85606954b3a5af5f8e5bbd1ea680cf/main/busybox) |
-| zlib | 1.3.2-r0 | Zlib | [f8c94d2e](https://gitlab.alpinelinux.org/alpine/aports/-/tree/f8c94d2e1d318ab29eb4ac5f00225341c877ed65/main/zlib) |
-| linux-lts | 6.18.53-r0 | GPL-2.0-only | [954466b9](https://gitlab.alpinelinux.org/alpine/aports/-/tree/954466b9df0970b27514a32affccaac99d3c620e/main/linux-lts) |
-| opensbi | 1.7-r0 | BSD-2-Clause | [eec9e283](https://gitlab.alpinelinux.org/alpine/aports/-/tree/eec9e28336c49b027111785d50fed1a04fe01b02/main/opensbi) |
+| alpine-release | 3.25.0_alpha20260805-r0 | MIT | [5aad27a9](https://gitlab.alpinelinux.org/alpine/aports/-/tree/5aad27a98146f1557e9e3408f615c59d44a41acb/main/alpine-base) |
+| apk-tools | 3.0.7-r0 | GPL-2.0-only | [1397144f](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools) |
+| busybox | 1.38.0-r4 | GPL-2.0-only | [9ac9bf53](https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox) |
+| busybox-binsh | 1.38.0-r4 | GPL-2.0-only | [9ac9bf53](https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox) |
+| ca-certificates-bundle | 20260611-r0 | MPL-2.0 AND MIT | [5f8337af](https://gitlab.alpinelinux.org/alpine/aports/-/tree/5f8337afea8674524d360be5fdb513e7e57fcc29/main/ca-certificates) |
+| libapk | 3.0.7-r0 | GPL-2.0-only | [1397144f](https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools) |
+| libcrypto3 | 3.5.7-r0 | Apache-2.0 | [35c0d1f2](https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl) |
+| libssl3 | 3.5.7-r0 | Apache-2.0 | [35c0d1f2](https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl) |
+| musl | 1.2.6-r2 | MIT | [b0c8ea10](https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl) |
+| musl-utils | 1.2.6-r2 | MIT AND BSD-2-Clause AND GPL-2.0-or-later | [b0c8ea10](https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl) |
+| scanelf | 1.3.9-r1 | GPL-2.0-only | [c61801ee](https://gitlab.alpinelinux.org/alpine/aports/-/tree/c61801eeacb3ffcd9c2025b09e402153bb93fb39/main/pax-utils) |
+| ssl_client | 1.38.0-r4 | GPL-2.0-only | [9ac9bf53](https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox) |
+| zlib | 1.3.2-r0 | Zlib | [f248b33b](https://gitlab.alpinelinux.org/alpine/aports/-/tree/f248b33b5943c7dc69bf691031d7612ab2e8ed93/main/zlib) |
+| linux-lts | 6.18.53-r0 | GPL-2.0-only | [e4f5708a](https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4f5708adc6a4e631b7dde47106bab095d5f1914/main/linux-lts) |
+| opensbi | 1.9-r0 | BSD-2-Clause | [e3e95307](https://gitlab.alpinelinux.org/alpine/aports/-/tree/e3e95307fe4ab08caf28babdaac0b11e2cedb305/main/opensbi) |
 
 ## Native integration and distribution
 
@@ -104,6 +104,6 @@ Nightly development-key caching uses actions/cache v4.2.4 at
 ([license](https://github.com/actions/cache/blob/v4.2.4/LICENSE)).
 No new Android runtime dependencies are introduced by settings or disk transfer.
 
-The networked persistence smoke test installs `tree` 2.2.1-r0 (GPL-2.0-or-later,
-[Alpine recipe](https://github.com/alpinelinux/aports/blob/3.23-stable/main/tree/APKBUILD))
+The networked persistence smoke test installs `tree` from Edge (GPL-2.0-or-later,
+[Alpine recipe](https://github.com/alpinelinux/aports/blob/master/main/tree/APKBUILD))
 into a disposable test disk. It is not present in either seed or the released APK.

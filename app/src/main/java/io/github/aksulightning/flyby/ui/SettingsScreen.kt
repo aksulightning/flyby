@@ -26,8 +26,8 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
     val diskValue = disk.toIntOrNull()?.takeIf { it in 1..100 }
     confirmCreate?.let { size -> AlertDialog(
         onDismissRequest = { confirmCreate = null },
-        title = { Text("Create a new Alpine disk?") },
-        text = { Text("This replaces the current system disk with a fresh $size GiB Alpine installation. All files and installed packages on the current system disk will be lost. Export it first if needed. The old Home/Data disk is kept separately.") },
+        title = { Text("Create a new Alpine Edge disk?") },
+        text = { Text("This replaces the current system disk with a fresh $size GiB Alpine Edge installation. All files and installed packages on the current system disk will be lost. Export it first if needed. The old Home/Data disk is kept separately.") },
         confirmButton = { TextButton({ createDisk(size); confirmCreate = null }, enabled = idle) { Text("Create and replace") } },
         dismissButton = { TextButton({ confirmCreate = null }) { Text("Cancel") } }) }
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -48,8 +48,8 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
         Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(disk, { disk = it }, label = { Text("System disk · 1–100 GiB") }, singleLine = true,
             isError = diskValue == null, enabled = idle, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-        Button({ confirmCreate = diskValue }, enabled = idle && diskValue != null) { Text("Create Alpine disk") }
-        Text("A complete persistent Alpine system, including /etc, /usr and /root. The filesystem expands to the selected size on its first boot. Disk space is allocated as it is used; keep enough free Android storage. /run and /tmp stay temporary.")
+        Button({ confirmCreate = diskValue }, enabled = idle && diskValue != null) { Text("Create Alpine Edge disk") }
+        Text("A complete persistent Alpine Edge system (main + community repositories), including /etc, /usr and /root. Updating Flyby keeps your existing installation; only new disks use this system image. The filesystem expands to the selected size on its first boot. Disk space is allocated as it is used; keep enough free Android storage. /run and /tmp stay temporary.")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(export, enabled = idle) { Text("Export disk") }
             OutlinedButton(import, enabled = idle) { Text("Import disk") }

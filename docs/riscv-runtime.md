@@ -61,8 +61,8 @@ are cached in `out/downloads`; all archives are SHA-256 pinned. Generated files
 and third-party source downloads are ignored by Git. No unidentified binaries
 are committed. The native archive URLs and hashes are in `prepare-native.py`.
 
-The guest uses Alpine 3.23.6 riscv64 minirootfs, Alpine linux-lts 6.18.53-r0 and
-OpenSBI 1.7-r0. The script extracts the exact official APK members, decompresses
+The guest uses Alpine Edge riscv64 minirootfs (20260805 snapshot), Alpine linux-lts 6.18.53-r0 and
+OpenSBI 1.9-r0. The script extracts the exact official APK members, decompresses
 the Linux Image, and constructs a deterministic gzip/newc initramfs without root
 or mounting images. It validates the RISC-V Image magic. Alpine's kernel config
 has built-in initramfs/gzip/devtmpfs/8250 console support. Exact package archive
