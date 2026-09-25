@@ -236,10 +236,29 @@ class VmInstrumentation : Instrumentation() {
                 if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { clicked = true; break }
             }
             if (!clicked && scroll) {
-                nodes.firstOrNull { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-                // Compose scrolls asynchronously. Inspect each settled page instead of queuing
-                // more scrolls every 100 ms and skipping the button while the view is moving.
-                SystemClock.sleep(600)
+                // Full-page accessibility scrolling can skip partially visible controls.
+                // Drag a third of the visible viewport, then hold to avoid a fling.
+                nodes.firstOrNull { it.isScrollable }?.let { node ->
+                    val bounds = android.graphics.Rect()
+                    node.getBoundsInScreen(bounds)
+                    val x = bounds.centerX().toFloat()
+                    val startY = bounds.top + bounds.height() * 0.75f
+                    val endY = bounds.top + bounds.height() * 0.4f
+                    val down = SystemClock.uptimeMillis()
+                    fun touch(action: Int, y: Float) {
+                        val event = android.view.MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+                        event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+                        try { check(uiAutomation.injectInputEvent(event, true)) } finally { event.recycle() }
+                    }
+                    touch(android.view.MotionEvent.ACTION_DOWN, startY)
+                    for (step in 1..8) {
+                        SystemClock.sleep(30)
+                        touch(android.view.MotionEvent.ACTION_MOVE, startY + (endY - startY) * step / 8)
+                    }
+                    SystemClock.sleep(200)
+                    touch(android.view.MotionEvent.ACTION_UP, endY)
+                }
+                SystemClock.sleep(250)
                 waitForIdleSync()
             }
             clicked
