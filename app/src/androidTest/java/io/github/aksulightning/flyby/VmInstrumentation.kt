@@ -235,7 +235,13 @@ class VmInstrumentation : Instrumentation() {
                 while (target != null && !target.isClickable) target = target.parent
                 if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { clicked = true; break }
             }
-            if (!clicked && scroll) nodes.firstOrNull { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            if (!clicked && scroll) {
+                nodes.firstOrNull { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                // Compose scrolls asynchronously. Inspect each settled page instead of queuing
+                // more scrolls every 100 ms and skipping the button while the view is moving.
+                SystemClock.sleep(600)
+                waitForIdleSync()
+            }
             clicked
         }
     }
