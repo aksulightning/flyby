@@ -64,7 +64,25 @@ class VmInstrumentation : Instrumentation() {
             waitForIdleSync()
             val sharedUri = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
             check(io.github.aksulightning.flyby.shared.AndroidSharedTree(targetContext.contentResolver, sharedUri).root().id == "root") { "Fixture root document ID must be stable" }
-            runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(sharedUri.toString())) }
+            runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(null)) }
+            // A real picker stops MainActivity and returns its result before the service reconnects.
+            // Exercise that order: retain the selected URI while disconnected, then apply on rebind.
+            runOnMainSync { checkNotNull(activity).moveTaskToBack(true) }
+            await(10_000) {
+                var stopped = false
+                runOnMainSync { stopped = (activity as MainActivity).lifecycle.currentState == androidx.lifecycle.Lifecycle.State.CREATED }
+                stopped
+            }
+            val pickerSettings = (targetContext.applicationContext as FlybyApplication).settings
+            runOnMainSync {
+                (activity as MainActivity).selectSharedFolder(sharedUri)
+                (activity as MainActivity).selectSharedFolder(null) // Cancellation does not erase a pending selection.
+                check(pickerSettings.state.value.sharedTree == null) { "Selection must wait for the Activity's service connection" }
+            }
+            check(targetContext.contentResolver.persistedUriPermissions.any { it.uri == sharedUri && it.isReadPermission && it.isWritePermission })
+            targetContext.startActivity(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            await(10_000) { pickerSettings.state.value.sharedTree == sharedUri.toString() }
+            waitForIdleSync()
             clickStart()
             await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             await(30_000) { "FLYBY_SHARED_READY" in vmService.session.transcript.value }
@@ -176,7 +194,7 @@ class VmInstrumentation : Instrumentation() {
             runBlocking { vmService.vm.stop() }
             backup.delete()
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart and Stop\n")
+            report.putString("stream", "PASS: JNI validation, shared-folder result before service rebind, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart and Stop\n")
         } catch (failure: Throwable) {
             report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())

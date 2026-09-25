@@ -41,6 +41,9 @@ the verified initrd/system seed.
 **Choose Android folder** uses `OpenDocumentTree` and takes persistent read/write
 URI permission. Selection and disconnect are permitted only when Linux and disk
 operations are stopped. Cancellation leaves the old selection unchanged.
+Picker results wait for the Activity to reconnect to the VM service before its
+state is checked. A temporarily disconnected service is not a running VM; the
+pending URI survives Activity recreation and its permission is retained on return.
 Disconnect releases the previous URI permission; it does not delete files.
 Revoked/moved/unavailable folders produce a start or file-operation error; select
 a valid folder again in Settings. Android's system picker controls which folders

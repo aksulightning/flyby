@@ -36,22 +36,20 @@ class MainActivity : ComponentActivity() {
     private var bound = false
     private var pendingExport by mutableStateOf<String?>(null)
     private var pendingImport by mutableStateOf<String?>(null)
+    private var pendingShared by mutableStateOf<String?>(null)
     private val exportPicker = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { pendingExport = it?.toString() }
     private val importPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { pendingImport = it?.toString() }
-    private val sharedPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+    private val sharedPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree(), ::selectSharedFolder)
+    internal fun selectSharedFolder(uri: android.net.Uri?) {
         if (uri != null) {
-            val preferences = (application as FlybyApplication).settings
-            val old = preferences.state.value.sharedTree
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
+                // The result can arrive before onStart's asynchronous service binding completes.
+                // Retain the grant now, but validate VM state only once the service reconnects.
                 contentResolver.takePersistableUriPermission(uri, flags)
-                check(service?.setSharedTree(uri.toString()) == true) { "Stop Linux before changing the shared folder" }
-                if (old != null && old != uri.toString()) runCatching {
-                    contentResolver.releasePersistableUriPermission(android.net.Uri.parse(old), flags)
-                }
+                pendingShared = uri.toString()
                 connectionError = null
             } catch (failure: Exception) {
-                if (old != uri.toString()) runCatching { contentResolver.releasePersistableUriPermission(uri, flags) }
                 connectionError = "Cannot select shared folder: ${failure.message}"
             }
         }
@@ -67,6 +65,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         pendingExport = savedInstanceState?.getString("export")
         pendingImport = savedInstanceState?.getString("import")
+        pendingShared = savedInstanceState?.getString("shared")
         enableEdgeToEdge()
         setContent {
             val connected = service
@@ -79,6 +78,13 @@ class MainActivity : ComponentActivity() {
                 if (connected != null && pendingExport != null) {
                     transferDisk(VmService.ACTION_EXPORT, pendingExport!!)
                     pendingExport = null
+                }
+            }
+            LaunchedEffect(connected, pendingShared) {
+                val selected = pendingShared
+                if (connected != null && selected != null) {
+                    applySharedFolder(connected, selected)
+                    pendingShared = null
                 }
             }
             val status by (connected?.vm?.status ?: disconnected).collectAsStateWithLifecycle()
@@ -129,7 +135,25 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("export", pendingExport)
         outState.putString("import", pendingImport)
+        outState.putString("shared", pendingShared)
         super.onSaveInstanceState(outState)
+    }
+    private fun applySharedFolder(connected: VmService, selected: String) {
+        val old = (application as FlybyApplication).settings.state.value.sharedTree
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        if (connected.setSharedTree(selected)) {
+            if (old != null && old != selected) runCatching {
+                contentResolver.releasePersistableUriPermission(android.net.Uri.parse(old), flags)
+            }
+            connectionError = null
+        } else {
+            if (old != selected) runCatching {
+                contentResolver.releasePersistableUriPermission(android.net.Uri.parse(selected), flags)
+            }
+            connectionError = if (connected.transfer.value.busy)
+                "Cannot select shared folder: wait for the disk operation to finish"
+            else "Cannot select shared folder: stop Linux before changing the shared folder"
+        }
     }
     private fun createDisk(gib: Int) {
         try {
