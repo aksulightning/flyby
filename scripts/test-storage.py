@@ -50,6 +50,9 @@ def boot(command, marker, name):
                     return
                 if proc.poll() is not None: break
             raise RuntimeError(f'Storage assertion failed: {name}; inspect {OUT}')
+    except BaseException:
+        print((OUT/name).read_text(errors='replace')[-20000:], flush=True)
+        raise
     finally:
         selector.close()
         if proc.poll() is None: proc.kill(); proc.wait()
@@ -72,7 +75,7 @@ if __name__ == '__main__':
              '\r\nSYSTEM_WRITE_OK\r\n', 'write.log')
         boot(verify + f"[ \"$(cat /etc/flyby-persist-test)\" = {TOKEN} ] && [ \"$(cat /usr/local/persist-test)\" = {TOKEN} ] && grep '/dev/nvme0n1 / ext4' /proc/mounts && printf '\\nSYSTEM_PERSIST_OK\\n'",
              '\r\nSYSTEM_PERSIST_OK\r\n', 'read.log')
-        print('PASS: overlay copy-up, FUSE device and persistent ext4 root; package test=' + str('--network' in sys.argv))
+        print('PASS: common modules, binfmt dispatch, overlay copy-up, FUSE device and persistent ext4 root; package test=' + str('--network' in sys.argv))
         sys.exit(0)
     boot(f"echo {TOKEN} > /root/persist-test; echo {TOKEN} > /data/persist-test; sync; printf '\\nWRITE_OK\\n'",
          '\r\nWRITE_OK\r\n', 'write.log')

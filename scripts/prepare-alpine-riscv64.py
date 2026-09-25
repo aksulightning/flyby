@@ -2,6 +2,7 @@
 """Pinned Alpine artifacts -> deterministic development initramfs. No root/tools needed."""
 import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
 from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
+from guest_modules import select_modules
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
@@ -44,18 +45,12 @@ def initramfs(rootfs, kernel_package, system_root, expected_release='Alpine Linu
             elif item.isfile() or item.islnk(): data, mode = tar.extractfile(item).read(), stat.S_IFREG | item.mode
             else: raise ValueError(f'Unexpected archive entry: {name}')
             entries[name] = (mode, data)
-    # Only the required filesystem and network modules from the matching kernel.
+    # Explicit guest module set and dependencies from the matching kernel.
     with tarfile.open(kernel_package, ignore_zeros=True) as tar:
         dep_name = next(n for n in tar.getnames() if n.endswith('/modules.dep'))
         prefix = dep_name.removesuffix('modules.dep')
         dependencies = dict(line.split(':', 1) for line in tar.extractfile(dep_name).read().decode().splitlines())
-        selected = set()
-        def include(name):
-            if name in selected: return
-            selected.add(name)
-            for dep in dependencies[name].split(): include(dep)
-        for module in ('ext4', 'overlay', 'fuse', 'realtek', 'r8169', 'af_packet', '9p', '9pnet', '9pnet_fd'):
-            include(next(n for n in dependencies if n.endswith('/'+module+'.ko.gz')))
+        selected = select_modules(dependencies)
         for name in sorted(selected):
             path = prefix + name.removesuffix('.gz')
             for parent in pathlib.PurePosixPath(path).parents:
@@ -63,6 +58,23 @@ def initramfs(rootfs, kernel_package, system_root, expected_release='Alpine Linu
             entries[path] = (stat.S_IFREG | 0o644, gzip.decompress(tar.extractfile(prefix + name).read()))
         dep_data = ''.join(f"{n.removesuffix('.gz')}: {' '.join(d.removesuffix('.gz') for d in dependencies[n].split())}\n" for n in sorted(selected))
         entries[dep_name] = (stat.S_IFREG | 0o644, dep_data.encode())
+        # BusyBox modprobe needs these aliases for kernel requests such as
+        # rtnl-link-veth, char-major-10-200 and nftables expressions.
+        module_names = {pathlib.PurePosixPath(n).name.removesuffix('.ko.gz').replace('-', '_') for n in selected}
+        aliases = tar.extractfile(prefix+'modules.alias').read().decode().splitlines()
+        aliases = [line for line in aliases if line.startswith('alias ') and line.split()[-1].replace('-', '_') in module_names]
+        entries[prefix+'modules.alias'] = (stat.S_IFREG | 0o644, ('\n'.join(aliases)+'\n').encode())
+        # Preserve selected soft dependencies too. Reject an incomplete selection.
+        softdeps = []
+        for line in tar.extractfile(prefix+'modules.softdep').read().decode().splitlines():
+            fields = line.split()
+            if len(fields) < 3 or fields[0] != 'softdep' or fields[1].replace('-', '_') not in module_names:
+                continue
+            required = {n.replace('-', '_') for n in fields[2:] if n not in ('pre:', 'post:')}
+            if not required <= module_names:
+                raise ValueError(f'Missing soft dependencies: {line}')
+            softdeps.append(line)
+        entries[prefix+'modules.softdep'] = (stat.S_IFREG | 0o644, ('\n'.join(softdeps)+'\n').encode())
     def file(name, value, mode=0o644):
         for parent in pathlib.PurePosixPath(name).parents:
             if str(parent) != '.': entries.setdefault(str(parent), (stat.S_IFDIR | 0o755, b''))

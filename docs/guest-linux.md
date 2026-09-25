@@ -26,13 +26,39 @@ and a respawning private control daemon on ttyS1. The shell prints
 `FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. This is an intentional development
 autologin root environment, no password/login management. Alpine's default SSL CA
 bundle is retained for HTTPS. The RTL8169 NIC uses RVVM user-mode sockets.
-Matching ext4, overlay, fuse, realtek PHY, r8169, af_packet and 9p kernel modules
-are extracted from the pinned linux-lts APK, together with their transitive
-dependencies. OverlayFS and FUSE are available in the initramfs and newly created
-Minimal and Service disks via `modprobe overlay` and `modprobe fuse`. Existing
-persistent disks retain their previous module files. FUSE userspace programs are
-installed separately with apk as needed. Both image tests verify OverlayFS copy-up
-and opening `/dev/fuse` after loading the modules.
+Kernel modules and their transitive dependencies come from the pinned linux-lts
+APK. `scripts/guest_modules.py` declares the same module set for initramfs,
+Minimal Alpine and Service Alpine. Selected aliases and soft dependencies are
+included for modprobe and kernel-triggered module requests.
+
+| Use | Included modules |
+| --- | --- |
+| Program formats | `binfmt_misc` |
+| Filesystems and disk images | `ext4`, `overlay`, `fuse`, `loop`, `squashfs`, `vfat`, `exfat`, `nls_cp437`, `nls_utf8` |
+| Virtual networks | `tun`, `veth`, `bridge`, `br_netfilter`, `8021q`, `dummy` |
+| VPN | `wireguard` and its crypto/tunnel dependencies |
+| Firewall and NAT | `nf_conntrack`, `nf_nat`, `nf_tables`, `nft_ct`, `nft_chain_nat`, `nft_nat`, `nft_masq`, `nft_redir`, `nft_reject`, `nft_reject_inet`, `nft_log`, `nft_limit`, `nft_compat`, `xt_conntrack`, `xt_MASQUERADE`, `xt_addrtype`, `xt_comment`, `xt_tcpudp` |
+| VM devices and shared folder | `realtek`, `r8169`, `af_packet`, `9p`, `9pnet`, `9pnet_fd` |
+
+The additional modules are available on demand; they are not all loaded at boot.
+For example, enable the binfmt_misc registration interface with:
+
+```sh
+modprobe binfmt_misc
+mkdir -p /proc/sys/fs/binfmt_misc
+mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+```
+
+Register the desired interpreter separately. This supplies kernel support, not
+QEMU interpreters, a container engine, VPN configuration or FUSE daemons. Install
+userspace tools such as `nftables`, `iproute2`, `wireguard-tools`, `fuse3` or
+filesystem utilities with apk as needed. Existing persistent disks retain their
+previous module files; the expanded set is installed with a newly created disk.
+
+Both image tests load every requested module, resolve TUN/veth aliases and execute
+an extension handler through binfmt_misc. They also verify OverlayFS copy-up and
+opening `/dev/fuse`. The Minimal image is exercised at 128 and 768 MiB, while the
+Android test boots both variants at 128 MiB.
 
 The firmware, Image, FDT and initrd layout is in `native/runtime/vm.h` and
 [the runtime document](riscv-runtime.md). Serial console is NS16550 `ttyS0`, verified

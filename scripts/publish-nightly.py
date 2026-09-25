@@ -55,7 +55,7 @@ Install the uniquely named **arm64-v8a.apk** asset below. Settings shows this ve
 - Night / Light / Follow device appearance.
 - Alpine Edge riscv64 guest with Edge main/community repositories; new installations and Disk Creator use the pinned Edge seed. Existing disks are preserved, not automatically upgraded.
 - Disk Creator offers **Minimal Alpine** (existing BusyBox init) and **Service Alpine** (OpenRC init and persistent services). The prototype no longer includes an Edge migration button.
-- New Minimal and Service images include the overlay and fuse kernel modules.
+- New Minimal and Service images include binfmt_misc, loop/SquashFS/FAT/exFAT, TUN/veth/bridge/VLAN, WireGuard and nftables/NAT modules, alongside overlay and fuse. Modules load on demand; userspace tools are installed separately.
 - RAM 128–768 MiB and Disk Creator 1–100 GiB; the complete system and installed packages survive Stop/Start.
 - Export/import the selected disk through Android's document picker. Stop Linux first; import replaces that disk after validation.
 - Android folder picker exposes a shared folder at /shared; old Home/Data disk files are retained separately.
