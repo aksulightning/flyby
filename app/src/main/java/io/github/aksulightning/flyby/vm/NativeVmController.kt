@@ -20,6 +20,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
     private var handle = 0L
+    private var bootTimeoutNanos = 300_000_000_000L
     private var shared: NinePServer? = null
     private var output: (ByteArray) -> Unit = {}
 
@@ -31,7 +32,8 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
             log("VM_CREATE")
             try {
                 shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null)
+                bootTimeoutNanos = if (config.upgradeEdge) 1_200_000_000_000L else 300_000_000_000L
+                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null, config.upgradeEdge)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 NativeBridge.startVm(handle)
@@ -54,7 +56,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
         try {
         var tail = ""
         var booted = false
-        val bootDeadline = System.nanoTime() + 300_000_000_000L
+        val bootDeadline = System.nanoTime() + bootTimeoutNanos
         while (NativeBridge.runningVm(id)) {
             currentCoroutineContext().ensureActive()
             val first = NativeBridge.readVm(id, 50)
@@ -82,7 +84,7 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
                     "Linux kernel panic. See Terminal for diagnostics."
                 }
             }
-            check(booted || System.nanoTime() < bootDeadline) { "Linux did not reach its shell within 5 minutes. See Terminal." }
+            check(booted || System.nanoTime() < bootDeadline) { "Linux did not reach its shell within the startup timeout. See Terminal." }
         }
         while (true) {
             val bytes = NativeBridge.readVm(id, 0)

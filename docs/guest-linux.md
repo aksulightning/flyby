@@ -59,7 +59,27 @@ refresh the pin and provenance together and run the acceptance tests again;
 never silently accept different bytes for the same pin.
 
 Updating the Android app retains an existing SYSTEM disk and its repository
-configuration. Disk Creator makes a fresh Edge installation after confirmation,
+configuration. To upgrade that installation, stop Linux, export its system disk
+in Settings, then choose **Upgrade current disk to Edge** and **Start Edge upgrade**.
+The app boots that same disk with a one-time upgrade request. The current
+initramfs provides the upgrade helper in `/run/flyby`, so older disks do not need
+to have the helper preinstalled. No package commands are typed into the user's
+interactive terminal. The guest obtains network access, saves the old repositories
+as `/etc/apk/repositories.before-edge`, switches to Edge main/community, upgrades
+apk-tools and then all installed packages with `apk upgrade --available`.
+The package manager updates the real release files; the app does not rewrite the
+version label to claim an upgrade. A completed upgrade prints
+`FLYBY_EDGE_UPGRADE_OK`; failures print `FLYBY_EDGE_UPGRADE_FAILED` and continue to
+the normal shell with the error visible for retry/recovery. An already-Edge disk
+returns `FLYBY_EDGE_ALREADY` without requiring the network.
+
+The upgrade start uses at least 512 MiB RAM without changing the saved RAM setting,
+keeps the service wake lock and permits up to 20 minutes for startup. Keep the app
+open and do not Stop during package installation. A failed/interrupted upgrade
+can leave partially updated packages: retry the operation or restore the exported
+disk backup. This is not a transactional filesystem rollback.
+
+Disk Creator makes a fresh Edge installation after confirmation,
 replacing that disk. Export it first if its files or installed packages are needed.
 
 To migrate an existing stock Flyby Alpine installation in place instead, export
@@ -77,4 +97,11 @@ apk update && apk add --upgrade apk-tools && apk upgrade --available
 Check that the upgrade succeeds, then Stop and Start Linux. The app supplies the
 kernel/firmware; installing a guest kernel package does not change the boot image.
 Custom or pinned packages may need manual resolution. The migration is opt-in and
-requires networking; the app does not run package upgrades on an existing disk.
+requires networking; ordinary Start never runs an upgrade automatically.
+
+`scripts/test-edge-upgrade.py` creates a disk from the checksum-pinned original
+3.23.6 minirootfs, verifies its old version, installs `tree` and writes files under
+`/root` and `/etc`. It upgrades that disk using the real boot request, then checks
+Edge, the saved repository list, installed package, file contents and mode after
+a separate restart. Android instrumentation covers the Settings confirmation and
+the already-Edge path through the service/JNI boundary.

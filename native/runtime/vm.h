@@ -15,7 +15,7 @@ constexpr uint64_t Rtc = 0x00101000;
 class Vm {
   public:
     Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "",
-       bool fullSystem = false, bool sharedFolder = false);
+       bool fullSystem = false, bool sharedFolder = false, bool upgradeEdge = false);
     ~Vm();
     Vm(const Vm &) = delete;
     Vm &operator=(const Vm &) = delete;

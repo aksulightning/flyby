@@ -162,6 +162,13 @@ class VmInstrumentation : Instrumentation() {
             }
             sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             clickText("Settings")
+            clickText("Upgrade current disk to Edge", scroll = true)
+            clickText("Start Edge upgrade")
+            await(300_000) { "FLYBY_EDGE_ALREADY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            check(pickerSettings.state.value.memoryMiB == 128) { "Upgrade must not change saved RAM" }
+            runBlocking { vmService.vm.stop() }
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            clickText("Settings")
             clickText("Night")
             val preferences = (targetContext.applicationContext as FlybyApplication).settings
             check(preferences.state.value.theme == ThemeMode.DARK)
@@ -210,7 +217,7 @@ class VmInstrumentation : Instrumentation() {
         finish(result, report)
     }
     private fun clickStart() = clickText("Start")
-    private fun clickText(label: String) {
+    private fun clickText(label: String, scroll: Boolean = false) {
         await(10_000) {
             // Traverse virtual Compose nodes: framework text search may not enumerate them.
             val nodes = mutableListOf<AccessibilityNodeInfo>()
@@ -228,6 +235,7 @@ class VmInstrumentation : Instrumentation() {
                 while (target != null && !target.isClickable) target = target.parent
                 if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { clicked = true; break }
             }
+            if (!clicked && scroll) nodes.firstOrNull { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
             clicked
         }
     }

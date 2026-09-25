@@ -27,12 +27,12 @@ def member(path, name):
     with tarfile.open(path, ignore_zeros=True) as tar:
         return tar.extractfile(name).read()
 
-def initramfs(rootfs, kernel_package, system_root):
+def initramfs(rootfs, kernel_package, system_root, expected_release='Alpine Linux edge', repository_base=BASE):
     entries = {}
     with tarfile.open(rootfs) as tar:
         # tarfile resolves the archive's /etc/os-release -> /usr/lib/os-release link.
-        if b'PRETTY_NAME="Alpine Linux edge"' not in tar.extractfile('./etc/os-release').read():
-            raise ValueError('The bundled root filesystem must be Alpine Edge')
+        if f'PRETTY_NAME="{expected_release}"'.encode() not in tar.extractfile('./etc/os-release').read():
+            raise ValueError(f'The bundled root filesystem must be {expected_release}')
         for item in tar:
             name = item.name.removeprefix('./').rstrip('/')
             if not name: continue
@@ -68,7 +68,15 @@ def initramfs(rootfs, kernel_package, system_root):
         entries[name] = (stat.S_IFREG | mode, value.encode())
     # Explicit Edge repositories in both initramfs and the full persistent seed.
     # Keep testing opt-in; never mix a stable branch into this installation.
-    file('etc/apk/repositories', BASE+'main\n'+BASE+'community\n')
+    file('etc/apk/repositories', repository_base+'main\n'+repository_base+'community\n')
+    file('etc/flyby-upgrade-edge', (ROOT/'native/guest/upgrade-edge.sh').read_text(), 0o755)
+    file('etc/flyby-upgrade-init', '''#!/bin/sh
+if ! /run/flyby/upgrade-edge; then
+    echo FLYBY_EDGE_UPGRADE_FAILED
+    echo 'Edge upgrade did not complete. Read the error above, then retry from Settings or restore your exported backup.'
+fi
+exec /sbin/init
+''', 0o755)
     helper = ROOT / 'out/guest/flyby-grow-root'
     helper.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-static', '-s', '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector', '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start',
@@ -103,6 +111,14 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     mkdir -p /newroot/run /newroot/tmp /newroot/dev /newroot/proc /newroot/sys
     mount -t tmpfs tmpfs /newroot/run || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -t tmpfs -o mode=1777 tmpfs /newroot/tmp || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    # Use current APK helpers even when the persistent root predates Edge support.
+    if grep -q 'flyby.upgrade-edge=1' /proc/cmdline; then
+        modprobe af_packet && modprobe realtek && modprobe r8169 || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+        mkdir -p /newroot/run/flyby
+        cp /etc/flyby-upgrade-edge /newroot/run/flyby/upgrade-edge
+        cp /etc/flyby-upgrade-init /newroot/run/flyby/upgrade-init
+        cp /etc/flyby-dhcp /newroot/run/flyby/upgrade-dhcp
+    fi
     # Mount from the current initrd so older persistent roots also support sharing.
     /etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     if grep -q 'flyby.shared=1' /proc/cmdline; then
@@ -112,6 +128,9 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     mount -o move /dev /newroot/dev || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /sys /newroot/sys || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -o move /proc /newroot/proc || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    if [ -x /newroot/run/flyby/upgrade-init ]; then
+        exec switch_root /newroot /run/flyby/upgrade-init
+    fi
     exec switch_root /newroot /sbin/init
 fi
 /etc/flyby-shared || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }

@@ -102,8 +102,10 @@ class VmService : Service() {
     @SuppressLint("WakelockTimeout")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> {
+            ACTION_START, ACTION_UPGRADE_EDGE -> {
                 if (storage.value.busy) return START_NOT_STICKY
+                val upgradeEdge = intent.action == ACTION_UPGRADE_EDGE
+                if (upgradeEdge && !idle()) return START_NOT_STICKY
                 // Must run synchronously before provisioning assets or initializing native RAM.
                 val notification = notification()
                 if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -115,7 +117,8 @@ class VmService : Service() {
                     ).apply { setReferenceCounted(false); acquire() }
                 }
                 scope.launch {
-                    val accepted = vm.start(VmConfig(memoryMiB = settings.state.value.memoryMiB)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
+                    val memory = if (upgradeEdge) maxOf(512, settings.state.value.memoryMiB) else settings.state.value.memoryMiB
+                    val accepted = vm.start(VmConfig(memoryMiB = memory, upgradeEdge = upgradeEdge)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
                     if (!accepted && vm.status.value.state in listOf(VmState.STOPPED, VmState.ERROR)) {
                         releaseWakeLock()
                         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -234,6 +237,7 @@ class VmService : Service() {
         const val ACTION_EXPORT = "io.github.aksulightning.flyby.EXPORT"
         const val ACTION_IMPORT = "io.github.aksulightning.flyby.IMPORT"
         const val ACTION_START = "io.github.aksulightning.flyby.START"
+        const val ACTION_UPGRADE_EDGE = "io.github.aksulightning.flyby.UPGRADE_EDGE"
         const val ACTION_STOP = "io.github.aksulightning.flyby.STOP"
         private const val CHANNEL = "flyby_linux"
         private const val NOTIFICATION = 1

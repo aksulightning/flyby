@@ -114,6 +114,14 @@ class MainActivity : ComponentActivity() {
                     } else if (settingsVisible) {
                         SettingsScreen(settings, idle, transfer, preferences,
                             { connected?.setMemory(it) }, { createDisk(it) },
+                            {
+                                settingsVisible = false
+                                terminalVisible = true
+                                try {
+                                    connectionError = null
+                                    startForegroundService(Intent(this, VmService::class.java).setAction(VmService.ACTION_UPGRADE_EDGE))
+                                } catch (failure: RuntimeException) { connectionError = "Cannot start Edge upgrade: ${failure.message}" }
+                            },
                             { sharedPicker.launch(settings.sharedTree?.let(android.net.Uri::parse)) },
                             { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },
