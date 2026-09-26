@@ -35,6 +35,30 @@ static void pointer(flyby::Vm &vm, unsigned x, unsigned y, unsigned buttons) {
     p[4] = buttons; p[5] = x; p[6] = x >> 8; p[7] = y; p[8] = y >> 8;
     vm.displayInput(p.data(), p.size());
 }
+static void paste(flyby::Vm &vm, const std::string &text) {
+    std::vector<uint8_t> reports;
+    auto report = [&](unsigned code, unsigned mods = 0) {
+        std::array<uint8_t,16> p{'F','I',1,1};
+        p[4] = mods; p[6] = code;
+        reports.insert(reports.end(), p.begin(), p.end());
+    };
+    for (char c : text) {
+        if (c >= 'a' && c <= 'z') report(4 + c - 'a');
+        else if (c == ' ') report(44);
+        else if (c == '>') { report(0, 2); report(55, 2); report(0, 2); }
+        else if (c == '/') report(56);
+        else if (c == '-') report(45);
+        else if (c == '\n') report(40);
+        else throw std::runtime_error("Unknown paste character");
+        report(0);
+    }
+    // IME commits enqueue whole report batches with no per-key host sleeps.
+    for (size_t offset = 0; offset < reports.size(); offset += 4096) {
+        const auto size = std::min(size_t(4096), reports.size() - offset);
+        if (!vm.displayInput(reports.data() + offset, size))
+            throw std::runtime_error("Unexpected paste backpressure");
+    }
+}
 static std::vector<int32_t> waitForDesktop(flyby::Vm &vm) {
     // OpenRC's "started" and the Wayland socket precede the first rendered
     // client frame. Font discovery and software rendering are slow on RV64.
@@ -94,6 +118,13 @@ int main(int argc, char **argv) {
             }
             shell(vm, "i=0; until grep -qx gui /root/flyby-gui-test 2>/dev/null; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; grep -qx gui /root/flyby-gui-test && echo WAYLAND_KEYBOARD_OK\n");
             wait(vm, "WAYLAND_KEYBOARD_OK\r\n", 40);
+            paste(vm, "echo android > /root/wayland-android-test\n");
+            shell(vm, "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do i=$((i+1)); [ $i -lt 20 ] || break; sleep 1; done; grep -qx android /root/wayland-android-test && echo WAYLAND_PASTE_OK\n");
+            wait(vm, "WAYLAND_PASTE_OK\r\n", 30);
+            pixels = vm.displayFrame();
+            std::ofstream finalImage(argv[3], std::ios::binary);
+            finalImage << "P6\n800 600\n255\n";
+            for (auto p : pixels) { char rgb[]{char(p >> 16), char(p >> 8), char(p)}; finalImage.write(rgb, 3); }
             shell(vm, "dd if=/dev/input/event1 of=/tmp/pointer-event bs=24 count=1 2>/dev/null &\n");
             std::this_thread::sleep_for(500ms);
             pointer(vm, 350, 280, 0); pointer(vm, 350, 280, 1); pointer(vm, 350, 280, 0);

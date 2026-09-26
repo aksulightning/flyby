@@ -48,6 +48,10 @@ Existing disks are never converted or upgraded automatically by this feature.
   input and desktop services. Other images continue to use their serial terminal.
 * Android copies at most ten frames per second while Display is resumed. This
   bounds host work; it is not a promise of ten guest-rendered frames per second.
+* The display UART delivers at most one 16-byte HID report every 25 ms. This
+  keeps IME/paste bursts in the bounded host queue while Weston consumes input,
+  avoiding evdev `SYN_DROPPED` and lost characters. Large pasted texts take time
+  to type; serial terminal and management UARTs are not rate-limited.
 * GUI programs run as the prototype's guest root user, like its existing terminal.
 * No Xorg server, XWayland or Weston X11 backend is installed. Alpine's shared
   Cairo/Mesa dependencies do include X11 client libraries; they do not provide

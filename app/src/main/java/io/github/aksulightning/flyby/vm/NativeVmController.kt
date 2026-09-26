@@ -112,7 +112,9 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
         mutex.withLock { handle != 0L && NativeBridge.displayFrameVm(handle, pixels) }
     }
     override suspend fun displayInput(reports: ByteArray) = withContext(Dispatchers.IO) {
-        withTimeout(5_000) {
+        // A full 4 KiB chunk contains 256 paced HID reports. Allow time for
+        // that much queue space to drain while the compositor handles input.
+        withTimeout(15_000) {
             while (!mutex.withLock { handle == 0L || NativeBridge.displayInputVm(handle, reports) }) delay(10)
         }
     }
