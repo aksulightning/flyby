@@ -1,60 +1,119 @@
-# First Linux guest (Phase 3, not built yet)
+# Alpine riscv64 guest
 
-No kernel, initramfs, BusyBox binary or guest build script is bundled in Phase 1.
-This document records the requirements for implementing the next guest build,
-not a successful boot report. Use an independently built Linux userspace: the
-Android NDK/bionic toolchain is for the **host QEMU**, not the guest BusyBox.
+Run `python3 scripts/prepare-alpine-riscv64.py`. It produces `kernel`, `firmware`,
+`initrd`, `disk.seed` and a SHA-256 manifest in `app/src/main/assets/vm/` using pinned official
+Alpine archives. These generated resources are packaged into the APK, not Git.
+`out/downloads` caches the original archives. No random prebuilt image is accepted.
 
-## Kernel and console
+Inputs:
+- Alpine Edge minirootfs 20260805 riscv64 (`edge/releases/riscv64`).
+- Alpine Edge linux-lts 6.18.53-r0: gzip-compressed Image and its package kernel config.
+- Alpine Edge OpenSBI 1.9-r0: `generic/firmware/fw_jump.bin`.
 
-The initial source reference is Linux **v6.12**, arm64 `defconfig`. Before
-producing a distributed image choose and pin a maintained 6.12.y patch release,
-verify its signature/checksum and preserve its full `.config` and patches.
+Exact URLs/checksums are source-controlled in the script. Kernel config confirms
+built-in initramfs, gzip, devtmpfs and 8250 serial console. Optional ISA features
+are discovered at runtime from the generated FDT. No patched Linux ABI or fake
+Alpine identification is used. To rebuild instead of using official packages,
+check out each exact aports revision in `docs/licenses.md` and use that package's
+APKBUILD, sources, config and patches with Alpine's `abuild` for riscv64. That full
+cross-build has not been run here; provisioning and booting the official artifacts
+have been run. Do not substitute arbitrary firmware or kernels without retesting.
 
-QEMU 9.2.4 `virt` provides a PL011 UART. The Linux v6.12
-[`amba-pl011.c`](https://github.com/torvalds/linux/blob/v6.12/drivers/tty/serial/amba-pl011.c)
-names the driver/console `ttyAMA`; the first UART is `ttyAMA0`.
-The ARM64 [`defconfig`](https://github.com/torvalds/linux/blob/v6.12/arch/arm64/configs/defconfig)
-enables both `CONFIG_SERIAL_AMBA_PL011=y` and
-`CONFIG_SERIAL_AMBA_PL011_CONSOLE=y`. The command builder therefore uses
-`console=ttyAMA0,115200 rdinit=/init panic=0`.
+The script creates a root-owned newc archive with fixed timestamps and gzip mtime.
+It uses the real minirootfs and installs a small `/init`: mount proc/sys/devtmpfs/
+devpts, set hostname, exec BusyBox init. Its inittab starts a login shell on ttyS0
+and a respawning private control daemon on ttyS1. The shell prints
+`FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. This is an intentional development
+autologin root environment, no password/login management. Alpine's default SSL CA
+bundle is retained for HTTPS. The RTL8169 NIC uses RVVM user-mode sockets.
+Kernel modules and their transitive dependencies come from the pinned linux-lts
+APK. `scripts/guest_modules.py` declares the same module set for initramfs,
+Minimal Alpine and Service Alpine. Selected aliases and soft dependencies are
+included for modprobe and kernel-triggered module requests.
 
-Required built-in options include ARM64, initramfs/initrd and gzip support,
-`CONFIG_DEVTMPFS`, `CONFIG_PROC_FS`, `CONFIG_SYSFS`, `CONFIG_TTY`, the PL011
-driver/console, and ELF binary support. Do not build critical boot drivers as
-modules. Start with `make ARCH=arm64 defconfig` using a pinned aarch64 Linux
-cross-compiler, preserve the resulting `.config`, and produce
-`arch/arm64/boot/Image`. `CONFIG_DEVTMPFS_MOUNT` alone does not mount `/dev` for
-an initramfs `/init`; mount it explicitly.
+| Use | Included modules |
+| --- | --- |
+| Program formats | `binfmt_misc` |
+| Filesystems and disk images | `ext4`, `overlay`, `fuse`, `loop`, `squashfs`, `vfat`, `exfat`, `nls_cp437`, `nls_utf8` |
+| Virtual networks | `tun`, `veth`, `bridge`, `br_netfilter`, `8021q`, `dummy` |
+| VPN | `wireguard` and its crypto/tunnel dependencies |
+| Firewall and NAT | `nf_conntrack`, `nf_nat`, `nf_tables`, `nft_ct`, `nft_chain_nat`, `nft_nat`, `nft_masq`, `nft_redir`, `nft_reject`, `nft_reject_inet`, `nft_log`, `nf_log_syslog`, `nft_limit`, `nft_compat`, `xt_conntrack`, `xt_MASQUERADE`, `xt_addrtype`, `xt_comment`, `xt_tcpudp` |
+| VM devices and shared folder | `realtek`, `r8169`, `af_packet`, `9p`, `9pnet`, `9pnet_fd` |
 
-## Initramfs implementation criteria
+The additional modules are available on demand; they are not all loaded at boot.
+For example, enable the binfmt_misc registration interface with:
 
-Use a pinned BusyBox release, GPL-2.0-only, built statically against a guest
-Linux libc. Its required applets include `sh`/ash, `mount`, `setsid`, `cttyhack`,
-`stty`, `poweroff`, `reboot`, `cat`, `echo` and filesystem utilities. The actual
-BusyBox version and libc must be selected and licensed before adding the build.
+```sh
+modprobe binfmt_misc
+mkdir -p /proc/sys/fs/binfmt_misc
+mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+```
 
-The future `scripts/build-test-initramfs.sh` must make a reproducible `newc`
-archive (root UID/GID and deterministic timestamps/order), containing `/init`,
-BusyBox and applet links, empty `/proc`, `/sys`, `/dev`, `/tmp` and `/root`.
-Provide `/dev/console` (5:1) and `/dev/null` (1:3) using a cpio manifest/fakeroot,
-without requiring host root or privileged mknod.
+Register the desired interpreter separately. This supplies kernel support, not
+QEMU interpreters, a container engine, VPN configuration or FUSE daemons. Install
+userspace tools such as `nftables`, `iproute2`, `wireguard-tools`, `fuse3` or
+filesystem utilities with apk as needed. Existing persistent disks retain their
+previous module files; the expanded set is installed with a newly created disk.
 
-`/init` must mount proc, sysfs and devtmpfs; attach standard streams to the
-PL011 console; print exactly `Hello from Linux`; and run an interactive shell
-with a controlling tty (`setsid` plus `cttyhack`). Keep PID 1 alive and handle
-shell exit. Set `TERM` to match the implemented emulator (initial diagnostics
-are not an ANSI emulator). Verify Ctrl-C/job control rather than assuming pipes
-alone provide a tty. Serial-size changes will need a guest-visible mechanism;
-resizing a host pipe does not change the guest tty window size.
+Both image tests load every requested module, resolve TUN/veth aliases and execute
+an extension handler through binfmt_misc. They also verify OverlayFS copy-up and
+opening `/dev/fuse`. The Minimal image is exercised at 128 and 768 MiB, while the
+Android test boots both variants at 128 MiB.
 
-## Acceptance test to implement with the images
+The firmware, Image, FDT and initrd layout is in `native/runtime/vm.h` and
+[the runtime document](riscv-runtime.md). Serial console is NS16550 `ttyS0`, verified
+by the running guest. The control daemon handles Stop via BusyBox poweroff and
+resize via `stty -F /dev/ttyS0`; a native readiness gate prevents boot-time loss.
 
-A developer smoke test must launch QEMU as an argv list with `Image` and the
-initramfs, drain diagnostics, fail on early exit, and wait with a finite timeout
-for the real `Hello from Linux` serial marker. Then send a unique echo token,
-require the shell's reply, stop and reap QEMU. Running this with host Linux QEMU
-tests the guest only; the same scenario inside the APK on ARM64 Android is still
-required. Test restart and process cleanup before adding persistent storage.
+Run `python3 scripts/smoke-boot.py` after building the host target. It boots the
+same board, waits for the real Alpine shell, sends commands, checks output and
+powers off. `ctest` additionally tests the private resize/Stop path and Ctrl+C.
+Failure keeps serial diagnostics in `out/smoke-boot.log`. The root filesystem is
+in RAM except `/root` and `/data`, which use the private ext4/NVMe disk. See
+[storage/network](storage-network.md) for seed generation, lifecycle and tests.
 
-No persistent disk or outbound networking is configured at this stage.
+## Edge and existing installations
+
+New installations and Disk Creator use the official Edge 20260805 snapshot
+(`VERSION_ID=3.25.0_alpha20260805`, `PRETTY_NAME="Alpine Linux edge"`).
+Both initramfs and SYSTEM seed configure exactly these repositories:
+
+```text
+https://dl-cdn.alpinelinux.org/alpine/edge/main
+https://dl-cdn.alpinelinux.org/alpine/edge/community
+```
+
+`testing` is not enabled by default. Build inputs remain version/checksum-pinned;
+`apk update` fetches the current Edge package indexes. Edge packages can change
+between builds and runtime upgrades. If a pinned package disappears upstream,
+refresh the pin and provenance together and run the acceptance tests again;
+never silently accept different bytes for the same pin.
+
+## Image variants
+
+Disk Creator offers **Minimal Alpine** (the default, existing BusyBox init) and
+**Service Alpine** (OpenRC 0.63.2-r1, including `openrc-init` as PID 1).
+Both use the same pinned Edge base, kernel, networking, 1–100 GiB persistent
+root and Android `/shared` support. Minimal's boot and package set stay unchanged.
+Service adds the pinned OpenRC packages and dependencies listed in provenance.
+The build uses a pinned x86_64 Linux `apk.static` with signature verification,
+offline dependency resolution and no cross-architecture install scripts.
+Runlevels are configured explicitly; no package metadata is fabricated.
+
+Service enables `flyby-boot`, `flyby-control`, `flyby-console` and `flyby-network`.
+The console and private control channel are supervised. The initramfs already
+mounts the virtual filesystems; generic hardware discovery is not needed.
+Use `rc-service NAME start|stop|restart|status` and `rc-update add NAME default`
+to manage services. Service shutdown uses `openrc-shutdown`, runs stop hooks,
+and remounts filesystems read-only; app Stop allows up to 30 seconds for this.
+
+Updating the Android app retains the existing disk. To try either image, stop
+Linux and create a disk in Settings, confirming replacement. Export first if
+its contents are needed. There is no in-place Edge migration button in this
+prototype. Imported disks retain their own init and packages; the creation
+selector is not an assertion about the active disk.
+
+`scripts/test-service.py` boots the real Service seed twice and checks PID 1,
+package registration, service start/stop/restart, the shutdown hook and enabled
+service persistence. Android instrumentation creates a Service disk through the
+service intent, boots it at 128 MiB, verifies OpenRC and exercises export/import.

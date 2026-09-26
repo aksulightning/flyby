@@ -31,6 +31,125 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - name: Install Android SDK packages
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
+      - name: Prepare verified native sources and Alpine guest
+        run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+      - name: Native build and Alpine shell smoke test
+        run: |
+          cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host -j2
+          ctest --test-dir out/host --output-on-failure
+          python3 scripts/smoke-boot.py
+          python3 scripts/test-storage.py
+          python3 scripts/test-storage.py --system --network
+          FLYBY_RAM_MIB=128 FLYBY_DISK_GIB=2 python3 scripts/test-storage.py --system
+          FLYBY_RAM_MIB=768 FLYBY_DISK_GIB=100 python3 scripts/test-storage.py --system
+          python3 scripts/test-network.py
+          python3 scripts/test-service.py
+          python3 scripts/test-wayland.py
       - name: Unit tests, debug APK and lint
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
+        run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
+
+  android-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
+      - name: Prepare and build emulator test APKs
+        run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+          ./gradlew --no-daemon -PflybyAbi=x86_64 assembleDebug assembleDebugAndroidTest
+      - name: Enable Android emulator acceleration on CI host
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot Alpine inside Android and verify lifecycle
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2, Apache-2.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          ram-size: 3072M
+          disable-linux-hw-accel: false
+          script: python3 scripts/test-android.py --network
+
+  nightly:
+    needs: [build, android-runtime]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/codex/riscv-phase2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      # Development signing only. Never use this cache for a production signing key.
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4, MIT
+        id: signing
+        with:
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+      - name: Provision explicit development signing key
+        run: |
+          mkdir -p out/signing
+          if [ ! -s out/signing/debug.keystore ]; then
+            keytool -genkeypair -keystore out/signing/debug.keystore -storetype JKS \
+              -alias androiddebugkey -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
+          fi
+      - name: Install guest helper compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu
+      - name: Prepare guest and complete corresponding sources
+        run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+          python3 scripts/bundle-sources.py
+      - name: Build identifiable ARM64 nightly
+        run: |
+          ./gradlew --no-daemon -PflybyNightly=true assembleDebug \
+            -PflybyVersionName="0.2.0-nightly.${GITHUB_RUN_NUMBER}+${GITHUB_SHA:0:7}" \
+            -PflybyVersionCode="$((10000 + GITHUB_RUN_NUMBER))" \
+            -PflybyCommit="$GITHUB_SHA"
+      - uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809
+        if: steps.signing.outputs.cache-hit != 'true'
+        with:
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+      - name: Require a real signing-key cache roundtrip
+        run: rm out/signing/debug.keystore
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809
+        with:
+          path: out/signing/debug.keystore
+          key: flyby-nightly-debug-signing-v2
+          fail-on-cache-miss: true
+      - name: Publish verified development prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish-nightly.py

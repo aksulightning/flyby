@@ -27,8 +27,8 @@ class QemuCommandBuilderTest {
     }
 
     @Test fun customResourceValuesAreValidatedAndUsed() {
-        val args = QemuCommandBuilder.build(VmConfig(1024, 2), temporary.vmFiles())
-        assertEquals("1024", args[args.indexOf("-m") + 1])
+        val args = QemuCommandBuilder.build(VmConfig(768, 2), temporary.vmFiles())
+        assertEquals("768", args[args.indexOf("-m") + 1])
         assertEquals("2", args[args.indexOf("-smp") + 1])
     }
 

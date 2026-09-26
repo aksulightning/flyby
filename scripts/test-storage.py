@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Two separate RVVM processes must share actual ext4 data, not retained RAM."""
+import gzip
+import base64
+import os
+from pathlib import Path
+import selectors
+import shutil
+import subprocess
+import time
+import uuid
+import sys
+import textwrap
+from module_checks import FILESYSTEM_MODULE_CHECKS
+
+ROOT = Path(__file__).resolve().parents[1]
+GUEST = ROOT / 'app/src/main/assets/vm'
+SYSTEM = '--system' in sys.argv
+OUT = ROOT / ('out/system-test' if SYSTEM else 'out/storage-test')
+OUT.mkdir(parents=True, exist_ok=True)
+DISK = OUT / 'disk.raw'
+TOKEN = uuid.uuid4().hex
+
+
+def boot(command, marker, name):
+    proc = subprocess.Popen([str(ROOT/'out/host/flyby-host'), str(GUEST), str(DISK)] + (['--system'] if SYSTEM else []),
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    selector = selectors.DefaultSelector()
+    selector.register(proc.stdout, selectors.EVENT_READ)
+    buffer = b''
+    sent = False
+    try:
+        with (OUT / name).open('wb') as log:
+            deadline = time.monotonic() + 180
+            while time.monotonic() < deadline:
+                for key, _ in selector.select(1):
+                    data = key.fileobj.read1(65536)
+                    log.write(data); log.flush(); buffer += data
+                if b'FLYBY_STORAGE_ERROR' in buffer or b'Kernel panic' in buffer or b'Initramfs unpacking failed' in buffer:
+                    raise RuntimeError(f'Guest boot failed: {name}')
+                network_ready = '--network' not in sys.argv or b'FLYBY_NETWORK_READY' in buffer
+                if not sent and b'FLYBY_ALPINE_READY' in buffer and network_ready:
+                    assert b'FLYBY_STORAGE_READY' in buffer
+                    # BusyBox's interactive editor truncates long input lines.
+                    # Transfer a script over bounded lines instead; base64 cannot
+                    # contain the heredoc delimiter, regardless of shell quoting.
+                    encoded = base64.b64encode(command.encode()).decode()
+                    packet = "base64 -d > /tmp/flyby-accept.sh <<'FLYBY_TEST_EOF'\n" + \
+                        '\n'.join(textwrap.wrap(encoded, 256)) + \
+                        "\nFLYBY_TEST_EOF\nsh /tmp/flyby-accept.sh || printf '\\nFLYBY_TEST_FAILED\\n'\n"
+                    proc.stdin.write(packet.encode()); proc.stdin.flush()
+                    sent = True; buffer = b''
+                if sent and b'\r\nFLYBY_TEST_FAILED\r\n' in buffer:
+                    raise RuntimeError(f'Guest assertion failed: {name}')
+                if sent and marker.encode() in buffer:
+                    proc.stdin.write(b'poweroff\n'); proc.stdin.flush()
+                    # communicate drains output, avoiding pipe-fill deadlock during shutdown.
+                    rest, _ = proc.communicate(timeout=30)
+                    log.write(rest)
+                    assert proc.returncode == 0
+                    return
+                if proc.poll() is not None: break
+            raise RuntimeError(f'Storage assertion failed: {name}; inspect {OUT}')
+    except BaseException:
+        print((OUT/name).read_text(errors='replace')[-20000:], flush=True)
+        raise
+    finally:
+        selector.close()
+        if proc.poll() is None: proc.kill(); proc.wait()
+
+
+if __name__ == '__main__':
+    with gzip.open(GUEST/('system.seed' if SYSTEM else 'disk.seed'), 'rb') as source, DISK.open('wb') as dest:
+        shutil.copyfileobj(source, dest)
+    if SYSTEM:
+        gib = int(os.environ.get('FLYBY_DISK_GIB', '1'))
+        if not 1 <= gib <= 100: raise ValueError('Invalid test disk size')
+        with DISK.open('r+b') as stream: stream.truncate(gib * 1024**3)
+        install = "apk add --no-cache tree && " if '--network' in sys.argv else ""
+        verify = "apk info -e tree && tree --version && " if '--network' in sys.argv else ""
+        capacity = f"[ \"$(df -k / | awk 'END {{print $2}}')\" -gt {int(gib * 1024**2 * .85)} ] && "
+        edge = "grep -qx 'PRETTY_NAME=\"Alpine Linux edge\"' /etc/os-release && " + \
+            "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/main' /etc/apk/repositories && " + \
+            "grep -qxF 'https://dl-cdn.alpinelinux.org/alpine/edge/community' /etc/apk/repositories && "
+        boot(FILESYSTEM_MODULE_CHECKS + capacity + edge + install + f"echo {TOKEN} > /etc/flyby-persist-test && echo {TOKEN} > /usr/local/persist-test && sync && printf '\\nSYSTEM_WRITE_OK\\n'",
+             '\r\nSYSTEM_WRITE_OK\r\n', 'write.log')
+        boot(verify + f"[ \"$(cat /etc/flyby-persist-test)\" = {TOKEN} ] && [ \"$(cat /usr/local/persist-test)\" = {TOKEN} ] && grep '/dev/nvme0n1 / ext4' /proc/mounts && printf '\\nSYSTEM_PERSIST_OK\\n'",
+             '\r\nSYSTEM_PERSIST_OK\r\n', 'read.log')
+        print('PASS: common modules, binfmt dispatch, overlay copy-up, FUSE device and persistent ext4 root; package test=' + str('--network' in sys.argv))
+        sys.exit(0)
+    boot(f"echo {TOKEN} > /root/persist-test; echo {TOKEN} > /data/persist-test; sync; printf '\\nWRITE_OK\\n'",
+         '\r\nWRITE_OK\r\n', 'write.log')
+    boot(f"[ \"$(cat /root/persist-test)\" = {TOKEN} ] && [ \"$(cat /data/persist-test)\" = {TOKEN} ] && printf '\\nPERSISTENCE_OK\\n'",
+         '\r\nPERSISTENCE_OK\r\n', 'read.log')
+    print('PASS: /root and /data survive guest poweroff and a fresh RVVM process')

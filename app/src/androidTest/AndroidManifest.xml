@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Test APK only: allows the target app to exercise real SAF document calls. -->
+        <provider android:name="io.github.aksulightning.flyby.SharedTestProvider"
+            android:authorities="io.github.aksulightning.flyby.test.shared"
+            android:permission="android.permission.MANAGE_DOCUMENTS"
+            android:exported="true" android:grantUriPermissions="true" />
+        <activity android:name="io.github.aksulightning.flyby.SharedTestSetupActivity" android:exported="true" />
+    </application>
+</manifest>

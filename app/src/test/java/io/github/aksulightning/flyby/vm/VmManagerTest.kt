@@ -13,7 +13,7 @@ import org.junit.rules.TemporaryFolder
 class VmManagerTest {
     @get:Rule val temporary = TemporaryFolder()
 
-    private class FakeController : QemuController {
+    private class FakeController : VmController {
         var starts = 0
         var stops = 0
         var forceStops = 0
@@ -23,7 +23,7 @@ class VmManagerTest {
         var spawnGate: CompletableDeferred<Unit>? = null
         var exit = CompletableDeferred<Int>()
         var lastInput: ByteArray? = null
-        override suspend fun start(arguments: List<String>, onOutput: (ByteArray) -> Unit) {
+        override suspend fun start(config: VmConfig, files: GuestFiles, onOutput: (ByteArray) -> Unit) {
             starts++
             if (failStart) error("spawn failed")
             spawnGate?.await()
@@ -43,7 +43,7 @@ class VmManagerTest {
         val fake = FakeController()
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
         assertEquals(VmState.STOPPED, manager.status.value.state)
-        assertTrue(manager.start(VmConfig(), temporary.vmFiles()))
+        assertTrue(manager.start(VmConfig(), temporary.guestFiles()))
         assertEquals(VmState.STARTING, manager.status.value.state)
         runCurrent()
         assertEquals(VmState.RUNNING, manager.status.value.state)
@@ -58,7 +58,7 @@ class VmManagerTest {
     @Test fun duplicateStartRejectedWhileStartingAndRunning() = runTest {
         val fake = FakeController()
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        val files = temporary.vmFiles()
+        val files = temporary.guestFiles()
         manager.start(VmConfig(), files)
         assertFalse(manager.start(VmConfig(), files))
         runCurrent()
@@ -70,7 +70,7 @@ class VmManagerTest {
     @Test fun immediateStopDoesNotLeaveStartingStateStuck() = runTest {
         val fake = FakeController()
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        manager.start(VmConfig(), temporary.vmFiles())
+        manager.start(VmConfig(), temporary.guestFiles())
         manager.stop()
         assertEquals(VmState.STOPPED, manager.status.value.state)
         assertEquals(0, fake.starts)
@@ -79,7 +79,7 @@ class VmManagerTest {
     @Test fun stopDuringSpawnCleansUp() = runTest {
         val fake = FakeController().apply { spawnGate = CompletableDeferred() }
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        manager.start(VmConfig(), temporary.vmFiles())
+        manager.start(VmConfig(), temporary.guestFiles())
         runCurrent()
         manager.stop()
         assertEquals(VmState.STOPPED, manager.status.value.state)
@@ -89,7 +89,7 @@ class VmManagerTest {
     @Test fun nonzeroExitAndRetry() = runTest {
         val fake = FakeController()
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        val files = temporary.vmFiles()
+        val files = temporary.guestFiles()
         manager.start(VmConfig(), files)
         runCurrent()
         fake.exit.complete(42)
@@ -106,7 +106,7 @@ class VmManagerTest {
     @Test fun spawnFailureIsReportedAndCleanedUp() = runTest {
         val fake = FakeController().apply { failStart = true }
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        manager.start(VmConfig(), temporary.vmFiles())
+        manager.start(VmConfig(), temporary.guestFiles())
         runCurrent()
         assertEquals(VmState.ERROR, manager.status.value.state)
         assertEquals("spawn failed", manager.status.value.error)
@@ -116,25 +116,35 @@ class VmManagerTest {
     @Test fun invalidConfigNeverSpawns() = runTest {
         val fake = FakeController()
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        manager.start(VmConfig(memoryMiB = 0), temporary.vmFiles())
+        manager.start(VmConfig(memoryMiB = 0), temporary.guestFiles())
         runCurrent()
         assertEquals(VmState.ERROR, manager.status.value.state)
         assertEquals(0, fake.starts)
     }
 
-    @Test fun unavailableProductionControllerNeverPretendsToRun() = runTest {
-        val manager = VmManager(backgroundScope, ioDispatcher = StandardTestDispatcher(testScheduler))
-        manager.start(VmConfig(), temporary.vmFiles())
+    @Test fun provisioningFailureIsReportedWithoutStartingNative() = runTest {
+        val fake = FakeController()
+        val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
+        manager.start(VmConfig()) { error("Guest checksum mismatch") }
         runCurrent()
         assertEquals(VmState.ERROR, manager.status.value.state)
-        assertTrue(manager.status.value.error!!.contains("Phase 1"))
+        assertEquals("Guest checksum mismatch", manager.status.value.error)
+        assertEquals(0, fake.starts)
+    }
+
+    @Test fun unavailableProductionControllerNeverPretendsToRun() = runTest {
+        val manager = VmManager(backgroundScope, ioDispatcher = StandardTestDispatcher(testScheduler))
+        manager.start(VmConfig(), temporary.guestFiles())
+        runCurrent()
+        assertEquals(VmState.ERROR, manager.status.value.state)
+        assertTrue(manager.status.value.error!!.contains("Native VM runtime"))
     }
 
     @Test fun timeoutFallsBackToForceStopAndRejectsRestartWhileStopping() = runTest {
         val fake = FakeController().apply { hangOnStop = true }
         val manager = VmManager(backgroundScope, fake, shutdownTimeoutMs = 100,
             ioDispatcher = StandardTestDispatcher(testScheduler))
-        val files = temporary.vmFiles()
+        val files = temporary.guestFiles()
         manager.start(VmConfig(), files)
         runCurrent()
         val stopping = async { manager.stop() }
@@ -155,7 +165,7 @@ class VmManagerTest {
             ioDispatcher = StandardTestDispatcher(testScheduler))
         try { manager.sendInput("secret".toByteArray()); fail("must reject input while stopped") }
         catch (_: IllegalStateException) { }
-        manager.start(VmConfig(), temporary.vmFiles())
+        manager.start(VmConfig(), temporary.guestFiles())
         runCurrent()
         manager.sendInput("secret".toByteArray())
         assertArrayEquals("secret".toByteArray(), fake.lastInput)
@@ -166,7 +176,7 @@ class VmManagerTest {
     @Test fun failedCleanupBlocksRestartUntilForceStopSucceeds() = runTest {
         val fake = FakeController().apply { failCleanup = true }
         val manager = VmManager(backgroundScope, fake, ioDispatcher = StandardTestDispatcher(testScheduler))
-        val files = temporary.vmFiles()
+        val files = temporary.guestFiles()
         manager.start(VmConfig(), files)
         runCurrent()
         manager.forceStop()

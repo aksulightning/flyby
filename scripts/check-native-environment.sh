@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Prerequisite check only. This does not claim to build QEMU for Android.
+# Historical Phase 1 QEMU prerequisite check; not used by Flyby Phase 2.
+# For the active runtime use scripts/build-native-android.sh.
 set -euo pipefail
 if [[ $# -ne 1 || ${1:-} == --help ]]; then
   echo "Usage: ANDROID_NDK_HOME=/path/to/ndk/27.2.12479018 $0 /path/to/qemu-9.2.4"

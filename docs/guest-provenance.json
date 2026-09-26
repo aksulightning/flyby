@@ -1,0 +1,1610 @@
+{
+  "branch": "edge",
+  "rootfs_snapshot": "20260805",
+  "artifacts": {
+    "linux-lts.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/linux-lts-6.18.53-r0.apk",
+      "sha256": "eeadfce6e7a3740ffda666b1d694ef23ecc04007b4f989198208fe61e6b0fda3"
+    },
+    "opensbi.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/opensbi-1.9-r0.apk",
+      "sha256": "a27f535aeb52580a7c2b531999fef249e8d402af25e276e6c269188c38889c3c"
+    },
+    "alpine-minirootfs.tar.gz": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/releases/riscv64/alpine-minirootfs-20260805-riscv64.tar.gz",
+      "sha256": "fc8f2160b00fea310db5c2e49f8f57582ae5e3f870e7e6ef3859db6ed6682e5a"
+    },
+    "openrc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-0.63.2-r1.apk",
+      "sha256": "4c0db28380ddd12ba945262fbe1d652200efa6cd2617f16782673ab02f996fc4"
+    },
+    "openrc-init.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-init-0.63.2-r1.apk",
+      "sha256": "7508f057a792e797b7835791ce284b49c281504d77c11a7723c51954faf2f9bd"
+    },
+    "openrc-user.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/openrc-user-0.63.2-r1.apk",
+      "sha256": "d4cc2a5a276461259944363e12b346d8602fba38195e5bdc171d54d62619b663"
+    },
+    "libcap2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libcap2-2.78-r0.apk",
+      "sha256": "5b750d8ab948fedeb2c4b2eb94e04ef72c6025a5e68595c2401d6824b61f3483"
+    },
+    "busybox-ifupdown.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/busybox-ifupdown-1.38.0-r7.apk",
+      "sha256": "8e821df3c3694f4a0c325361837de1cbca5ac2e23752a91c928076da3767fb9d"
+    },
+    "brotli-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/brotli-libs-1.2.0-r1.apk",
+      "sha256": "89bd0f5db4a9f9659794215040674fc6473e24caf646234a795d38e963db7379"
+    },
+    "cairo.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/cairo-1.18.4-r1.apk",
+      "sha256": "c848329ed9f1b10083bb59d7115dd1267b24dcc1be9c3ec63a2b396ddfeeba4b"
+    },
+    "encodings.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/encodings-1.1.0-r0.apk",
+      "sha256": "9c38dced80738403392aa2ae2124d759a8177afef3dbdff260570da8e1b4595e"
+    },
+    "eudev.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/eudev-3.2.14-r8.apk",
+      "sha256": "b95618a9913c191c4e5ad21ae728fc11a96153f134104d753097ea1a3d348426"
+    },
+    "eudev-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/eudev-libs-3.2.14-r8.apk",
+      "sha256": "7d7de65987bcb54a9de791f13759cf8ec1b8b47531bd73aa19f4cde7654f30cc"
+    },
+    "eudev-openrc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/eudev-openrc-3.2.14-r8.apk",
+      "sha256": "1a43b17201c43769ae38cd132acbdb122a3cd8e5ee6a18e8b0b82a418c943b06"
+    },
+    "font-dejavu.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/font-dejavu-2.37-r6.apk",
+      "sha256": "b3866a5418a4172c3d943db1177583a7952802feba417de2a12ebac980eec28e"
+    },
+    "fontconfig.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/fontconfig-2.18.1-r0.apk",
+      "sha256": "faee627d476e13d8ccc2e64c9d07d12b6ac0895d29da245eae433e121393822c"
+    },
+    "freetype.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/freetype-2.14.3-r0.apk",
+      "sha256": "965312477890bff1d8b32ee4047627f27036d517016eac2cb4cb641505408dd4"
+    },
+    "fribidi.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/fribidi-1.0.16-r3.apk",
+      "sha256": "c93955762e06f796d99811ef26f719ec7df2c9dab4ce3d3d36d49621942ffbe6"
+    },
+    "glib.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/glib-2.90.0-r0.apk",
+      "sha256": "2c84a9bcd59d36312c555586c738e14c2f8926617ea3d046b388ffb4b0d5d102"
+    },
+    "graphite2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/graphite2-1.3.15-r0.apk",
+      "sha256": "696eea1b113dc812b508408cc8b17b0bc8e7cfd875b64e61cfa60b5cf7dbe982"
+    },
+    "harfbuzz.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/harfbuzz-14.2.1-r0.apk",
+      "sha256": "bd44c52f782116c1c21bab34265e618df9ec432de445d9cab635d8408f02ac32"
+    },
+    "hwdata-pci.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/hwdata-pci-0.411-r0.apk",
+      "sha256": "eaa4c68c3435ce9f20f923460e599534ca0be90765b8808fe3781a0f6fcf4f19"
+    },
+    "kmod-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/kmod-libs-34.2-r1.apk",
+      "sha256": "20ddb27c1b2f08dc2785c44fb32238b24be5b4df84fb558c8483eb368013b8e4"
+    },
+    "lcms2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/lcms2-2.19.1-r0.apk",
+      "sha256": "eb428effe0549cf52a86ec6ce0181bb2813bda741e575821c2e6d5849445855a"
+    },
+    "libblkid.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libblkid-2.42.4-r0.apk",
+      "sha256": "82e3567f34e4a8313074bd530b4f4d260b9f1b85d6abc679a5f2accf449a6e72"
+    },
+    "libbsd.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libbsd-0.12.2-r0.apk",
+      "sha256": "515c8d9cb1952685269be3749c1fac709ad352010b23930738d99cbd6dfb11ee"
+    },
+    "libbz2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libbz2-1.0.8-r6.apk",
+      "sha256": "2dc9fc0385ad0d592155b88b019418d5b03d651607ff3ea6115c8ae779dfc5ea"
+    },
+    "libdisplay-info.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libdisplay-info-0.3.0-r1.apk",
+      "sha256": "465b50c6dcce1d330974f4ff582fe5946be3c6820b12892343a4f5d349192de4"
+    },
+    "libdrm.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libdrm-2.4.134-r0.apk",
+      "sha256": "7b7a7e0a36c9e16c8204113c1a0b3b7d319ab3d7428b5c6bc88abf09ab800873"
+    },
+    "libeconf.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libeconf-0.8.4-r0.apk",
+      "sha256": "c342aaa8c92ef608ddca5e678af007eace0a220dc03d2918512792f9a06eb24c"
+    },
+    "libelf.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libelf-0.195-r0.apk",
+      "sha256": "8b9c3f3930cc8b937d4870550091fe2cedde55664b1d4a716619bff37d7b6186"
+    },
+    "libelogind.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libelogind-255.24-r0.apk",
+      "sha256": "e4752c1a227ce6918efa0c5eefd8ceee5885b56d00570447c7251591ac3ec9c4"
+    },
+    "libevdev.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libevdev-1.13.6-r0.apk",
+      "sha256": "9ce2e6719ea461ee2f204321357f063254436f82b196c885799c1c523efd4126"
+    },
+    "libexpat.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libexpat-2.8.5-r0.apk",
+      "sha256": "49774484f631c97a8fcff36e95cf14df8cbaeafa4141f5a6e94389f9b9611a1b"
+    },
+    "libffi.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libffi-3.8.0-r0.apk",
+      "sha256": "f8d317eb69d119c500c2dbc254f8d0a4e0bc1e4bc925d4f048133ea13c38dc28"
+    },
+    "libfontenc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libfontenc-1.1.9-r0.apk",
+      "sha256": "82331b5ba2ef798079d645e9501bf07ac6dd38c89371867f1a0a6dadf084a2d6"
+    },
+    "libgcc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libgcc-15.2.0-r9.apk",
+      "sha256": "fad40ecab1aecd9de37120602d115cfd706a773d7471852ea178d9049b0877a2"
+    },
+    "libinput-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libinput-libs-1.31.3-r0.apk",
+      "sha256": "118e385946c4ccc89660e49c60a4f4303ecdf0c9ff353582578dbee0c17ab33a"
+    },
+    "libinput-udev.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libinput-udev-1.31.3-r0.apk",
+      "sha256": "242deac4f39b30c0abe2c2c6a24db1df90314be8b39538507436af896bb79a8c"
+    },
+    "libintl.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libintl-1.0-r0.apk",
+      "sha256": "9d7f6293d064bf5c2479e559cd81a57e726e0cd1dde871479adc780c583243eb"
+    },
+    "libjpeg-turbo.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libjpeg-turbo-3.1.3-r0.apk",
+      "sha256": "fbeabcd588795530e81b9ff5c780bfbda5b1c675fe58fbc54a101e92404ab8fc"
+    },
+    "libmd.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libmd-1.2.0-r0.apk",
+      "sha256": "caa5b75656048113e3273505ecdd3d799d0f6dc95a677a124327055ea7316676"
+    },
+    "libmount.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libmount-2.42.4-r0.apk",
+      "sha256": "ccd242bdd4be7b174bf728330d2ad9dd26d023fc4bbd6ce2a079aa0b1dbcdfbe"
+    },
+    "libpciaccess.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libpciaccess-0.19-r0.apk",
+      "sha256": "f3933e42f3943f7dd67dd244441cc7ca6beb5a26b8a2d7ca5f7ac46cb0bdf5d6"
+    },
+    "libpng.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libpng-1.6.58-r1.apk",
+      "sha256": "0a8a455324e11e7e599ca8eabf7842e176d2a090e2bc574106f2ca390a15ce38"
+    },
+    "libseat.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libseat-0.9.3-r1.apk",
+      "sha256": "a71e7f145e225a0078f5f6b86e0113dba5b64f49aca508a071763042dba1be6a"
+    },
+    "libsharpyuv.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libsharpyuv-1.6.0-r0.apk",
+      "sha256": "5e5c04ca05cf40aa83bf21c1bed0678d993b93c57349d9a9aa3b9f9ba8a55ff4"
+    },
+    "libstdc++.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libstdc++-15.2.0-r9.apk",
+      "sha256": "bf9d5b761d3cb21005761c01349ded8c48980b2571aa277d2fc2ed6760ead858"
+    },
+    "libwebp.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libwebp-1.6.0-r0.apk",
+      "sha256": "1f99a536270956416577f9d2221d0ed9f1e1f8f1834bbffe7f2adcf1f13c23b3"
+    },
+    "libweston.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/libweston-16.0.0-r0.apk",
+      "sha256": "179eadf31189f2655b99847c83c5213516378e77da4c2e931a8abaca29130702"
+    },
+    "libx11.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libx11-1.8.13-r0.apk",
+      "sha256": "4d4c7a0a7e54d7390a8a8a820cf325b0a0b45b08ded270114ac7048fd6a67c8f"
+    },
+    "libxau.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxau-1.0.12-r0.apk",
+      "sha256": "6198639f546632d4cab4cbe808e7155b6f2995f01e8f5e8dbc278f2ac33e134a"
+    },
+    "libxcb.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxcb-1.17.0-r2.apk",
+      "sha256": "2db06994c13435082f0cf0bfb6fa69ab5109b0566f50419c4caf457ec7fb90bd"
+    },
+    "libxdmcp.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxdmcp-1.1.5-r1.apk",
+      "sha256": "872e16c4e21ae2f96bf7afe6db70cf41530e049f4c7fe988769d52bbafa2ef82"
+    },
+    "libxext.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxext-1.3.7-r0.apk",
+      "sha256": "49adc9b4a1b3b367664d092825f841ea1e499c4e174b61e5fb5a2d55036013ab"
+    },
+    "libxft.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxft-2.3.9-r0.apk",
+      "sha256": "789d55ad19888bea8bee796a1ec4a9dfebd4275402104893c4f6a89aa187880d"
+    },
+    "libxkbcommon.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxkbcommon-1.13.2-r0.apk",
+      "sha256": "14834444b90ed16a0f47462056dc0ec2d80cdad791b9eeb217dddd72dc1e22ac"
+    },
+    "libxml2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxml2-2.13.9-r2.apk",
+      "sha256": "870801ace5873ceceb4b0efdfe03026a794a9eec0bc1bcf3f2e5edd4aa9b0fbc"
+    },
+    "libxrender.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxrender-0.9.12-r0.apk",
+      "sha256": "a4f50bf61b44b10a120bb4a8ec0705dfab7bb14c5af48b542896fc66793535e3"
+    },
+    "libxshmfence.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/libxshmfence-1.3.3-r0.apk",
+      "sha256": "025b0b18baf789f6db690b77e72869d90a73c1f477948d85ad93dfb449ddb68d"
+    },
+    "llvm23-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/llvm23-libs-23.1.2-r0.apk",
+      "sha256": "cf69e7a641997f14a7a539ad20494e6f65a46cf3ba9f1d4f4f24e37728d08579"
+    },
+    "mesa.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mesa-26.2.3-r1.apk",
+      "sha256": "7ecd0e480c95b9d5fa7dcb579082945fbb728743f0c8f4d5dc0f2983a6da0365"
+    },
+    "mesa-egl.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mesa-egl-26.2.3-r1.apk",
+      "sha256": "ab271779e3209ba826db1be699fd9d648a880d8f29d26e16b8954dbb13d4dc0e"
+    },
+    "mesa-gbm.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mesa-gbm-26.2.3-r1.apk",
+      "sha256": "ee2658f9824c284414285734128a76f0bfa79a7be025d49bd97b710fb87f7faf"
+    },
+    "mesa-gles.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mesa-gles-26.2.3-r1.apk",
+      "sha256": "03fd18088f91c760409135bfe980210fc6962e1a2836d8eadb782ad4880c050f"
+    },
+    "mkfontscale.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mkfontscale-1.2.4-r0.apk",
+      "sha256": "604fef53bddbfbbc31d83901ea0405be0f48366480b4a50acfd9010a6a2ec155"
+    },
+    "mtdev.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/mtdev-1.1.7-r0.apk",
+      "sha256": "9bd540390d46f13d65a5890397a9bc7c20df3faa40a2e8bbb03f8c841013359b"
+    },
+    "pango.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/pango-1.58.2-r0.apk",
+      "sha256": "efc2f19a6af18910ccb902136e6fec82026d5f7e5cb996430518e15133fd6466"
+    },
+    "pcre2.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/pcre2-10.48-r0.apk",
+      "sha256": "af8dcefa9a6ab8badc74fb843680cd6b743a88ba6a0095761f3c82f7daa9f7eb"
+    },
+    "pixman.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/pixman-0.46.4-r0.apk",
+      "sha256": "77a4d9908c26c4b0df79a749eee60037750ad71f34397930ba63a6ee3ab7c7ef"
+    },
+    "seatd.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/seatd-0.9.3-r1.apk",
+      "sha256": "e0efbdb724fcfe8b28b33f9f2976892e6a988735e43164d2a98a3b13bcfb8350"
+    },
+    "seatd-openrc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/seatd-openrc-0.9.3-r1.apk",
+      "sha256": "1d9cc622d974bd47defedc8554893cc781941dbc0cbe645cc451870e43cdb363"
+    },
+    "udev-init-scripts.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/udev-init-scripts-35-r1.apk",
+      "sha256": "49b66a6cb1c803ab16bb17f0e50671daee113d0342ba182d01493d23e10fc40a"
+    },
+    "udev-init-scripts-openrc.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/udev-init-scripts-openrc-35-r1.apk",
+      "sha256": "be138108cead2c7467beee6ec31e6ea2305923cedefc8f372d12a2327feb0df0"
+    },
+    "vulkan-loader.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/vulkan-loader-1.4.360-r0.apk",
+      "sha256": "1b4f9c4db73bc1fc0028622fe6d5401773f28b49e28ef76dd1e8d0abc7c85984"
+    },
+    "wayland-libs-client.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/wayland-libs-client-1.26.0-r0.apk",
+      "sha256": "4ec43ad84b6aedbba97d600b1eb7dd187c383921401ab201c7c75557c68fa8e8"
+    },
+    "wayland-libs-cursor.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/wayland-libs-cursor-1.26.0-r0.apk",
+      "sha256": "7c1c84bf3e8e2526327c4e001affb0225185d305704d1796316c92a09269e3f6"
+    },
+    "wayland-libs-server.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/wayland-libs-server-1.26.0-r0.apk",
+      "sha256": "f76044acd2613e94fe8a216b4c84e303a87daee38a21377eb181ec2e57b282f7"
+    },
+    "weston.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/weston-16.0.0-r0.apk",
+      "sha256": "453dbfadde0b9a68d5b36f7c4620bca73290e221d78ca0dbf2e4356e4e1e86f9"
+    },
+    "weston-backend-drm.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/weston-backend-drm-16.0.0-r0.apk",
+      "sha256": "5ed275ce95abde682c0cf6e1f0f40d55faf9320d4b3a15a5fff06505973baffa"
+    },
+    "weston-shell-desktop.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/weston-shell-desktop-16.0.0-r0.apk",
+      "sha256": "0f7eba2e4fbe30c1a033f92cac6552801574448c6b380121750aa5842da1aafa"
+    },
+    "weston-terminal.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/weston-terminal-16.0.0-r0.apk",
+      "sha256": "7f4c1b1288d4906dd687acde0f44bbb58ac9816fc5c37fd4944866412e1f024a"
+    },
+    "xkeyboard-config.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/xkeyboard-config-2.48-r0.apk",
+      "sha256": "90ae8e1db89a926837c4c6515e74afa7b4c40db03a0f1e9e429c5c38da16f1c4"
+    },
+    "xz-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/xz-libs-5.8.4-r0.apk",
+      "sha256": "ac629de850aef58ee11b8994a837076b0af40b611d51dbac218b8515a9662fe6"
+    },
+    "zstd-libs.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/zstd-libs-1.5.7-r2.apk",
+      "sha256": "5292eb5e595bc06f27aeb7728211c414ff065fa5f5091a046ef3d4ff821a917c"
+    }
+  },
+  "build_tools": {
+    "apk-tools-static": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-3.0.8-r0.apk",
+      "sha256": "673f1bfb22136fc42ca035321cf731a4ad0452c000928666cb39a138f0c277bf"
+    }
+  },
+  "images": {
+    "minimal": {
+      "seed": "system.seed",
+      "init": "BusyBox"
+    },
+    "service": {
+      "seed": "service.seed",
+      "init": "OpenRC"
+    },
+    "wayland": {
+      "seed": "wayland.seed",
+      "init": "OpenRC",
+      "display": "Weston, 800x600, Pixman; no Xorg/XWayland"
+    }
+  },
+  "packages": [
+    {
+      "name": "alpine-baselayout",
+      "version": "3.7.2-r1",
+      "license": "GPL-2.0-only",
+      "origin": "alpine-baselayout",
+      "commit": "60a7585bbab2fa0f762504eb617dbca90216e31f",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout"
+    },
+    {
+      "name": "alpine-baselayout-data",
+      "version": "3.7.2-r1",
+      "license": "GPL-2.0-only",
+      "origin": "alpine-baselayout",
+      "commit": "60a7585bbab2fa0f762504eb617dbca90216e31f",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/60a7585bbab2fa0f762504eb617dbca90216e31f/main/alpine-baselayout"
+    },
+    {
+      "name": "alpine-keys",
+      "version": "2.6-r0",
+      "license": "MIT",
+      "origin": "alpine-keys",
+      "commit": "b9f23becced4d7b3ccc0fa0f28530243ccd314a0",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f23becced4d7b3ccc0fa0f28530243ccd314a0/main/alpine-keys"
+    },
+    {
+      "name": "alpine-release",
+      "version": "3.25.0_alpha20260805-r0",
+      "license": "MIT",
+      "origin": "alpine-base",
+      "commit": "5aad27a98146f1557e9e3408f615c59d44a41acb",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5aad27a98146f1557e9e3408f615c59d44a41acb/main/alpine-base"
+    },
+    {
+      "name": "apk-tools",
+      "version": "3.0.7-r0",
+      "license": "GPL-2.0-only",
+      "origin": "apk-tools",
+      "commit": "1397144f807abac6f9df704d21a1f71827df13b6",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools"
+    },
+    {
+      "name": "busybox",
+      "version": "1.38.0-r4",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
+    },
+    {
+      "name": "busybox-binsh",
+      "version": "1.38.0-r4",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
+    },
+    {
+      "name": "ca-certificates-bundle",
+      "version": "20260611-r0",
+      "license": "MPL-2.0 AND MIT",
+      "origin": "ca-certificates",
+      "commit": "5f8337afea8674524d360be5fdb513e7e57fcc29",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5f8337afea8674524d360be5fdb513e7e57fcc29/main/ca-certificates"
+    },
+    {
+      "name": "libapk",
+      "version": "3.0.7-r0",
+      "license": "GPL-2.0-only",
+      "origin": "apk-tools",
+      "commit": "1397144f807abac6f9df704d21a1f71827df13b6",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1397144f807abac6f9df704d21a1f71827df13b6/main/apk-tools"
+    },
+    {
+      "name": "libcrypto3",
+      "version": "3.5.7-r0",
+      "license": "Apache-2.0",
+      "origin": "openssl",
+      "commit": "35c0d1f2b314f647008595f681786813760da191",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl"
+    },
+    {
+      "name": "libssl3",
+      "version": "3.5.7-r0",
+      "license": "Apache-2.0",
+      "origin": "openssl",
+      "commit": "35c0d1f2b314f647008595f681786813760da191",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/35c0d1f2b314f647008595f681786813760da191/main/openssl"
+    },
+    {
+      "name": "musl",
+      "version": "1.2.6-r2",
+      "license": "MIT",
+      "origin": "musl",
+      "commit": "b0c8ea10e8f29cabe336b2e5d864124940e126ab",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl"
+    },
+    {
+      "name": "musl-utils",
+      "version": "1.2.6-r2",
+      "license": "MIT AND BSD-2-Clause AND GPL-2.0-or-later",
+      "origin": "musl",
+      "commit": "b0c8ea10e8f29cabe336b2e5d864124940e126ab",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b0c8ea10e8f29cabe336b2e5d864124940e126ab/main/musl"
+    },
+    {
+      "name": "scanelf",
+      "version": "1.3.9-r1",
+      "license": "GPL-2.0-only",
+      "origin": "pax-utils",
+      "commit": "c61801eeacb3ffcd9c2025b09e402153bb93fb39",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c61801eeacb3ffcd9c2025b09e402153bb93fb39/main/pax-utils"
+    },
+    {
+      "name": "ssl_client",
+      "version": "1.38.0-r4",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "9ac9bf5318a9ccc8af34b1389eba3df432488673",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2-r0",
+      "license": "Zlib",
+      "origin": "zlib",
+      "commit": "f248b33b5943c7dc69bf691031d7612ab2e8ed93",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f248b33b5943c7dc69bf691031d7612ab2e8ed93/main/zlib"
+    },
+    {
+      "name": "linux-lts",
+      "version": "6.18.53-r0",
+      "license": "GPL-2.0-only",
+      "origin": "linux-lts",
+      "commit": "e4f5708adc6a4e631b7dde47106bab095d5f1914",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4f5708adc6a4e631b7dde47106bab095d5f1914/main/linux-lts"
+    },
+    {
+      "name": "opensbi",
+      "version": "1.9-r0",
+      "license": "BSD-2-Clause",
+      "origin": "opensbi",
+      "commit": "e3e95307fe4ab08caf28babdaac0b11e2cedb305",
+      "images": [
+        "minimal",
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e3e95307fe4ab08caf28babdaac0b11e2cedb305/main/opensbi"
+    },
+    {
+      "name": "openrc",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "openrc-init",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "openrc-user",
+      "version": "0.63.2-r1",
+      "license": "BSD-2-Clause",
+      "origin": "openrc",
+      "commit": "2f3ff9120b8bad6648b2f53ffd7bdde512b133b2",
+      "images": [
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2f3ff9120b8bad6648b2f53ffd7bdde512b133b2/main/openrc"
+    },
+    {
+      "name": "libcap2",
+      "version": "2.78-r0",
+      "license": "BSD-3-Clause OR GPL-2.0-only",
+      "origin": "libcap",
+      "commit": "0c35848136c4c16a1b1672cb812efa88fffef1c2",
+      "images": [
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/0c35848136c4c16a1b1672cb812efa88fffef1c2/main/libcap"
+    },
+    {
+      "name": "busybox-ifupdown",
+      "version": "1.38.0-r7",
+      "license": "GPL-2.0-only",
+      "origin": "busybox",
+      "commit": "768a1e8764c8ddda36995c2a4ba8ab9a9c78ef91",
+      "images": [
+        "service",
+        "wayland"
+      ],
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/768a1e8764c8ddda36995c2a4ba8ab9a9c78ef91/main/busybox"
+    },
+    {
+      "name": "brotli-libs",
+      "version": "1.2.0-r1",
+      "license": "MIT",
+      "origin": "brotli",
+      "commit": "1ee249c9da168084b1c6c9f7488bdffa2ac33c84",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1ee249c9da168084b1c6c9f7488bdffa2ac33c84/main/brotli"
+    },
+    {
+      "name": "cairo",
+      "version": "1.18.4-r1",
+      "license": "LGPL-2.1-or-later OR MPL-1.1",
+      "origin": "cairo",
+      "commit": "e54632f6ef658146c2393a8cbd0368a3707d4991",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e54632f6ef658146c2393a8cbd0368a3707d4991/main/cairo"
+    },
+    {
+      "name": "encodings",
+      "version": "1.1.0-r0",
+      "license": "Public Domain",
+      "origin": "encodings",
+      "commit": "c690d2215724c06db60faa7a7de4b8f0d2720682",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c690d2215724c06db60faa7a7de4b8f0d2720682/main/encodings"
+    },
+    {
+      "name": "eudev",
+      "version": "3.2.14-r8",
+      "license": "GPL-2.0-or-later",
+      "origin": "eudev",
+      "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev"
+    },
+    {
+      "name": "eudev-libs",
+      "version": "3.2.14-r8",
+      "license": "GPL-2.0-or-later",
+      "origin": "eudev",
+      "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev"
+    },
+    {
+      "name": "eudev-openrc",
+      "version": "3.2.14-r8",
+      "license": "GPL-2.0-or-later",
+      "origin": "eudev",
+      "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev"
+    },
+    {
+      "name": "font-dejavu",
+      "version": "2.37-r6",
+      "license": "Bitstream-Vera",
+      "origin": "font-dejavu",
+      "commit": "59420f440b2e664f7be1a6e135a3175aab56cd51",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/59420f440b2e664f7be1a6e135a3175aab56cd51/main/font-dejavu"
+    },
+    {
+      "name": "fontconfig",
+      "version": "2.18.1-r0",
+      "license": "MIT",
+      "origin": "fontconfig",
+      "commit": "d026b8a2a0e11062ac18d1b94791eb358b2f7f8c",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d026b8a2a0e11062ac18d1b94791eb358b2f7f8c/main/fontconfig"
+    },
+    {
+      "name": "freetype",
+      "version": "2.14.3-r0",
+      "license": "FTL OR GPL-2.0-or-later",
+      "origin": "freetype",
+      "commit": "ad16b0afc1a315c4095a75ff72ebbe3cfa29b671",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/ad16b0afc1a315c4095a75ff72ebbe3cfa29b671/main/freetype"
+    },
+    {
+      "name": "fribidi",
+      "version": "1.0.16-r3",
+      "license": "LGPL-2.1-or-later",
+      "origin": "fribidi",
+      "commit": "5c9b8291bfb31116907f54dad1c7e03fec51eddb",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5c9b8291bfb31116907f54dad1c7e03fec51eddb/main/fribidi"
+    },
+    {
+      "name": "glib",
+      "version": "2.90.0-r0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "glib",
+      "commit": "b1f2e90f9e0d99b6d3b9d1c2084494eed27405ce",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b1f2e90f9e0d99b6d3b9d1c2084494eed27405ce/main/glib"
+    },
+    {
+      "name": "graphite2",
+      "version": "1.3.15-r0",
+      "license": "LGPL-2.1-or-later OR MPL-1.1",
+      "origin": "graphite2",
+      "commit": "13d7ebc2bf207f3915898a3c1e70cc716f491bd3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/13d7ebc2bf207f3915898a3c1e70cc716f491bd3/main/graphite2"
+    },
+    {
+      "name": "harfbuzz",
+      "version": "14.2.1-r0",
+      "license": "MIT",
+      "origin": "harfbuzz",
+      "commit": "92e85684b9a5fd63c2ccd21597fa2be4afa87c0b",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/92e85684b9a5fd63c2ccd21597fa2be4afa87c0b/main/harfbuzz"
+    },
+    {
+      "name": "hwdata-pci",
+      "version": "0.411-r0",
+      "license": "GPL-2.0-or-later OR XFree86-1.1",
+      "origin": "hwdata",
+      "commit": "9088f99431247664c7924ed4b2e39adfb799e60f",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9088f99431247664c7924ed4b2e39adfb799e60f/main/hwdata"
+    },
+    {
+      "name": "kmod-libs",
+      "version": "34.2-r1",
+      "license": "LGPL-2.1-or-later",
+      "origin": "kmod",
+      "commit": "1997195d08a4d0e04899714802276d89d1ad4cb2",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1997195d08a4d0e04899714802276d89d1ad4cb2/main/kmod"
+    },
+    {
+      "name": "lcms2",
+      "version": "2.19.1-r0",
+      "license": "MIT",
+      "origin": "lcms2",
+      "commit": "6db5bb1893bd91f06a208da1bc797b9218cc4eaa",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6db5bb1893bd91f06a208da1bc797b9218cc4eaa/main/lcms2"
+    },
+    {
+      "name": "libblkid",
+      "version": "2.42.4-r0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "util-linux",
+      "commit": "7c9106d622cfa14634ecb9df8cbcec9f48a4061f",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7c9106d622cfa14634ecb9df8cbcec9f48a4061f/main/util-linux"
+    },
+    {
+      "name": "libbsd",
+      "version": "0.12.2-r0",
+      "license": "BSD-3-Clause",
+      "origin": "libbsd",
+      "commit": "02365e78d654a7beb23fd35d7d69f4a649009ede",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/02365e78d654a7beb23fd35d7d69f4a649009ede/main/libbsd"
+    },
+    {
+      "name": "libbz2",
+      "version": "1.0.8-r6",
+      "license": "bzip2-1.0.6",
+      "origin": "bzip2",
+      "commit": "33283848034c9885d984c8e8697c645c57324938",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/33283848034c9885d984c8e8697c645c57324938/main/bzip2"
+    },
+    {
+      "name": "libdisplay-info",
+      "version": "0.3.0-r1",
+      "license": "MIT",
+      "origin": "libdisplay-info",
+      "commit": "219800e054ef6c497bdb924daec7765222bc2b83",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/219800e054ef6c497bdb924daec7765222bc2b83/main/libdisplay-info"
+    },
+    {
+      "name": "libdrm",
+      "version": "2.4.134-r0",
+      "license": "MIT",
+      "origin": "libdrm",
+      "commit": "2015800769b781bef45917b668d10bffe2ac538f",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2015800769b781bef45917b668d10bffe2ac538f/main/libdrm"
+    },
+    {
+      "name": "libeconf",
+      "version": "0.8.4-r0",
+      "license": "MIT",
+      "origin": "libeconf",
+      "commit": "96066c3b6d2992dd2b72db6492c4e65d7f17520f",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/96066c3b6d2992dd2b72db6492c4e65d7f17520f/main/libeconf"
+    },
+    {
+      "name": "libelf",
+      "version": "0.195-r0",
+      "license": "GPL-3.0-or-later AND ( GPL-2.0-or-later OR LGPL-3.0-or-later )",
+      "origin": "elfutils",
+      "commit": "8f13294206888f3dd44ed74a8eb3dd9934499e81",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8f13294206888f3dd44ed74a8eb3dd9934499e81/main/elfutils"
+    },
+    {
+      "name": "libelogind",
+      "version": "255.24-r0",
+      "license": "GPL-2.0-or-later LGPL-2.1-or-later",
+      "origin": "elogind",
+      "commit": "f7e4c2c1ed47d57461b9cb50cd11cc2bc8168ad3",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f7e4c2c1ed47d57461b9cb50cd11cc2bc8168ad3/community/elogind"
+    },
+    {
+      "name": "libevdev",
+      "version": "1.13.6-r0",
+      "license": "MIT",
+      "origin": "libevdev",
+      "commit": "2af4dd0082956420a61fe680bb3da04034e67e34",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2af4dd0082956420a61fe680bb3da04034e67e34/community/libevdev"
+    },
+    {
+      "name": "libexpat",
+      "version": "2.8.5-r0",
+      "license": "MIT",
+      "origin": "expat",
+      "commit": "3a7db677f94655442ea751bc5ee21b5bcc365d5b",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3a7db677f94655442ea751bc5ee21b5bcc365d5b/main/expat"
+    },
+    {
+      "name": "libffi",
+      "version": "3.8.0-r0",
+      "license": "MIT",
+      "origin": "libffi",
+      "commit": "58a77443f37614ab608c580baf2b7f898184bec9",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/58a77443f37614ab608c580baf2b7f898184bec9/main/libffi"
+    },
+    {
+      "name": "libfontenc",
+      "version": "1.1.9-r0",
+      "license": "MIT",
+      "origin": "libfontenc",
+      "commit": "9667f1121e207bb3819d91ab6734375f7698e5a7",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9667f1121e207bb3819d91ab6734375f7698e5a7/main/libfontenc"
+    },
+    {
+      "name": "libgcc",
+      "version": "15.2.0-r9",
+      "license": "GPL-2.0-or-later AND LGPL-2.1-or-later",
+      "origin": "gcc",
+      "commit": "21530a8b7b00b34c648a6b3744d461f32203a885",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/21530a8b7b00b34c648a6b3744d461f32203a885/main/gcc"
+    },
+    {
+      "name": "libinput-libs",
+      "version": "1.31.3-r0",
+      "license": "MIT",
+      "origin": "libinput",
+      "commit": "3241f28bdb5504c76850ce79362f9f38d44d4fa6",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3241f28bdb5504c76850ce79362f9f38d44d4fa6/community/libinput"
+    },
+    {
+      "name": "libinput-udev",
+      "version": "1.31.3-r0",
+      "license": "MIT",
+      "origin": "libinput",
+      "commit": "3241f28bdb5504c76850ce79362f9f38d44d4fa6",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3241f28bdb5504c76850ce79362f9f38d44d4fa6/community/libinput"
+    },
+    {
+      "name": "libintl",
+      "version": "1.0-r0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "gettext",
+      "commit": "a0b12dbf67fb047e79a1b76c6dfe6f2904d0d391",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/a0b12dbf67fb047e79a1b76c6dfe6f2904d0d391/main/gettext"
+    },
+    {
+      "name": "libjpeg-turbo",
+      "version": "3.1.3-r0",
+      "license": "BSD-3-Clause AND IJG AND Zlib",
+      "origin": "libjpeg-turbo",
+      "commit": "5fe6bebf850fc964a8525c81548397c39cb6f7cd",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5fe6bebf850fc964a8525c81548397c39cb6f7cd/main/libjpeg-turbo"
+    },
+    {
+      "name": "libmd",
+      "version": "1.2.0-r0",
+      "license": "BSD-3-Clause AND BSD-2-Clause AND ISC AND Beerware AND Public Domain",
+      "origin": "libmd",
+      "commit": "87b78bc6890645c317d3167bdbb0187502d0cda9",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/87b78bc6890645c317d3167bdbb0187502d0cda9/main/libmd"
+    },
+    {
+      "name": "libmount",
+      "version": "2.42.4-r0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "util-linux",
+      "commit": "7c9106d622cfa14634ecb9df8cbcec9f48a4061f",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7c9106d622cfa14634ecb9df8cbcec9f48a4061f/main/util-linux"
+    },
+    {
+      "name": "libpciaccess",
+      "version": "0.19-r0",
+      "license": "X11",
+      "origin": "libpciaccess",
+      "commit": "d5de88aad8098d25c1b9e53d4ca5e6ff6c90e234",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d5de88aad8098d25c1b9e53d4ca5e6ff6c90e234/main/libpciaccess"
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.58-r1",
+      "license": "Libpng",
+      "origin": "libpng",
+      "commit": "47f0ce2db0f841ad73afd91ff4d71bca0f46ad05",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/47f0ce2db0f841ad73afd91ff4d71bca0f46ad05/main/libpng"
+    },
+    {
+      "name": "libseat",
+      "version": "0.9.3-r1",
+      "license": "MIT",
+      "origin": "seatd",
+      "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d266f30be9d5c0e2d291e63f6458ce93128864a7/community/seatd"
+    },
+    {
+      "name": "libsharpyuv",
+      "version": "1.6.0-r0",
+      "license": "BSD-3-Clause",
+      "origin": "libwebp",
+      "commit": "af8b48fabd19b69b00f5efe192f461896a38cf74",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/af8b48fabd19b69b00f5efe192f461896a38cf74/main/libwebp"
+    },
+    {
+      "name": "libstdc++",
+      "version": "15.2.0-r9",
+      "license": "GPL-2.0-or-later AND LGPL-2.1-or-later",
+      "origin": "gcc",
+      "commit": "21530a8b7b00b34c648a6b3744d461f32203a885",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/21530a8b7b00b34c648a6b3744d461f32203a885/main/gcc"
+    },
+    {
+      "name": "libwebp",
+      "version": "1.6.0-r0",
+      "license": "BSD-3-Clause",
+      "origin": "libwebp",
+      "commit": "af8b48fabd19b69b00f5efe192f461896a38cf74",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/af8b48fabd19b69b00f5efe192f461896a38cf74/main/libwebp"
+    },
+    {
+      "name": "libweston",
+      "version": "16.0.0-r0",
+      "license": "MIT",
+      "origin": "weston",
+      "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d9f421f22d70b101ee7eac8f229f4d0bb425cdad/community/weston"
+    },
+    {
+      "name": "libx11",
+      "version": "1.8.13-r0",
+      "license": "X11",
+      "origin": "libx11",
+      "commit": "f993bc30142d46271ede4a746c1abefaa1a78eee",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f993bc30142d46271ede4a746c1abefaa1a78eee/main/libx11"
+    },
+    {
+      "name": "libxau",
+      "version": "1.0.12-r0",
+      "license": "MIT",
+      "origin": "libxau",
+      "commit": "c911b00ecb8f42c3281d4be61ce9acb4fe985a14",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c911b00ecb8f42c3281d4be61ce9acb4fe985a14/main/libxau"
+    },
+    {
+      "name": "libxcb",
+      "version": "1.17.0-r2",
+      "license": "MIT",
+      "origin": "libxcb",
+      "commit": "5e1b822309fb17cc2ebd46d6fbacb1763acbcdd1",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5e1b822309fb17cc2ebd46d6fbacb1763acbcdd1/main/libxcb"
+    },
+    {
+      "name": "libxdmcp",
+      "version": "1.1.5-r1",
+      "license": "MIT",
+      "origin": "libxdmcp",
+      "commit": "614e9166706cec427fc3d907b8d981390a42e088",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/614e9166706cec427fc3d907b8d981390a42e088/main/libxdmcp"
+    },
+    {
+      "name": "libxext",
+      "version": "1.3.7-r0",
+      "license": "MIT",
+      "origin": "libxext",
+      "commit": "4ec252fa3e6e8edf16d0d6da3fe6dd39e2263942",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/4ec252fa3e6e8edf16d0d6da3fe6dd39e2263942/main/libxext"
+    },
+    {
+      "name": "libxft",
+      "version": "2.3.9-r0",
+      "license": "MIT",
+      "origin": "libxft",
+      "commit": "9a4062b0f278b43370faa58195206c5ef94e7899",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9a4062b0f278b43370faa58195206c5ef94e7899/main/libxft"
+    },
+    {
+      "name": "libxkbcommon",
+      "version": "1.13.2-r0",
+      "license": "MIT AND MIT-open-group AND HPND AND HPND-sell-variant AND LicenseRef-digital-equipment-corporation",
+      "origin": "libxkbcommon",
+      "commit": "6ea05d8d07eb6e11dec2147cc1d07b2ab64bf6a0",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6ea05d8d07eb6e11dec2147cc1d07b2ab64bf6a0/main/libxkbcommon"
+    },
+    {
+      "name": "libxml2",
+      "version": "2.13.9-r2",
+      "license": "MIT",
+      "origin": "libxml2",
+      "commit": "f1bd5b6767a0e7fdda380c95138a1c938eb6e102",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f1bd5b6767a0e7fdda380c95138a1c938eb6e102/main/libxml2"
+    },
+    {
+      "name": "libxrender",
+      "version": "0.9.12-r0",
+      "license": "MIT",
+      "origin": "libxrender",
+      "commit": "74030d4140b68e8d4d36a357751f156ab31840c2",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/74030d4140b68e8d4d36a357751f156ab31840c2/main/libxrender"
+    },
+    {
+      "name": "libxshmfence",
+      "version": "1.3.3-r0",
+      "license": "MIT",
+      "origin": "libxshmfence",
+      "commit": "92c045b6cdda2c1d423337a68cc814cad86b651a",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/92c045b6cdda2c1d423337a68cc814cad86b651a/main/libxshmfence"
+    },
+    {
+      "name": "llvm23-libs",
+      "version": "23.1.2-r0",
+      "license": "Apache-2.0",
+      "origin": "llvm23",
+      "commit": "fbddb7853372ef2744c4773010ec2629291cc1c7",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/fbddb7853372ef2744c4773010ec2629291cc1c7/main/llvm23"
+    },
+    {
+      "name": "mesa",
+      "version": "26.2.3-r1",
+      "license": "MIT AND SGI-B-2.0 AND BSL-1.0",
+      "origin": "mesa",
+      "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5be9d1d4593ed639fe9e1905cee3a791de36bff3/main/mesa"
+    },
+    {
+      "name": "mesa-egl",
+      "version": "26.2.3-r1",
+      "license": "MIT AND SGI-B-2.0 AND BSL-1.0",
+      "origin": "mesa",
+      "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5be9d1d4593ed639fe9e1905cee3a791de36bff3/main/mesa"
+    },
+    {
+      "name": "mesa-gbm",
+      "version": "26.2.3-r1",
+      "license": "MIT AND SGI-B-2.0 AND BSL-1.0",
+      "origin": "mesa",
+      "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5be9d1d4593ed639fe9e1905cee3a791de36bff3/main/mesa"
+    },
+    {
+      "name": "mesa-gles",
+      "version": "26.2.3-r1",
+      "license": "MIT AND SGI-B-2.0 AND BSL-1.0",
+      "origin": "mesa",
+      "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5be9d1d4593ed639fe9e1905cee3a791de36bff3/main/mesa"
+    },
+    {
+      "name": "mkfontscale",
+      "version": "1.2.4-r0",
+      "license": "MIT",
+      "origin": "mkfontscale",
+      "commit": "e4301c788920ece9e1cd96dfa9d0ea6e7875e755",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4301c788920ece9e1cd96dfa9d0ea6e7875e755/main/mkfontscale"
+    },
+    {
+      "name": "mtdev",
+      "version": "1.1.7-r0",
+      "license": "MIT",
+      "origin": "mtdev",
+      "commit": "e08040e6d605215afce727b42ff584868d0a61df",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e08040e6d605215afce727b42ff584868d0a61df/community/mtdev"
+    },
+    {
+      "name": "pango",
+      "version": "1.58.2-r0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "pango",
+      "commit": "cffccd8e464575ed5dbf71486eac9fe8ea745585",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/cffccd8e464575ed5dbf71486eac9fe8ea745585/main/pango"
+    },
+    {
+      "name": "pcre2",
+      "version": "10.48-r0",
+      "license": "BSD-3-Clause",
+      "origin": "pcre2",
+      "commit": "07d282e2a0c1edcd0aa0ca9759cb4366151dc050",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/07d282e2a0c1edcd0aa0ca9759cb4366151dc050/main/pcre2"
+    },
+    {
+      "name": "pixman",
+      "version": "0.46.4-r0",
+      "license": "MIT",
+      "origin": "pixman",
+      "commit": "9337ac809a431f004386ea3e279e3d55f770e7d3",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9337ac809a431f004386ea3e279e3d55f770e7d3/main/pixman"
+    },
+    {
+      "name": "seatd",
+      "version": "0.9.3-r1",
+      "license": "MIT",
+      "origin": "seatd",
+      "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d266f30be9d5c0e2d291e63f6458ce93128864a7/community/seatd"
+    },
+    {
+      "name": "seatd-openrc",
+      "version": "0.9.3-r1",
+      "license": "MIT",
+      "origin": "seatd",
+      "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d266f30be9d5c0e2d291e63f6458ce93128864a7/community/seatd"
+    },
+    {
+      "name": "udev-init-scripts",
+      "version": "35-r1",
+      "license": "GPL-2.0-only",
+      "origin": "udev-init-scripts",
+      "commit": "7501172a312403cb494042f8aa8f9faf7b354790",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7501172a312403cb494042f8aa8f9faf7b354790/main/udev-init-scripts"
+    },
+    {
+      "name": "udev-init-scripts-openrc",
+      "version": "35-r1",
+      "license": "GPL-2.0-only",
+      "origin": "udev-init-scripts",
+      "commit": "7501172a312403cb494042f8aa8f9faf7b354790",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7501172a312403cb494042f8aa8f9faf7b354790/main/udev-init-scripts"
+    },
+    {
+      "name": "vulkan-loader",
+      "version": "1.4.360-r0",
+      "license": "Apache-2.0",
+      "origin": "vulkan-loader",
+      "commit": "48337777063f6f6f08ba0dc001e6e7f465206da9",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/48337777063f6f6f08ba0dc001e6e7f465206da9/main/vulkan-loader"
+    },
+    {
+      "name": "wayland-libs-client",
+      "version": "1.26.0-r0",
+      "license": "MIT",
+      "origin": "wayland",
+      "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/13b755bcd1f1ee9fc241c6e02d7ea22519ea7729/main/wayland"
+    },
+    {
+      "name": "wayland-libs-cursor",
+      "version": "1.26.0-r0",
+      "license": "MIT",
+      "origin": "wayland",
+      "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/13b755bcd1f1ee9fc241c6e02d7ea22519ea7729/main/wayland"
+    },
+    {
+      "name": "wayland-libs-server",
+      "version": "1.26.0-r0",
+      "license": "MIT",
+      "origin": "wayland",
+      "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/13b755bcd1f1ee9fc241c6e02d7ea22519ea7729/main/wayland"
+    },
+    {
+      "name": "weston",
+      "version": "16.0.0-r0",
+      "license": "MIT",
+      "origin": "weston",
+      "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d9f421f22d70b101ee7eac8f229f4d0bb425cdad/community/weston"
+    },
+    {
+      "name": "weston-backend-drm",
+      "version": "16.0.0-r0",
+      "license": "MIT",
+      "origin": "weston",
+      "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d9f421f22d70b101ee7eac8f229f4d0bb425cdad/community/weston"
+    },
+    {
+      "name": "weston-shell-desktop",
+      "version": "16.0.0-r0",
+      "license": "MIT",
+      "origin": "weston",
+      "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d9f421f22d70b101ee7eac8f229f4d0bb425cdad/community/weston"
+    },
+    {
+      "name": "weston-terminal",
+      "version": "16.0.0-r0",
+      "license": "MIT",
+      "origin": "weston",
+      "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+      "repository": "community",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d9f421f22d70b101ee7eac8f229f4d0bb425cdad/community/weston"
+    },
+    {
+      "name": "xkeyboard-config",
+      "version": "2.48-r0",
+      "license": "MIT",
+      "origin": "xkeyboard-config",
+      "commit": "a20d42e8221431ce8caab197d2aa0b0da152929c",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/a20d42e8221431ce8caab197d2aa0b0da152929c/main/xkeyboard-config"
+    },
+    {
+      "name": "xz-libs",
+      "version": "5.8.4-r0",
+      "license": "GPL-2.0-or-later AND 0BSD AND Public-Domain AND LGPL-2.1-or-later",
+      "origin": "xz",
+      "commit": "950af2f9ad0e4518d167e8ce0b41e7be0a7a730e",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/950af2f9ad0e4518d167e8ce0b41e7be0a7a730e/main/xz"
+    },
+    {
+      "name": "zstd-libs",
+      "version": "1.5.7-r2",
+      "license": "BSD-3-Clause OR GPL-2.0-or-later",
+      "origin": "zstd",
+      "commit": "3c6e2ee2b16f403d53eab39c4426eb61f003c322",
+      "repository": "main",
+      "images": [
+        "wayland"
+      ],
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3c6e2ee2b16f403d53eab39c4426eb61f003c322/main/zstd"
+    }
+  ]
+}

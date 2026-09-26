@@ -1,0 +1,772 @@
+[
+  {
+    "name": "brotli-libs",
+    "version": "1.2.0-r1",
+    "repository": "main",
+    "path": "main/riscv64/brotli-libs-1.2.0-r1.apk",
+    "sha256": "89bd0f5db4a9f9659794215040674fc6473e24caf646234a795d38e963db7379",
+    "origin": "brotli",
+    "commit": "1ee249c9da168084b1c6c9f7488bdffa2ac33c84",
+    "license": "MIT"
+  },
+  {
+    "name": "cairo",
+    "version": "1.18.4-r1",
+    "repository": "main",
+    "path": "main/riscv64/cairo-1.18.4-r1.apk",
+    "sha256": "c848329ed9f1b10083bb59d7115dd1267b24dcc1be9c3ec63a2b396ddfeeba4b",
+    "origin": "cairo",
+    "commit": "e54632f6ef658146c2393a8cbd0368a3707d4991",
+    "license": "LGPL-2.1-or-later OR MPL-1.1"
+  },
+  {
+    "name": "encodings",
+    "version": "1.1.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/encodings-1.1.0-r0.apk",
+    "sha256": "9c38dced80738403392aa2ae2124d759a8177afef3dbdff260570da8e1b4595e",
+    "origin": "encodings",
+    "commit": "c690d2215724c06db60faa7a7de4b8f0d2720682",
+    "license": "Public Domain"
+  },
+  {
+    "name": "eudev",
+    "version": "3.2.14-r8",
+    "repository": "main",
+    "path": "main/riscv64/eudev-3.2.14-r8.apk",
+    "sha256": "b95618a9913c191c4e5ad21ae728fc11a96153f134104d753097ea1a3d348426",
+    "origin": "eudev",
+    "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+    "license": "GPL-2.0-or-later"
+  },
+  {
+    "name": "eudev-libs",
+    "version": "3.2.14-r8",
+    "repository": "main",
+    "path": "main/riscv64/eudev-libs-3.2.14-r8.apk",
+    "sha256": "7d7de65987bcb54a9de791f13759cf8ec1b8b47531bd73aa19f4cde7654f30cc",
+    "origin": "eudev",
+    "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+    "license": "GPL-2.0-or-later"
+  },
+  {
+    "name": "eudev-openrc",
+    "version": "3.2.14-r8",
+    "repository": "main",
+    "path": "main/riscv64/eudev-openrc-3.2.14-r8.apk",
+    "sha256": "1a43b17201c43769ae38cd132acbdb122a3cd8e5ee6a18e8b0b82a418c943b06",
+    "origin": "eudev",
+    "commit": "6b4d520a838bd137811a56ffa569e2431ce5b903",
+    "license": "GPL-2.0-or-later"
+  },
+  {
+    "name": "font-dejavu",
+    "version": "2.37-r6",
+    "repository": "main",
+    "path": "main/riscv64/font-dejavu-2.37-r6.apk",
+    "sha256": "b3866a5418a4172c3d943db1177583a7952802feba417de2a12ebac980eec28e",
+    "origin": "font-dejavu",
+    "commit": "59420f440b2e664f7be1a6e135a3175aab56cd51",
+    "license": "Bitstream-Vera"
+  },
+  {
+    "name": "fontconfig",
+    "version": "2.18.1-r0",
+    "repository": "main",
+    "path": "main/riscv64/fontconfig-2.18.1-r0.apk",
+    "sha256": "faee627d476e13d8ccc2e64c9d07d12b6ac0895d29da245eae433e121393822c",
+    "origin": "fontconfig",
+    "commit": "d026b8a2a0e11062ac18d1b94791eb358b2f7f8c",
+    "license": "MIT"
+  },
+  {
+    "name": "freetype",
+    "version": "2.14.3-r0",
+    "repository": "main",
+    "path": "main/riscv64/freetype-2.14.3-r0.apk",
+    "sha256": "965312477890bff1d8b32ee4047627f27036d517016eac2cb4cb641505408dd4",
+    "origin": "freetype",
+    "commit": "ad16b0afc1a315c4095a75ff72ebbe3cfa29b671",
+    "license": "FTL OR GPL-2.0-or-later"
+  },
+  {
+    "name": "fribidi",
+    "version": "1.0.16-r3",
+    "repository": "main",
+    "path": "main/riscv64/fribidi-1.0.16-r3.apk",
+    "sha256": "c93955762e06f796d99811ef26f719ec7df2c9dab4ce3d3d36d49621942ffbe6",
+    "origin": "fribidi",
+    "commit": "5c9b8291bfb31116907f54dad1c7e03fec51eddb",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "glib",
+    "version": "2.90.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/glib-2.90.0-r0.apk",
+    "sha256": "2c84a9bcd59d36312c555586c738e14c2f8926617ea3d046b388ffb4b0d5d102",
+    "origin": "glib",
+    "commit": "b1f2e90f9e0d99b6d3b9d1c2084494eed27405ce",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "graphite2",
+    "version": "1.3.15-r0",
+    "repository": "main",
+    "path": "main/riscv64/graphite2-1.3.15-r0.apk",
+    "sha256": "696eea1b113dc812b508408cc8b17b0bc8e7cfd875b64e61cfa60b5cf7dbe982",
+    "origin": "graphite2",
+    "commit": "13d7ebc2bf207f3915898a3c1e70cc716f491bd3",
+    "license": "LGPL-2.1-or-later OR MPL-1.1"
+  },
+  {
+    "name": "harfbuzz",
+    "version": "14.2.1-r0",
+    "repository": "main",
+    "path": "main/riscv64/harfbuzz-14.2.1-r0.apk",
+    "sha256": "bd44c52f782116c1c21bab34265e618df9ec432de445d9cab635d8408f02ac32",
+    "origin": "harfbuzz",
+    "commit": "92e85684b9a5fd63c2ccd21597fa2be4afa87c0b",
+    "license": "MIT"
+  },
+  {
+    "name": "hwdata-pci",
+    "version": "0.411-r0",
+    "repository": "main",
+    "path": "main/riscv64/hwdata-pci-0.411-r0.apk",
+    "sha256": "eaa4c68c3435ce9f20f923460e599534ca0be90765b8808fe3781a0f6fcf4f19",
+    "origin": "hwdata",
+    "commit": "9088f99431247664c7924ed4b2e39adfb799e60f",
+    "license": "GPL-2.0-or-later OR XFree86-1.1"
+  },
+  {
+    "name": "kmod-libs",
+    "version": "34.2-r1",
+    "repository": "main",
+    "path": "main/riscv64/kmod-libs-34.2-r1.apk",
+    "sha256": "20ddb27c1b2f08dc2785c44fb32238b24be5b4df84fb558c8483eb368013b8e4",
+    "origin": "kmod",
+    "commit": "1997195d08a4d0e04899714802276d89d1ad4cb2",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "lcms2",
+    "version": "2.19.1-r0",
+    "repository": "main",
+    "path": "main/riscv64/lcms2-2.19.1-r0.apk",
+    "sha256": "eb428effe0549cf52a86ec6ce0181bb2813bda741e575821c2e6d5849445855a",
+    "origin": "lcms2",
+    "commit": "6db5bb1893bd91f06a208da1bc797b9218cc4eaa",
+    "license": "MIT"
+  },
+  {
+    "name": "libblkid",
+    "version": "2.42.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/libblkid-2.42.4-r0.apk",
+    "sha256": "82e3567f34e4a8313074bd530b4f4d260b9f1b85d6abc679a5f2accf449a6e72",
+    "origin": "util-linux",
+    "commit": "7c9106d622cfa14634ecb9df8cbcec9f48a4061f",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "libbsd",
+    "version": "0.12.2-r0",
+    "repository": "main",
+    "path": "main/riscv64/libbsd-0.12.2-r0.apk",
+    "sha256": "515c8d9cb1952685269be3749c1fac709ad352010b23930738d99cbd6dfb11ee",
+    "origin": "libbsd",
+    "commit": "02365e78d654a7beb23fd35d7d69f4a649009ede",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "libbz2",
+    "version": "1.0.8-r6",
+    "repository": "main",
+    "path": "main/riscv64/libbz2-1.0.8-r6.apk",
+    "sha256": "2dc9fc0385ad0d592155b88b019418d5b03d651607ff3ea6115c8ae779dfc5ea",
+    "origin": "bzip2",
+    "commit": "33283848034c9885d984c8e8697c645c57324938",
+    "license": "bzip2-1.0.6"
+  },
+  {
+    "name": "libdisplay-info",
+    "version": "0.3.0-r1",
+    "repository": "main",
+    "path": "main/riscv64/libdisplay-info-0.3.0-r1.apk",
+    "sha256": "465b50c6dcce1d330974f4ff582fe5946be3c6820b12892343a4f5d349192de4",
+    "origin": "libdisplay-info",
+    "commit": "219800e054ef6c497bdb924daec7765222bc2b83",
+    "license": "MIT"
+  },
+  {
+    "name": "libdrm",
+    "version": "2.4.134-r0",
+    "repository": "main",
+    "path": "main/riscv64/libdrm-2.4.134-r0.apk",
+    "sha256": "7b7a7e0a36c9e16c8204113c1a0b3b7d319ab3d7428b5c6bc88abf09ab800873",
+    "origin": "libdrm",
+    "commit": "2015800769b781bef45917b668d10bffe2ac538f",
+    "license": "MIT"
+  },
+  {
+    "name": "libeconf",
+    "version": "0.8.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/libeconf-0.8.4-r0.apk",
+    "sha256": "c342aaa8c92ef608ddca5e678af007eace0a220dc03d2918512792f9a06eb24c",
+    "origin": "libeconf",
+    "commit": "96066c3b6d2992dd2b72db6492c4e65d7f17520f",
+    "license": "MIT"
+  },
+  {
+    "name": "libelf",
+    "version": "0.195-r0",
+    "repository": "main",
+    "path": "main/riscv64/libelf-0.195-r0.apk",
+    "sha256": "8b9c3f3930cc8b937d4870550091fe2cedde55664b1d4a716619bff37d7b6186",
+    "origin": "elfutils",
+    "commit": "8f13294206888f3dd44ed74a8eb3dd9934499e81",
+    "license": "GPL-3.0-or-later AND ( GPL-2.0-or-later OR LGPL-3.0-or-later )"
+  },
+  {
+    "name": "libelogind",
+    "version": "255.24-r0",
+    "repository": "community",
+    "path": "community/riscv64/libelogind-255.24-r0.apk",
+    "sha256": "e4752c1a227ce6918efa0c5eefd8ceee5885b56d00570447c7251591ac3ec9c4",
+    "origin": "elogind",
+    "commit": "f7e4c2c1ed47d57461b9cb50cd11cc2bc8168ad3",
+    "license": "GPL-2.0-or-later LGPL-2.1-or-later"
+  },
+  {
+    "name": "libevdev",
+    "version": "1.13.6-r0",
+    "repository": "community",
+    "path": "community/riscv64/libevdev-1.13.6-r0.apk",
+    "sha256": "9ce2e6719ea461ee2f204321357f063254436f82b196c885799c1c523efd4126",
+    "origin": "libevdev",
+    "commit": "2af4dd0082956420a61fe680bb3da04034e67e34",
+    "license": "MIT"
+  },
+  {
+    "name": "libexpat",
+    "version": "2.8.5-r0",
+    "repository": "main",
+    "path": "main/riscv64/libexpat-2.8.5-r0.apk",
+    "sha256": "49774484f631c97a8fcff36e95cf14df8cbaeafa4141f5a6e94389f9b9611a1b",
+    "origin": "expat",
+    "commit": "3a7db677f94655442ea751bc5ee21b5bcc365d5b",
+    "license": "MIT"
+  },
+  {
+    "name": "libffi",
+    "version": "3.8.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/libffi-3.8.0-r0.apk",
+    "sha256": "f8d317eb69d119c500c2dbc254f8d0a4e0bc1e4bc925d4f048133ea13c38dc28",
+    "origin": "libffi",
+    "commit": "58a77443f37614ab608c580baf2b7f898184bec9",
+    "license": "MIT"
+  },
+  {
+    "name": "libfontenc",
+    "version": "1.1.9-r0",
+    "repository": "main",
+    "path": "main/riscv64/libfontenc-1.1.9-r0.apk",
+    "sha256": "82331b5ba2ef798079d645e9501bf07ac6dd38c89371867f1a0a6dadf084a2d6",
+    "origin": "libfontenc",
+    "commit": "9667f1121e207bb3819d91ab6734375f7698e5a7",
+    "license": "MIT"
+  },
+  {
+    "name": "libgcc",
+    "version": "15.2.0-r9",
+    "repository": "main",
+    "path": "main/riscv64/libgcc-15.2.0-r9.apk",
+    "sha256": "fad40ecab1aecd9de37120602d115cfd706a773d7471852ea178d9049b0877a2",
+    "origin": "gcc",
+    "commit": "21530a8b7b00b34c648a6b3744d461f32203a885",
+    "license": "GPL-2.0-or-later AND LGPL-2.1-or-later"
+  },
+  {
+    "name": "libinput-libs",
+    "version": "1.31.3-r0",
+    "repository": "community",
+    "path": "community/riscv64/libinput-libs-1.31.3-r0.apk",
+    "sha256": "118e385946c4ccc89660e49c60a4f4303ecdf0c9ff353582578dbee0c17ab33a",
+    "origin": "libinput",
+    "commit": "3241f28bdb5504c76850ce79362f9f38d44d4fa6",
+    "license": "MIT"
+  },
+  {
+    "name": "libinput-udev",
+    "version": "1.31.3-r0",
+    "repository": "community",
+    "path": "community/riscv64/libinput-udev-1.31.3-r0.apk",
+    "sha256": "242deac4f39b30c0abe2c2c6a24db1df90314be8b39538507436af896bb79a8c",
+    "origin": "libinput",
+    "commit": "3241f28bdb5504c76850ce79362f9f38d44d4fa6",
+    "license": "MIT"
+  },
+  {
+    "name": "libintl",
+    "version": "1.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/libintl-1.0-r0.apk",
+    "sha256": "9d7f6293d064bf5c2479e559cd81a57e726e0cd1dde871479adc780c583243eb",
+    "origin": "gettext",
+    "commit": "a0b12dbf67fb047e79a1b76c6dfe6f2904d0d391",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "libjpeg-turbo",
+    "version": "3.1.3-r0",
+    "repository": "main",
+    "path": "main/riscv64/libjpeg-turbo-3.1.3-r0.apk",
+    "sha256": "fbeabcd588795530e81b9ff5c780bfbda5b1c675fe58fbc54a101e92404ab8fc",
+    "origin": "libjpeg-turbo",
+    "commit": "5fe6bebf850fc964a8525c81548397c39cb6f7cd",
+    "license": "BSD-3-Clause AND IJG AND Zlib"
+  },
+  {
+    "name": "libmd",
+    "version": "1.2.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/libmd-1.2.0-r0.apk",
+    "sha256": "caa5b75656048113e3273505ecdd3d799d0f6dc95a677a124327055ea7316676",
+    "origin": "libmd",
+    "commit": "87b78bc6890645c317d3167bdbb0187502d0cda9",
+    "license": "BSD-3-Clause AND BSD-2-Clause AND ISC AND Beerware AND Public Domain"
+  },
+  {
+    "name": "libmount",
+    "version": "2.42.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/libmount-2.42.4-r0.apk",
+    "sha256": "ccd242bdd4be7b174bf728330d2ad9dd26d023fc4bbd6ce2a079aa0b1dbcdfbe",
+    "origin": "util-linux",
+    "commit": "7c9106d622cfa14634ecb9df8cbcec9f48a4061f",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "libpciaccess",
+    "version": "0.19-r0",
+    "repository": "main",
+    "path": "main/riscv64/libpciaccess-0.19-r0.apk",
+    "sha256": "f3933e42f3943f7dd67dd244441cc7ca6beb5a26b8a2d7ca5f7ac46cb0bdf5d6",
+    "origin": "libpciaccess",
+    "commit": "d5de88aad8098d25c1b9e53d4ca5e6ff6c90e234",
+    "license": "X11"
+  },
+  {
+    "name": "libpng",
+    "version": "1.6.58-r1",
+    "repository": "main",
+    "path": "main/riscv64/libpng-1.6.58-r1.apk",
+    "sha256": "0a8a455324e11e7e599ca8eabf7842e176d2a090e2bc574106f2ca390a15ce38",
+    "origin": "libpng",
+    "commit": "47f0ce2db0f841ad73afd91ff4d71bca0f46ad05",
+    "license": "Libpng"
+  },
+  {
+    "name": "libseat",
+    "version": "0.9.3-r1",
+    "repository": "community",
+    "path": "community/riscv64/libseat-0.9.3-r1.apk",
+    "sha256": "a71e7f145e225a0078f5f6b86e0113dba5b64f49aca508a071763042dba1be6a",
+    "origin": "seatd",
+    "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+    "license": "MIT"
+  },
+  {
+    "name": "libsharpyuv",
+    "version": "1.6.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/libsharpyuv-1.6.0-r0.apk",
+    "sha256": "5e5c04ca05cf40aa83bf21c1bed0678d993b93c57349d9a9aa3b9f9ba8a55ff4",
+    "origin": "libwebp",
+    "commit": "af8b48fabd19b69b00f5efe192f461896a38cf74",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "libstdc++",
+    "version": "15.2.0-r9",
+    "repository": "main",
+    "path": "main/riscv64/libstdc++-15.2.0-r9.apk",
+    "sha256": "bf9d5b761d3cb21005761c01349ded8c48980b2571aa277d2fc2ed6760ead858",
+    "origin": "gcc",
+    "commit": "21530a8b7b00b34c648a6b3744d461f32203a885",
+    "license": "GPL-2.0-or-later AND LGPL-2.1-or-later"
+  },
+  {
+    "name": "libwebp",
+    "version": "1.6.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/libwebp-1.6.0-r0.apk",
+    "sha256": "1f99a536270956416577f9d2221d0ed9f1e1f8f1834bbffe7f2adcf1f13c23b3",
+    "origin": "libwebp",
+    "commit": "af8b48fabd19b69b00f5efe192f461896a38cf74",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "libweston",
+    "version": "16.0.0-r0",
+    "repository": "community",
+    "path": "community/riscv64/libweston-16.0.0-r0.apk",
+    "sha256": "179eadf31189f2655b99847c83c5213516378e77da4c2e931a8abaca29130702",
+    "origin": "weston",
+    "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+    "license": "MIT"
+  },
+  {
+    "name": "libx11",
+    "version": "1.8.13-r0",
+    "repository": "main",
+    "path": "main/riscv64/libx11-1.8.13-r0.apk",
+    "sha256": "4d4c7a0a7e54d7390a8a8a820cf325b0a0b45b08ded270114ac7048fd6a67c8f",
+    "origin": "libx11",
+    "commit": "f993bc30142d46271ede4a746c1abefaa1a78eee",
+    "license": "X11"
+  },
+  {
+    "name": "libxau",
+    "version": "1.0.12-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxau-1.0.12-r0.apk",
+    "sha256": "6198639f546632d4cab4cbe808e7155b6f2995f01e8f5e8dbc278f2ac33e134a",
+    "origin": "libxau",
+    "commit": "c911b00ecb8f42c3281d4be61ce9acb4fe985a14",
+    "license": "MIT"
+  },
+  {
+    "name": "libxcb",
+    "version": "1.17.0-r2",
+    "repository": "main",
+    "path": "main/riscv64/libxcb-1.17.0-r2.apk",
+    "sha256": "2db06994c13435082f0cf0bfb6fa69ab5109b0566f50419c4caf457ec7fb90bd",
+    "origin": "libxcb",
+    "commit": "5e1b822309fb17cc2ebd46d6fbacb1763acbcdd1",
+    "license": "MIT"
+  },
+  {
+    "name": "libxdmcp",
+    "version": "1.1.5-r1",
+    "repository": "main",
+    "path": "main/riscv64/libxdmcp-1.1.5-r1.apk",
+    "sha256": "872e16c4e21ae2f96bf7afe6db70cf41530e049f4c7fe988769d52bbafa2ef82",
+    "origin": "libxdmcp",
+    "commit": "614e9166706cec427fc3d907b8d981390a42e088",
+    "license": "MIT"
+  },
+  {
+    "name": "libxext",
+    "version": "1.3.7-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxext-1.3.7-r0.apk",
+    "sha256": "49adc9b4a1b3b367664d092825f841ea1e499c4e174b61e5fb5a2d55036013ab",
+    "origin": "libxext",
+    "commit": "4ec252fa3e6e8edf16d0d6da3fe6dd39e2263942",
+    "license": "MIT"
+  },
+  {
+    "name": "libxft",
+    "version": "2.3.9-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxft-2.3.9-r0.apk",
+    "sha256": "789d55ad19888bea8bee796a1ec4a9dfebd4275402104893c4f6a89aa187880d",
+    "origin": "libxft",
+    "commit": "9a4062b0f278b43370faa58195206c5ef94e7899",
+    "license": "MIT"
+  },
+  {
+    "name": "libxkbcommon",
+    "version": "1.13.2-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxkbcommon-1.13.2-r0.apk",
+    "sha256": "14834444b90ed16a0f47462056dc0ec2d80cdad791b9eeb217dddd72dc1e22ac",
+    "origin": "libxkbcommon",
+    "commit": "6ea05d8d07eb6e11dec2147cc1d07b2ab64bf6a0",
+    "license": "MIT AND MIT-open-group AND HPND AND HPND-sell-variant AND LicenseRef-digital-equipment-corporation"
+  },
+  {
+    "name": "libxml2",
+    "version": "2.13.9-r2",
+    "repository": "main",
+    "path": "main/riscv64/libxml2-2.13.9-r2.apk",
+    "sha256": "870801ace5873ceceb4b0efdfe03026a794a9eec0bc1bcf3f2e5edd4aa9b0fbc",
+    "origin": "libxml2",
+    "commit": "f1bd5b6767a0e7fdda380c95138a1c938eb6e102",
+    "license": "MIT"
+  },
+  {
+    "name": "libxrender",
+    "version": "0.9.12-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxrender-0.9.12-r0.apk",
+    "sha256": "a4f50bf61b44b10a120bb4a8ec0705dfab7bb14c5af48b542896fc66793535e3",
+    "origin": "libxrender",
+    "commit": "74030d4140b68e8d4d36a357751f156ab31840c2",
+    "license": "MIT"
+  },
+  {
+    "name": "libxshmfence",
+    "version": "1.3.3-r0",
+    "repository": "main",
+    "path": "main/riscv64/libxshmfence-1.3.3-r0.apk",
+    "sha256": "025b0b18baf789f6db690b77e72869d90a73c1f477948d85ad93dfb449ddb68d",
+    "origin": "libxshmfence",
+    "commit": "92c045b6cdda2c1d423337a68cc814cad86b651a",
+    "license": "MIT"
+  },
+  {
+    "name": "llvm23-libs",
+    "version": "23.1.2-r0",
+    "repository": "main",
+    "path": "main/riscv64/llvm23-libs-23.1.2-r0.apk",
+    "sha256": "cf69e7a641997f14a7a539ad20494e6f65a46cf3ba9f1d4f4f24e37728d08579",
+    "origin": "llvm23",
+    "commit": "fbddb7853372ef2744c4773010ec2629291cc1c7",
+    "license": "Apache-2.0"
+  },
+  {
+    "name": "mesa",
+    "version": "26.2.3-r1",
+    "repository": "main",
+    "path": "main/riscv64/mesa-26.2.3-r1.apk",
+    "sha256": "7ecd0e480c95b9d5fa7dcb579082945fbb728743f0c8f4d5dc0f2983a6da0365",
+    "origin": "mesa",
+    "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+    "license": "MIT AND SGI-B-2.0 AND BSL-1.0"
+  },
+  {
+    "name": "mesa-egl",
+    "version": "26.2.3-r1",
+    "repository": "main",
+    "path": "main/riscv64/mesa-egl-26.2.3-r1.apk",
+    "sha256": "ab271779e3209ba826db1be699fd9d648a880d8f29d26e16b8954dbb13d4dc0e",
+    "origin": "mesa",
+    "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+    "license": "MIT AND SGI-B-2.0 AND BSL-1.0"
+  },
+  {
+    "name": "mesa-gbm",
+    "version": "26.2.3-r1",
+    "repository": "main",
+    "path": "main/riscv64/mesa-gbm-26.2.3-r1.apk",
+    "sha256": "ee2658f9824c284414285734128a76f0bfa79a7be025d49bd97b710fb87f7faf",
+    "origin": "mesa",
+    "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+    "license": "MIT AND SGI-B-2.0 AND BSL-1.0"
+  },
+  {
+    "name": "mesa-gles",
+    "version": "26.2.3-r1",
+    "repository": "main",
+    "path": "main/riscv64/mesa-gles-26.2.3-r1.apk",
+    "sha256": "03fd18088f91c760409135bfe980210fc6962e1a2836d8eadb782ad4880c050f",
+    "origin": "mesa",
+    "commit": "5be9d1d4593ed639fe9e1905cee3a791de36bff3",
+    "license": "MIT AND SGI-B-2.0 AND BSL-1.0"
+  },
+  {
+    "name": "mkfontscale",
+    "version": "1.2.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/mkfontscale-1.2.4-r0.apk",
+    "sha256": "604fef53bddbfbbc31d83901ea0405be0f48366480b4a50acfd9010a6a2ec155",
+    "origin": "mkfontscale",
+    "commit": "e4301c788920ece9e1cd96dfa9d0ea6e7875e755",
+    "license": "MIT"
+  },
+  {
+    "name": "mtdev",
+    "version": "1.1.7-r0",
+    "repository": "community",
+    "path": "community/riscv64/mtdev-1.1.7-r0.apk",
+    "sha256": "9bd540390d46f13d65a5890397a9bc7c20df3faa40a2e8bbb03f8c841013359b",
+    "origin": "mtdev",
+    "commit": "e08040e6d605215afce727b42ff584868d0a61df",
+    "license": "MIT"
+  },
+  {
+    "name": "pango",
+    "version": "1.58.2-r0",
+    "repository": "main",
+    "path": "main/riscv64/pango-1.58.2-r0.apk",
+    "sha256": "efc2f19a6af18910ccb902136e6fec82026d5f7e5cb996430518e15133fd6466",
+    "origin": "pango",
+    "commit": "cffccd8e464575ed5dbf71486eac9fe8ea745585",
+    "license": "LGPL-2.1-or-later"
+  },
+  {
+    "name": "pcre2",
+    "version": "10.48-r0",
+    "repository": "main",
+    "path": "main/riscv64/pcre2-10.48-r0.apk",
+    "sha256": "af8dcefa9a6ab8badc74fb843680cd6b743a88ba6a0095761f3c82f7daa9f7eb",
+    "origin": "pcre2",
+    "commit": "07d282e2a0c1edcd0aa0ca9759cb4366151dc050",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "pixman",
+    "version": "0.46.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/pixman-0.46.4-r0.apk",
+    "sha256": "77a4d9908c26c4b0df79a749eee60037750ad71f34397930ba63a6ee3ab7c7ef",
+    "origin": "pixman",
+    "commit": "9337ac809a431f004386ea3e279e3d55f770e7d3",
+    "license": "MIT"
+  },
+  {
+    "name": "seatd",
+    "version": "0.9.3-r1",
+    "repository": "community",
+    "path": "community/riscv64/seatd-0.9.3-r1.apk",
+    "sha256": "e0efbdb724fcfe8b28b33f9f2976892e6a988735e43164d2a98a3b13bcfb8350",
+    "origin": "seatd",
+    "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+    "license": "MIT"
+  },
+  {
+    "name": "seatd-openrc",
+    "version": "0.9.3-r1",
+    "repository": "community",
+    "path": "community/riscv64/seatd-openrc-0.9.3-r1.apk",
+    "sha256": "1d9cc622d974bd47defedc8554893cc781941dbc0cbe645cc451870e43cdb363",
+    "origin": "seatd",
+    "commit": "d266f30be9d5c0e2d291e63f6458ce93128864a7",
+    "license": "MIT"
+  },
+  {
+    "name": "udev-init-scripts",
+    "version": "35-r1",
+    "repository": "main",
+    "path": "main/riscv64/udev-init-scripts-35-r1.apk",
+    "sha256": "49b66a6cb1c803ab16bb17f0e50671daee113d0342ba182d01493d23e10fc40a",
+    "origin": "udev-init-scripts",
+    "commit": "7501172a312403cb494042f8aa8f9faf7b354790",
+    "license": "GPL-2.0-only"
+  },
+  {
+    "name": "udev-init-scripts-openrc",
+    "version": "35-r1",
+    "repository": "main",
+    "path": "main/riscv64/udev-init-scripts-openrc-35-r1.apk",
+    "sha256": "be138108cead2c7467beee6ec31e6ea2305923cedefc8f372d12a2327feb0df0",
+    "origin": "udev-init-scripts",
+    "commit": "7501172a312403cb494042f8aa8f9faf7b354790",
+    "license": "GPL-2.0-only"
+  },
+  {
+    "name": "vulkan-loader",
+    "version": "1.4.360-r0",
+    "repository": "main",
+    "path": "main/riscv64/vulkan-loader-1.4.360-r0.apk",
+    "sha256": "1b4f9c4db73bc1fc0028622fe6d5401773f28b49e28ef76dd1e8d0abc7c85984",
+    "origin": "vulkan-loader",
+    "commit": "48337777063f6f6f08ba0dc001e6e7f465206da9",
+    "license": "Apache-2.0"
+  },
+  {
+    "name": "wayland-libs-client",
+    "version": "1.26.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/wayland-libs-client-1.26.0-r0.apk",
+    "sha256": "4ec43ad84b6aedbba97d600b1eb7dd187c383921401ab201c7c75557c68fa8e8",
+    "origin": "wayland",
+    "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+    "license": "MIT"
+  },
+  {
+    "name": "wayland-libs-cursor",
+    "version": "1.26.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/wayland-libs-cursor-1.26.0-r0.apk",
+    "sha256": "7c1c84bf3e8e2526327c4e001affb0225185d305704d1796316c92a09269e3f6",
+    "origin": "wayland",
+    "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+    "license": "MIT"
+  },
+  {
+    "name": "wayland-libs-server",
+    "version": "1.26.0-r0",
+    "repository": "main",
+    "path": "main/riscv64/wayland-libs-server-1.26.0-r0.apk",
+    "sha256": "f76044acd2613e94fe8a216b4c84e303a87daee38a21377eb181ec2e57b282f7",
+    "origin": "wayland",
+    "commit": "13b755bcd1f1ee9fc241c6e02d7ea22519ea7729",
+    "license": "MIT"
+  },
+  {
+    "name": "weston",
+    "version": "16.0.0-r0",
+    "repository": "community",
+    "path": "community/riscv64/weston-16.0.0-r0.apk",
+    "sha256": "453dbfadde0b9a68d5b36f7c4620bca73290e221d78ca0dbf2e4356e4e1e86f9",
+    "origin": "weston",
+    "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+    "license": "MIT"
+  },
+  {
+    "name": "weston-backend-drm",
+    "version": "16.0.0-r0",
+    "repository": "community",
+    "path": "community/riscv64/weston-backend-drm-16.0.0-r0.apk",
+    "sha256": "5ed275ce95abde682c0cf6e1f0f40d55faf9320d4b3a15a5fff06505973baffa",
+    "origin": "weston",
+    "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+    "license": "MIT"
+  },
+  {
+    "name": "weston-shell-desktop",
+    "version": "16.0.0-r0",
+    "repository": "community",
+    "path": "community/riscv64/weston-shell-desktop-16.0.0-r0.apk",
+    "sha256": "0f7eba2e4fbe30c1a033f92cac6552801574448c6b380121750aa5842da1aafa",
+    "origin": "weston",
+    "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+    "license": "MIT"
+  },
+  {
+    "name": "weston-terminal",
+    "version": "16.0.0-r0",
+    "repository": "community",
+    "path": "community/riscv64/weston-terminal-16.0.0-r0.apk",
+    "sha256": "7f4c1b1288d4906dd687acde0f44bbb58ac9816fc5c37fd4944866412e1f024a",
+    "origin": "weston",
+    "commit": "d9f421f22d70b101ee7eac8f229f4d0bb425cdad",
+    "license": "MIT"
+  },
+  {
+    "name": "xkeyboard-config",
+    "version": "2.48-r0",
+    "repository": "main",
+    "path": "main/riscv64/xkeyboard-config-2.48-r0.apk",
+    "sha256": "90ae8e1db89a926837c4c6515e74afa7b4c40db03a0f1e9e429c5c38da16f1c4",
+    "origin": "xkeyboard-config",
+    "commit": "a20d42e8221431ce8caab197d2aa0b0da152929c",
+    "license": "MIT"
+  },
+  {
+    "name": "xz-libs",
+    "version": "5.8.4-r0",
+    "repository": "main",
+    "path": "main/riscv64/xz-libs-5.8.4-r0.apk",
+    "sha256": "ac629de850aef58ee11b8994a837076b0af40b611d51dbac218b8515a9662fe6",
+    "origin": "xz",
+    "commit": "950af2f9ad0e4518d167e8ce0b41e7be0a7a730e",
+    "license": "GPL-2.0-or-later AND 0BSD AND Public-Domain AND LGPL-2.1-or-later"
+  },
+  {
+    "name": "zstd-libs",
+    "version": "1.5.7-r2",
+    "repository": "main",
+    "path": "main/riscv64/zstd-libs-1.5.7-r2.apk",
+    "sha256": "5292eb5e595bc06f27aeb7728211c414ff065fa5f5091a046ef3d4ff821a917c",
+    "origin": "zstd",
+    "commit": "3c6e2ee2b16f403d53eab39c4426eb61f003c322",
+    "license": "BSD-3-Clause OR GPL-2.0-or-later"
+  }
+]

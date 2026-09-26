@@ -1,0 +1,100 @@
+package io.github.aksulightning.flyby.ui
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import io.github.aksulightning.flyby.vm.ImageVariant
+import io.github.aksulightning.flyby.BuildConfig
+import io.github.aksulightning.flyby.settings.*
+import io.github.aksulightning.flyby.service.VmService
+
+@Composable
+fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transfer,
+                   preferences: AppSettings, memory: (Int) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
+                   selectShared: () -> Unit, clearShared: () -> Unit, licenses: () -> Unit,
+                   export: () -> Unit, import: () -> Unit, back: () -> Unit, modifier: Modifier, error: String? = null) {
+    var ram by rememberSaveable(settings.memoryMiB) { mutableStateOf(settings.memoryMiB.toString()) }
+    var disk by rememberSaveable(settings.diskGiB) { mutableStateOf(settings.diskGiB.toString()) }
+    var confirmCreate by rememberSaveable { mutableStateOf<Int?>(null) }
+    var image by rememberSaveable { mutableStateOf(ImageVariant.MINIMAL) }
+    val ramValue = ram.toIntOrNull()?.takeIf { it in 128..768 }
+    val diskValue = disk.toIntOrNull()?.takeIf { it in 1..100 }
+    confirmCreate?.let { size -> AlertDialog(
+        onDismissRequest = { confirmCreate = null },
+        title = { Text("Create a new ${image.title} disk?") },
+        text = { Text("This replaces the current system disk with a fresh $size GiB ${image.title} installation. All files and installed packages on the current system disk will be lost. Export it first if needed. The old Home/Data disk is kept separately.") },
+        confirmButton = { TextButton({ createDisk(size, image); confirmCreate = null }, enabled = idle) { Text("Create and replace") } },
+        dismissButton = { TextButton({ confirmCreate = null }) { Text("Cancel") } }) }
+    Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(back) { Text("Back") }
+        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Text("Appearance", style = MaterialTheme.typography.titleMedium)
+        ThemeMode.entries.forEach { mode ->
+            Row { RadioButton(settings.theme == mode, { preferences.theme(mode) }); TextButton({ preferences.theme(mode) }) { Text(when(mode) {
+                ThemeMode.SYSTEM -> "Follow device"; ThemeMode.DARK -> "Night"; ThemeMode.LIGHT -> "Light"
+            }) } }
+        }
+        HorizontalDivider()
+        Text("Virtual machine", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(ram, { ram = it }, label = { Text("RAM · 128–768 MiB") }, singleLine = true,
+            isError = ramValue == null, enabled = idle, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        Button({ ramValue?.let(memory) }, enabled = idle && ramValue != null && ramValue != settings.memoryMiB) { Text("Save RAM") }
+        Text("Saved RAM: ${settings.memoryMiB} MiB. Stop Linux before changing RAM, disks or the shared folder. Changes apply at the next start.")
+        Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
+        ImageVariant.entries.forEach { variant ->
+            Row {
+                RadioButton(image == variant, { image = variant }, enabled = idle)
+                TextButton({ image = variant }, enabled = idle) { Text(variant.title) }
+            }
+        }
+        Text(image.description)
+        OutlinedTextField(disk, { disk = it }, label = { Text("System disk · 1–100 GiB") }, singleLine = true,
+            isError = diskValue == null, enabled = idle, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        Button({ confirmCreate = diskValue }, enabled = idle && diskValue != null) { Text("Create ${image.title} disk") }
+        Text("A complete persistent Alpine Edge system (main + community repositories), including /etc, /usr and /root. Updating Flyby keeps your existing installation; only new disks use this system image. The filesystem expands to the selected size on its first boot. Disk space is allocated as it is used; keep enough free Android storage. /run and /tmp stay temporary.")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(export, enabled = idle) { Text("Export disk") }
+            OutlinedButton(import, enabled = idle) { Text("Import disk") }
+        }
+        Text("Backups include the system disk, not running memory or /shared. Import replaces the system disk after validation.")
+        if (transfer.busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        transfer.message?.let { Text(it) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        HorizontalDivider()
+        Text("Shared folder · /shared", style = MaterialTheme.typography.titleMedium)
+        Text(settings.sharedTree?.let { android.net.Uri.decode(it.substringAfterLast('/')) } ?: "No folder selected")
+        OutlinedButton(selectShared, enabled = idle) { Text("Choose Android folder") }
+        if (settings.sharedTree != null) TextButton(clearShared, enabled = idle) { Text("Disconnect folder") }
+        Text("The selected Android folder is available at /shared in Linux. File edits and deletions affect the Android files directly. Access is limited to that folder. Document providers may not support every Unix file operation.")
+        Text("The previous Home/Data disk is retained in app storage; its contents are not automatically copied to the system disk or /shared.", style = MaterialTheme.typography.bodySmall)
+        HorizontalDivider()
+        Text("Terminal", style = MaterialTheme.typography.titleMedium)
+        Text("Text size · ${settings.fontSize} sp")
+        Slider(settings.fontSize.toFloat(), { preferences.fontSize(it.toInt()) }, valueRange = 8f..32f, steps = 23)
+        Text("Line spacing · ${settings.lineSpacing}%")
+        Slider(settings.lineSpacing.toFloat(), { preferences.lineSpacing(it.toInt()) }, valueRange = 100f..160f, steps = 59)
+        Text("Cursor")
+        CursorStyle.entries.forEach { style ->
+            Row { RadioButton(settings.cursor == style, { preferences.cursor(style) }); TextButton({ preferences.cursor(style) }) { Text(style.name.lowercase().replaceFirstChar { it.uppercase() }) } }
+        }
+        SettingSwitch("Extra key row", settings.extraKeys, preferences::extraKeys)
+        SettingSwitch("Keep screen on in terminal", settings.keepScreenOn, preferences::keepScreenOn)
+        HorizontalDivider()
+        OutlinedButton(licenses) { Text("Licenses") }
+        Text("Flyby ${BuildConfig.VERSION_NAME}\nBuild ${BuildConfig.VERSION_CODE}\n${BuildConfig.REVISION}", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun SettingSwitch(label: String, checked: Boolean, change: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, Modifier.weight(1f).padding(top = 12.dp)); Switch(checked, change)
+    }
+}

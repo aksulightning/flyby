@@ -1,3 +1,6 @@
+> Historical Phase 1 proposal. Superseded by the embedded RV64 runtime.
+> QEMU is not built, linked or used by Phase 2. See [docs/riscv-runtime.md](../../docs/riscv-runtime.md).
+
 # Native QEMU workspace
 
 The Phase 1 app contains no native executable and no JNI library. NDK r27c and

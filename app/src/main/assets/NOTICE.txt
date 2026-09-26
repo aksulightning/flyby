@@ -1,0 +1,21 @@
+Flyby: original source Apache-2.0, https://github.com/aksulightning/flyby
+Native runtime:
+- RVVM library ce8ca7c00ba4058e5f26811057573b3ff23e9316, MPL-2.0.
+  https://github.com/LekKit/RVVM/tree/ce8ca7c00ba4058e5f26811057573b3ff23e9316
+  GPL command-line programs are not linked. No upstream source patches.
+- libvterm 0.3.3, MIT, copyright 2008 Paul Evans.
+  https://www.leonerd.org.uk/code/libvterm/libvterm-0.3.3.tar.gz
+- AndroidX, Kotlin, kotlinx.coroutines: Apache-2.0.
+Guest: Linux 6.18.53 (GPL-2.0-only), OpenSBI 1.9 (BSD-2-Clause),
+Alpine Edge riscv64 (20260805 snapshot) including BusyBox (GPL-2.0-only) and musl (MIT).
+Every guest package's version, license and exact Alpine source recipe revision
+is listed in assets/vm/provenance.json. Full native/core notices are packaged
+as assets/*-*.txt. Source/build/provisioning scripts and the redistribution
+requirements are in the Flyby repository, docs/licenses.md.
+This development guest has an automatic root shell. Its system disk persists; /run and /tmp are temporary.
+The Flyby guest filesystem-growth helper and SAF/9P bridge are original Apache-2.0 code.
+The guest helper is freestanding and links no C library.
+
+Service Alpine includes OpenRC (BSD-2-Clause). Its full license is available in
+OpenRC-BSD-2-Clause.txt. Additional package notices and exact sources are recorded
+in vm/provenance.json and the release corresponding-source archive.
