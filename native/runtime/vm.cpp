@@ -246,7 +246,10 @@ bool Vm::displayInput(const uint8_t *data, size_t size) {
     std::lock_guard lock(impl->lifecycle);
     if (!impl->machine) return true;
     { std::lock_guard inputLock(impl->displayInput.mutex);
-      if (!impl->displayInput.enabled || size > InputCapacity - impl->displayInput.inSize) return false; }
+      // A view may send its reset before the guest has booted. Discard it;
+      // false means queue backpressure only, never a readiness timeout.
+      if (!impl->displayInput.enabled) return true;
+      if (size > InputCapacity - impl->displayInput.inSize) return false; }
     impl->displayInput.write(data, size);
     return true;
 }

@@ -81,6 +81,10 @@ int main(int argc, char **argv) {
         rejects([&] { flyby::Vm vm(invalid.string(), 512, 1); });
         std::filesystem::remove_all(invalid);
         flyby::Vm vm(argv[1], 512, 1);
+        const uint8_t release[16] = {'F', 'I', 1, 1};
+        check(vm.displayInput(release, sizeof(release)), "Display reset before guest readiness must not block");
+        check(vm.displayFrame().empty(), "Headless guest must not advertise a ready display");
+        rejects([&] { vm.displayInput(release, sizeof(release) - 1); });
         vm.start();
         rejects([&] { vm.start(); });
         waitFor(vm, "FLYBY_ALPINE_READY", 180);
