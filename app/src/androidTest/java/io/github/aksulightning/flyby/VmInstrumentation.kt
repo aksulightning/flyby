@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import io.github.aksulightning.flyby.terminal.TerminalView
+import io.github.aksulightning.flyby.display.DisplayView
 import io.github.aksulightning.flyby.nativebridge.NativeBridge
 import io.github.aksulightning.flyby.service.VmService
 import io.github.aksulightning.flyby.vm.VmState
@@ -201,8 +202,63 @@ class VmInstrumentation : Instrumentation() {
             await(15_000) { "\nFLYBY_RESTORE_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
             backup.delete()
+            // Exercise the new image and Android view/IME against the real guest.
+            runOnMainSync {
+                check(vmService.setMemory(512))
+                vmService.onStartCommand(Intent(targetContext, VmService::class.java)
+                    .setAction(VmService.ACTION_CREATE).putExtra(VmService.EXTRA_DISK_GIB, 1)
+                    .putExtra(VmService.EXTRA_IMAGE, "WAYLAND"), 0, 0)
+            }
+            await(180_000) { !vmService.transfer.value.busy }
+            check(vmService.transfer.value.message?.startsWith("Minimal Alpine Wayland disk created") == true)
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) // Settings -> Main.
+            clickStart()
+            await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            runBlocking { vmService.session.sendInput((
+                "i=0; until rc-service flyby-wayland-terminal status >/dev/null 2>&1; do " +
+                "i=\$((i+1)); [ \$i -lt 60 ] || break; sleep 1; done; " +
+                "rc-service flyby-wayland-terminal status && printf '\\nFLYBY_WAYLAND_READY\\n'\n").toByteArray()) }
+            await(120_000) { "\nFLYBY_WAYLAND_READY\r\n" in vmService.session.transcript.value }
+            val frame = IntArray(800 * 600)
+            await(30_000) { runBlocking { vmService.vm.displayFrame(frame) } && frame.toSet().size > 16 }
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) // Terminal -> Main.
+            clickText("Display")
+            var display: DisplayView? = null
+            await(10_000) {
+                var ready = false
+                runOnMainSync {
+                    display = findDisplay(checkNotNull(activity).window.decorView)
+                    ready = display?.input != null
+                }
+                ready
+            }
+            runOnMainSync {
+                val view = checkNotNull(display)
+                view.requestFocus()
+                val input = view.onCreateInputConnection(EditorInfo())
+                input.setComposingText("echo android", 1)
+                input.commitText("echo android > /root/wayland-android-test\n", 1)
+            }
+            runBlocking { vmService.session.sendInput((
+                "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do " +
+                "i=\$((i+1)); [ \$i -lt 30 ] || break; sleep 1; done; " +
+                "grep -qx android /root/wayland-android-test && printf '\\nFLYBY_DISPLAY_IME_OK\\n'\n").toByteArray()) }
+            await(45_000) { "\nFLYBY_DISPLAY_IME_OK\r\n" in vmService.session.transcript.value }
+            // Recreate while Display is selected; retain the VM and restore the view.
+            val displayMonitor = addMonitor(MainActivity::class.java.name, null, false)
+            runOnMainSync { activity?.recreate() }
+            activity = checkNotNull(displayMonitor.waitForActivityWithTimeout(10_000))
+            removeMonitor(displayMonitor)
+            await(10_000) {
+                var ready = false
+                runOnMainSync { ready = findDisplay(checkNotNull(activity).window.decorView)?.input != null }
+                ready
+            }
+            check(vmService.vm.status.value.state == VmState.RUNNING)
+            runBlocking { vmService.vm.stop() }
+            check(!runBlocking { vmService.vm.displayFrame(frame) })
             result = Activity.RESULT_OK
-            report.putString("stream", "PASS: JNI validation, shared-folder result before service rebind, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart and Stop\n")
+            report.putString("stream", "PASS: JNI validation, shared-folder result before service rebind, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart, Wayland 800x600 frame, Display IME, Display recreation and Stop\n")
         } catch (failure: Throwable) {
             report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
@@ -265,6 +321,11 @@ class VmInstrumentation : Instrumentation() {
     private fun findTerminal(view: View): TerminalView? {
         if (view is TerminalView) return view
         if (view is ViewGroup) for (i in 0 until view.childCount) findTerminal(view.getChildAt(i))?.let { return it }
+        return null
+    }
+    private fun findDisplay(view: View): DisplayView? {
+        if (view is DisplayView) return view
+        if (view is ViewGroup) for (i in 0 until view.childCount) findDisplay(view.getChildAt(i))?.let { return it }
         return null
     }
     private fun await(timeout: Long, condition: () -> Boolean) {

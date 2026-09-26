@@ -1,5 +1,7 @@
 package io.github.aksulightning.flyby.display
 
+import kotlin.math.roundToInt
+
 /** Complete HID state reports, shared with native/guest/display-input.c. */
 class DisplayInput(private val send: (ByteArray) -> Unit) {
     private val keys = linkedSetOf<Int>()
@@ -34,8 +36,8 @@ class DisplayInput(private val send: (ByteArray) -> Unit) {
     }
     fun tap(code: Int) { key(code, true); key(code, false) }
     fun pointer(px: Float, py: Float, mask: Int, wheel: Int = 0) {
-        x = (px.coerceIn(0f, 799f) * 32767f / 799f).toInt()
-        y = (py.coerceIn(0f, 599f) * 32767f / 599f).toInt()
+        x = (px.coerceIn(0f, 799f).toDouble() * 32767 / 799).roundToInt()
+        y = (py.coerceIn(0f, 599f).toDouble() * 32767 / 599).roundToInt()
         buttons = mask and 7
         send(pointer(wheel))
     }

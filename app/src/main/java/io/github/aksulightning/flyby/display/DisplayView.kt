@@ -86,6 +86,11 @@ class DisplayView(context: Context) : View(context) {
                 return true
             }
             override fun sendKeyEvent(event: KeyEvent) = this@DisplayView.dispatchKeyEvent(event)
+            override fun performEditorAction(actionCode: Int): Boolean {
+                finishComposingText()
+                input?.tap(40)
+                return true
+            }
         }
     }
     private fun hid(key: Int): Int = when (key) {
