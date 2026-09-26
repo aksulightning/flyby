@@ -64,7 +64,6 @@ fun DisplayScreen(vm: VmManager, status: VmStatus, onBack: () -> Unit, onTermina
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             TextButton(onBack) { Text("Back") }
             TextButton(onTerminal) { Text("Terminal") }
-            TextButton({ view?.keyboard() }, enabled = ready) { Text("Keyboard") }
             Text("800 × 600", Modifier.padding(12.dp))
         }
         if (!ready) Text(if (status.state == VmState.RUNNING)
@@ -81,6 +80,7 @@ fun DisplayScreen(vm: VmManager, status: VmStatus, onBack: () -> Unit, onTermina
             for ((label, code) in listOf("Esc" to 41, "Tab" to 43, "Enter" to 40, "←" to 80, "↓" to 81, "↑" to 82, "→" to 79)) {
                 TextButton({ input.tap(code) }, enabled = ready) { Text(label) }
             }
+            TextButton({ view?.keyboard() }, enabled = ready) { Text("Keyboard") }
         }
     }
 }
