@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aksulightning.flyby.service.VmService
 import io.github.aksulightning.flyby.ui.MainScreen
 import io.github.aksulightning.flyby.ui.TerminalScreen
+import io.github.aksulightning.flyby.ui.DisplayScreen
 import io.github.aksulightning.flyby.vm.VmStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -89,8 +90,9 @@ class MainActivity : ComponentActivity() {
             }
             val status by (connected?.vm?.status ?: disconnected).collectAsStateWithLifecycle()
             var terminalVisible by rememberSaveable { mutableStateOf(false) }
-            BackHandler(terminalVisible || settingsVisible || licensesVisible) {
-                if (licensesVisible) licensesVisible = false else { terminalVisible = false; settingsVisible = false }
+            var displayVisible by rememberSaveable { mutableStateOf(false) }
+            BackHandler(terminalVisible || displayVisible || settingsVisible || licensesVisible) {
+                if (licensesVisible) licensesVisible = false else { terminalVisible = false; displayVisible = false; settingsVisible = false }
             }
             val dark = settings.theme == ThemeMode.DARK || (settings.theme == ThemeMode.SYSTEM && isSystemInDarkTheme())
             SideEffect {
@@ -118,6 +120,9 @@ class MainActivity : ComponentActivity() {
                             { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },
                             { importPicker.launch(arrayOf("*/*")) }, { settingsVisible = false }, content, connectionError)
+                    } else if (displayVisible && connected != null) {
+                        DisplayScreen(connected.vm, visibleStatus, { displayVisible = false },
+                            { displayVisible = false; terminalVisible = true }, content)
                     } else if (terminalVisible && connected != null) {
                         TerminalScreen(connected.session, visibleStatus, { terminalVisible = false }, content, settings)
                     } else {
@@ -126,7 +131,8 @@ class MainActivity : ComponentActivity() {
                             if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                                 notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                             else startServiceVm()
-                        }, { connected?.stopVm() }, { terminalVisible = true }, content, connected != null && !transfer.busy, { settingsVisible = true }, settings.memoryMiB, settings.diskGiB)
+                        }, { connected?.stopVm() }, { terminalVisible = true }, content, connected != null && !transfer.busy, { settingsVisible = true }, settings.memoryMiB, settings.diskGiB,
+                            onDisplay = { displayVisible = true })
                     }
                 }
             }

@@ -8,8 +8,8 @@ COMMON_MODULE_CHECKS = " ".join('''
 modprobe char-major-10-200 && test -c /dev/net/tun &&
 modprobe rtnl-link-veth && test -d /sys/module/veth &&
 '''.splitlines()) + ' for module in ' + ' '.join(GUEST_MODULES) + (
-    '; do modprobe "$module" && test -d "/sys/module/$module" '
-    '|| { echo FLYBY_MODULE_ERROR; exit 1; }; done && '
+    '; do modprobe "$module" && test -d "/sys/module/$(printf %s "$module" | tr - _)" '
+    '|| { echo "FLYBY_MODULE_ERROR $module"; exit 1; }; done && '
 )
 COMMON_MODULE_CHECKS += " ".join('''
 binfmt_test=$(mktemp -d /tmp/flyby-binfmt.XXXXXX) &&

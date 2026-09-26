@@ -44,11 +44,11 @@ def source_archive(name, expected):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     metadata = json.loads((ROOT/'app/src/main/assets/vm/provenance.json').read_text())
-    recipes = sorted({(p['origin'],p['commit']) for p in metadata['packages']})
-    for origin, commit in recipes:
+    recipes = sorted({(p.get('repository', 'main'),p['origin'],p['commit']) for p in metadata['packages']})
+    for repository, origin, commit in recipes:
         archive = download(f'https://codeload.github.com/alpinelinux/aports/tar.gz/{commit}', CACHE/(commit+'.tar.gz'))
-        prefix = f'aports-{commit}/main/{origin}/'
-        dest = OUT/'aports'/commit/'main'/origin
+        prefix = f'aports-{commit}/{repository}/{origin}/'
+        dest = OUT/'aports'/commit/repository/origin
         dest.mkdir(parents=True, exist_ok=True)
         with tarfile.open(archive) as tar:
             for item in tar:

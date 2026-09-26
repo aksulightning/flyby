@@ -151,6 +151,13 @@ class VmManager(
         if (current.value.state == VmState.RUNNING) controller?.resize(rows, cols)
     }
 
+    suspend fun displayFrame(pixels: IntArray): Boolean =
+        current.value.state == VmState.RUNNING && controller?.displayFrame(pixels) == true
+
+    suspend fun displayInput(reports: ByteArray) {
+        if (current.value.state == VmState.RUNNING) controller?.displayInput(reports)
+    }
+
     override suspend fun sendInput(bytes: ByteArray) {
         check(current.value.state == VmState.RUNNING) { "VM is not running" }
         checkNotNull(controller).sendInput(bytes.copyOf())

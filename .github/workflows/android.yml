@@ -50,6 +50,7 @@ jobs:
           FLYBY_RAM_MIB=768 FLYBY_DISK_GIB=100 python3 scripts/test-storage.py --system
           python3 scripts/test-network.py
           python3 scripts/test-service.py
+          python3 scripts/test-wayland.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 

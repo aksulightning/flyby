@@ -13,6 +13,8 @@ object NativeBridge {
     external fun sharedInputVm(id: Long, data: ByteArray)
     external fun sharedOutputVm(id: Long): ByteArray
     external fun resizeVm(id: Long, rows: Int, cols: Int)
+    external fun displayFrameVm(id: Long, pixels: IntArray): Boolean
+    external fun displayInputVm(id: Long, reports: ByteArray): Boolean
     external fun createTerminal(): Long
     external fun destroyTerminal(id: Long)
     external fun resetTerminal(id: Long)

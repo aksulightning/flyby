@@ -28,6 +28,8 @@ class Vm {
     void input(const uint8_t *data, size_t size);
     void resize(unsigned rows, unsigned cols);
     void sharedInput(const uint8_t *data, size_t size);
+    bool displayInput(const uint8_t *data, size_t size);
+    std::vector<int32_t> displayFrame();
     std::vector<uint8_t> sharedOutput();
     std::vector<uint8_t> output(unsigned timeoutMs);
 

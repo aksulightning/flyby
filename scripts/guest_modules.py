@@ -3,6 +3,7 @@
 MODULE_GROUPS = {
     'base': ('ext4', 'overlay', 'fuse', 'realtek', 'r8169', 'af_packet', '9p', '9pnet', '9pnet_fd'),
     'execution': ('binfmt_misc',),
+    'display': ('evdev', 'uhid', 'hid-generic'),
     'storage': ('loop', 'squashfs', 'vfat', 'exfat', 'nls_cp437', 'nls_utf8'),
     'network': ('tun', 'veth', 'bridge', 'br_netfilter', '8021q', 'dummy', 'wireguard'),
     'firewall': (

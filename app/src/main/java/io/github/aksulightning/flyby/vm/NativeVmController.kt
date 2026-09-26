@@ -15,6 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withTimeout
 
 class NativeVmController(private val log: (String) -> Unit, private val sharedTree: () -> SharedTree? = { null }) : VmController {
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
@@ -106,5 +107,13 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
     }
     override suspend fun resize(rows: Int, cols: Int) = withContext(Dispatchers.IO) {
         mutex.withLock { if (handle != 0L) NativeBridge.resizeVm(handle, rows, cols) }
+    }
+    override suspend fun displayFrame(pixels: IntArray): Boolean = withContext(Dispatchers.IO) {
+        mutex.withLock { handle != 0L && NativeBridge.displayFrameVm(handle, pixels) }
+    }
+    override suspend fun displayInput(reports: ByteArray) = withContext(Dispatchers.IO) {
+        withTimeout(5_000) {
+            while (!mutex.withLock { handle == 0L || NativeBridge.displayInputVm(handle, reports) }) delay(10)
+        }
     }
 }

@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "display.h"
 extern "C" {
 #include <devices/ns16550a.h>
 #include <devices/rtl8169.h>
@@ -42,7 +43,8 @@ struct Console {
     std::vector<uint8_t> outgoing = std::vector<uint8_t>(OutputCapacity);
     size_t inStart = 0, inSize = 0, outStart = 0, outSize = 0, readyMatch = 0;
     bool closed = false, enabled;
-    explicit Console(bool gated = false) : enabled(!gated) {
+    const std::string ready;
+    explicit Console(bool gated = false, const char *marker = "FLYBY_CONTROL_READY\n") : enabled(!gated), ready(marker) {
         dev.data = this;
         dev.poll = [](chardev_t *d) {
             auto &c = *static_cast<Console *>(d->data);
@@ -65,11 +67,10 @@ struct Console {
             auto &c = *static_cast<Console *>(d->data);
             std::lock_guard lock(c.mutex);
             const auto *b = static_cast<const uint8_t *>(bytes);
-            constexpr char ready[] = "FLYBY_CONTROL_READY\n";
             for (size_t i = 0; i < size; ++i) {
                 if (!c.enabled) {
-                    c.readyMatch = b[i] == ready[c.readyMatch] ? c.readyMatch + 1 : 0;
-                    if (c.readyMatch == sizeof(ready) - 1)
+                    c.readyMatch = b[i] == c.ready[c.readyMatch] ? c.readyMatch + 1 : 0;
+                    if (c.readyMatch == c.ready.size())
                         c.enabled = true;
                 }
                 if (c.outSize == OutputCapacity) {
@@ -109,6 +110,8 @@ struct Vm::Impl {
     Console console;
     Console control{true};
     Console shared;
+    Console displayInput{true, "FLYBY_DISPLAY_READY\n"};
+    Display display;
     ~Impl() {
         if (machine)
             rvvm_free_machine(machine);
@@ -137,8 +140,10 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
     if (!irq || !rvvm_riscv_clint_init(m, Clint) || !rvvm_syscon_init(m, Syscon) ||
         !rvvm_ns16550a_init(m, &impl->console.dev, Uart, 0, irq, 1) ||
         !rvvm_ns16550a_init(m, &impl->control.dev, ControlUart, 0, irq, 2) ||
-        (sharedFolder && !rvvm_ns16550a_init(m, &impl->shared.dev, SharedUart, 0, irq, 8)))
+        !rvvm_ns16550a_init(m, &impl->shared.dev, SharedUart, 0, irq, 8) ||
+        !rvvm_ns16550a_init(m, &impl->displayInput.dev, 0x10003000, 0, irq, 9))
         throw std::runtime_error("Native board initialization failed");
+    impl->display.attach(m);
     const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
     if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
         !rvvm_rtc_goldfish_init(m, Rtc, irq, 7) || !rtl8169_init_auto(m))
@@ -226,6 +231,25 @@ static std::vector<uint8_t> readConsole(Console &c, unsigned timeoutMs) {
     return b;
 }
 std::vector<uint8_t> Vm::output(unsigned timeoutMs) { return readConsole(impl->console, timeoutMs); }
+std::vector<int32_t> Vm::displayFrame() {
+    std::lock_guard lock(impl->lifecycle);
+    if (!impl->machine) return {};
+    { std::lock_guard inputLock(impl->displayInput.mutex);
+      if (!impl->displayInput.enabled) return {}; }
+    return impl->display.frame();
+}
+bool Vm::displayInput(const uint8_t *data, size_t size) {
+    if (size == 0 || size > 4096 || size % 16) throw std::invalid_argument("Invalid display input");
+    for (size_t i = 0; i < size; i += 16)
+        if (data[i] != 'F' || data[i+1] != 'I' || data[i+2] != 1 || (data[i+3] != 1 && data[i+3] != 2))
+            throw std::invalid_argument("Invalid display input report");
+    std::lock_guard lock(impl->lifecycle);
+    if (!impl->machine) return true;
+    { std::lock_guard inputLock(impl->displayInput.mutex);
+      if (!impl->displayInput.enabled || size > InputCapacity - impl->displayInput.inSize) return false; }
+    impl->displayInput.write(data, size);
+    return true;
+}
 std::vector<uint8_t> Vm::sharedOutput() { return readConsole(impl->shared, 0); }
 void Vm::sharedInput(const uint8_t *data, size_t size) {
     std::lock_guard lock(impl->lifecycle);

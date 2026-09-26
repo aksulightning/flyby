@@ -1,8 +1,8 @@
 # Flyby
 
 Flyby is a lightweight, local Linux terminal environment for Android. An embedded
-native RISC-V interpreter runs Alpine Linux without root, KVM, a graphical desktop,
-Termux, a remote server, or QEMU.
+native RISC-V interpreter runs Alpine Linux without Android root, KVM,
+Termux, a remote server, or QEMU. An optional Wayland image adds an integrated desktop.
 
 ## Current stage
 
@@ -11,6 +11,11 @@ persistent Alpine system disk and outbound user-mode networking.
 Settings offers **128–768 MiB RAM**, **1–100 GiB Disk Creator**, Android folder
 sharing at **/shared**, terminal appearance, offline licenses and disk **Export / Import**.
 See [nightly downloads and disk backups](docs/nightly-and-backups.md).
+
+Disk Creator also offers **Minimal Alpine Wayland**, based on Service Alpine,
+with OpenRC, Weston and a native Wayland terminal. **Display** shows its 800 × 600
+desktop with touch, mouse and keyboard input. No Xorg or XWayland is installed.
+See [Wayland setup, implementation and limitations](docs/wayland.md).
 
 Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
 input, Alpine shell, DNS/HTTP/HTTPS, Activity recreation/background/return, session
@@ -83,6 +88,7 @@ cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
 cmake --build out/host -j2
 ctest --test-dir out/host --output-on-failure
 python3 scripts/smoke-boot.py
+python3 scripts/test-wayland.py
 ```
 
 These run the **same native interpreter and board** used by Android, not a fake

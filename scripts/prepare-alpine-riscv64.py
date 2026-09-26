@@ -3,6 +3,7 @@
 import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
 from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
 from guest_modules import select_modules
+from wayland_image import PACKAGES as WAYLAND_PACKAGES, LOCK as WAYLAND_LOCK, build as build_wayland
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
@@ -249,15 +250,21 @@ def provenance(paths):
                              origin=fields['origin'], commit=fields['commit'], images=['service'] if name in SERVICE_PACKAGES else ['minimal', 'service']))
     for package in packages:
         package.setdefault('images', ['minimal', 'service'])
+        package['images'].append('wayland')
+        package['repository'] = 'main'
         package['source_recipe'] = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{package['commit']}/main/{package['origin']}"
+    for p in WAYLAND_LOCK:
+        packages.append({k: p[k] for k in ('name', 'version', 'license', 'origin', 'commit', 'repository')} |
+                        dict(images=['wayland'], source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{p['commit']}/{p['repository']}/{p['origin']}"))
     return dict(branch='edge', rootfs_snapshot='20260805',
-                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES).items()},
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
-                images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC')},
+                images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),
+                        'wayland': dict(seed='wayland.seed', init='OpenRC', display='Weston, 800x600, Pixman; no Xorg/XWayland')},
                 packages=packages)
 
 def main():
-    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES).items()}
+    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES).items()}
     apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
     metadata = provenance(paths)
     DEST.mkdir(parents=True, exist_ok=True)
@@ -275,8 +282,9 @@ def main():
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
+    build_wayland(config_dir/'service-root', config_dir/'wayland-root', paths)
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
-    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root')]:
+    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root')]:
         disk = config_dir/(name+'-seed.raw')
         disk.unlink(missing_ok=True)
         with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)

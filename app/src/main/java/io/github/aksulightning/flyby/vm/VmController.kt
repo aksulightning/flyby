@@ -8,4 +8,6 @@ interface VmController {
     suspend fun forceStop()
     suspend fun sendInput(bytes: ByteArray)
     suspend fun resize(rows: Int, cols: Int) = Unit
+    suspend fun displayFrame(pixels: IntArray): Boolean = false
+    suspend fun displayInput(reports: ByteArray) = Unit
 }

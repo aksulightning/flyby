@@ -149,6 +149,24 @@ JNIEXPORT void JNICALL JNI(resizeVm)(JNIEnv *env, jobject, jlong id, jint rows, 
     }
     CATCH_VOID
 }
+JNIEXPORT jboolean JNICALL JNI(displayFrameVm)(JNIEnv *env, jobject, jlong id, jintArray pixels) {
+    try {
+        if (!pixels || env->GetArrayLength(pixels) != 800 * 600)
+            throw std::invalid_argument("Display buffer must be 800x600");
+        auto frame = get(vms, id)->displayFrame();
+        if (frame.empty()) return false;
+        env->SetIntArrayRegion(pixels, 0, frame.size(), frame.data());
+        return !env->ExceptionCheck();
+    }
+    CATCH_RET(false)
+}
+JNIEXPORT jboolean JNICALL JNI(displayInputVm)(JNIEnv *env, jobject, jlong id, jbyteArray data) {
+    try {
+        auto b = bytes(env, data);
+        return get(vms, id)->displayInput(b.data(), b.size());
+    }
+    CATCH_RET(false)
+}
 JNIEXPORT jlong JNICALL JNI(createTerminal)(JNIEnv *env, jobject) {
     try {
         return put(terms, std::make_shared<flyby::Terminal>());
