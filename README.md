@@ -1,40 +1,158 @@
 # Flyby
 
-Flyby is a lightweight, local Linux terminal environment for Android. An embedded
-native RISC-V interpreter runs Alpine Linux without Android root, KVM,
-Termux, a remote server, or QEMU. An optional Wayland image adds an integrated desktop.
+> [!IMPORTANT]
+> **An honest note about this project:** Flyby has been created largely with the
+> help of AI. It may contain mistakes, unfinished ideas or bugs that have not been
+> noticed yet. You do not need to use this app, and you should not trust it with
+> important or irreplaceable data. If you try it, keep backups and treat it as an
+> experimental project—not as a finished or security-audited product.
 
-## Current stage
+Flyby is an experimental Android app that runs a small Linux computer inside your
+phone or tablet.
 
-**Start → native RV64 VM → OpenSBI → Linux → Alpine root shell**, with a
-persistent Alpine system disk and outbound user-mode networking.
-Settings offers **128–768 MiB RAM**, **1–100 GiB Disk Creator**, Android folder
-sharing at **/shared**, terminal appearance, offline licenses and disk **Export / Import**.
-See [nightly downloads and disk backups](docs/nightly-and-backups.md).
+In everyday terms, the app gives you a Linux command line and, optionally, a very
+simple Linux desktop. Linux runs locally on the Android device. Flyby does not need
+Android root access, Termux, QEMU, a remote server or a permanent internet
+connection just to start Linux.
 
-Disk Creator also offers **Minimal Alpine Wayland**, based on Service Alpine,
-with OpenRC, Weston and a native Wayland terminal. **Display** shows its 800 × 600
-desktop with touch, mouse and keyboard input. No Xorg or XWayland is installed.
-See [Wayland setup, implementation and limitations](docs/wayland.md).
+Flyby is mainly for experimenting, learning and development. It is not intended to
+replace Android or to be a polished desktop-computer experience.
 
-Verified on **Android API 35 x86_64 in GitHub Actions**: real Start UI, terminal IME
-input, Alpine shell, DNS/HTTP/HTTPS, Activity recreation/background/return, session
-identity, Stop/Start disk persistence and graceful Stop. The default **ARM64** APK
-and NDK library build; JVM tests for both variants and native/guest tests run in CI.
-**Physical ARM64 hardware, keyboard apps and screen-off/OEM power behavior remain
-acceptance gates. Nightlies are development prereleases, not stable releases.**
+## What can Flyby do?
 
-The Compose UI retains Start / Stop / Terminal. The terminal uses libvterm for
-ANSI, colors, cursor movement, UTF-8, alternate screen and 2,000 lines of scrollback.
-It supports Enter, Backspace, Ctrl, Alt, Tab, Esc, arrows, copy/paste and guest resize.
-A started foreground service owns the VM and terminal independently of Activities.
+- Start and stop an Alpine Linux system inside Android.
+- Keep Linux files, settings and installed packages between restarts.
+- Provide a terminal for typing Linux commands.
+- Provide an optional basic graphical desktop.
+- Let Linux use the Android device's outgoing internet connection.
+- Share a folder chosen through Android with Linux at `/shared`.
+- Create Linux disks from 1 to 100 GiB.
+- Export and import a compressed `.flyby` backup of the Linux disk.
+- Adjust the virtual machine's memory from 128 to 768 MiB.
 
-## Build the Android app
+The virtual Linux computer uses one virtual processor. It runs through a built-in
+RISC-V interpreter, so performance depends heavily on the Android device and is
+not expected to match a normal native Android app.
 
-Keep the Phase 1 toolchain: **JDK 17**, Gradle 8.11.1, AGP 8.9.2, Kotlin 2.1.20,
-Compose BOM 2025.03.01, minSdk 26, compile/targetSdk 35. Native ABI: **arm64-v8a**.
-Set `ANDROID_HOME`; local SDK paths and signing material must not be committed.
-Python 3, host `mke2fs` and `debugfs` (e2fsprogs) and HTTPS access are needed for the verified provisioning scripts.
+## The three disk images
+
+A **disk image** is a file that acts like the virtual Linux computer's hard drive.
+It contains the Linux system, installed programs, settings and files. Flyby's Disk
+Creator offers three starting images:
+
+| Image | What it provides | Best for |
+| --- | --- | --- |
+| **Minimal Alpine** | A small Alpine Linux system with a command line and a simple BusyBox startup system. This is the default. | Basic Linux commands, learning and the smallest setup. |
+| **Service Alpine** | Alpine Linux with OpenRC, which can start and manage background services. It has no graphical desktop. | Server-like tools and programs that should run as services. |
+| **Minimal Alpine Wayland** | Service Alpine plus a simple Weston/Wayland desktop and graphical terminal. | Trying a basic Linux desktop on Android. |
+
+Important things to know about disks:
+
+- Creating any of these images makes a **fresh Linux installation**. It does not
+  upgrade or resize the contents of the current disk.
+- Creating a disk replaces the current SYSTEM disk after confirmation. Export a
+  backup first if you want to keep it.
+- The selected image affects only the next disk you create. Existing disks are not
+  automatically converted when the app is updated.
+- A disk can be configured as 1–100 GiB, but the full amount is not necessarily
+  reserved immediately. It consumes more real Android storage as Linux writes data.
+  Running out of Android storage can damage or interrupt the Linux system.
+- The whole Linux filesystem is persistent, including `/etc`, `/usr`, `/root`
+  and installed packages. Temporary locations such as `/run` and `/tmp` are not.
+- The Linux kernel and startup firmware come from the Android app. Installing a
+  kernel package inside Linux does not replace them.
+- The folder mounted at `/shared` points directly to the Android folder you chose.
+  Changes and deletions there affect the real Android files. It is not included in
+  Flyby disk backups.
+
+More detail is available in
+[Settings, Disk Creator and sharing](docs/settings-and-sharing.md),
+[storage and networking](docs/storage-network.md) and
+[Wayland notes](docs/wayland.md).
+
+## How to try it
+
+Flyby currently provides development builds rather than a stable release.
+
+1. Open the repository's [Releases](https://github.com/aksulightning/flyby/releases)
+   page.
+2. Choose a release marked as a **prerelease** and download the ARM64 APK.
+3. Install the APK on a compatible ARM64 Android device. Android may ask you to
+   allow installation from that source.
+4. Open Flyby and press **Start**.
+5. Wait in **Terminal** until `root@flyby:~#` appears.
+6. Type a simple command such as `ls` or `cat /etc/os-release`.
+
+For the graphical image, first stop Linux, open **Settings → Disk Creator**, select
+**Minimal Alpine Wayland**, create the disk and start Linux again. Then open
+**Display**. Using 512–768 MiB of RAM is recommended for the desktop.
+
+See [nightly downloads and disk backups](docs/nightly-and-backups.md) for detailed
+download, update, export and import instructions.
+
+## Backups
+
+Stop Linux before exporting a disk. In **Settings**, choose **Export disk** and save
+the resulting `.flyby` file somewhere safe. To restore it, choose **Import disk**
+and confirm that the current disk may be replaced.
+
+A backup contains the Linux disk and its files. It does **not** contain:
+
+- live virtual-machine memory;
+- terminal scrollback;
+- Flyby app preferences; or
+- files in the Android folder mounted at `/shared`.
+
+Backups are compressed but **not encrypted**. Anyone who gets the backup may be able
+to read its contents. Flyby accepts its own compatible backup format, not arbitrary
+raw disk images or ZIP files.
+
+## Known limitations and risks
+
+- Flyby is experimental. Nightly builds are development prereleases, not stable
+  releases.
+- Automated tests run on an Android API 35 x86_64 emulator. Physical ARM64 phones
+  and tablets, different keyboard apps, screen-off use and manufacturer-specific
+  battery management still need broader testing.
+- Android 8.0 (API 26) is the minimum configured Android version, but this does not
+  mean every device has been tested.
+- There is one virtual CPU and only 128–768 MiB of virtual RAM. Programs may be slow,
+  and large or demanding Linux applications may not work.
+- The graphical desktop is fixed at 800 × 600, has no GPU acceleration and is
+  limited to native Wayland applications available for RISC-V. Xorg and XWayland
+  are not included.
+- The initial graphical keyboard layout is US. Android text input supports a limited
+  set of extra characters. Physical keyboards use the Linux guest's configured
+  layout.
+- Networking is outgoing only. There is no port-forwarding, network settings screen,
+  Android Private DNS integration, VPN bypass or automatic proxy configuration.
+- Android may stop the app, especially because of battery or memory restrictions.
+  If that happens, unsaved work in the running virtual machine is lost. Flyby does
+  not automatically restart or save a RAM snapshot.
+- Flyby keeps a partial wake lock while Linux is running. This can consume battery.
+- Force-stopping the app or losing power during disk writes can leave the Linux
+  filesystem needing recovery. Flyby does not automatically format or repair it.
+- The terminal has bounded scrollback. Copy copies the visible screen rather than a
+  freely selected character range, and resizing does not reflow old lines.
+- The shared Android folder does not support every normal Linux filesystem feature.
+  Symbolic links, hard links, special files and Unix ownership changes are not
+  supported, and the Android storage provider may restrict other operations.
+- A bug in the native interpreter, extreme memory use or a hostile guest kernel may
+  crash the whole app. Flyby is **not a security-audited sandbox** for untrusted
+  Linux software.
+- Clearing Flyby's Android app data or uninstalling the app deletes its private
+  Linux disk. Export important data before doing either.
+- Development APKs may use different signing keys. Android can refuse an in-place
+  update when the signer changes, which may require exporting the disk, uninstalling
+  the old app and installing the new build.
+
+## For developers
+
+### Build the Android app
+
+Requirements include JDK 17, Android SDK 35, Android NDK
+`27.2.12479018`, CMake 3.22.1, Python 3 and `e2fsprogs`. Set
+`ANDROID_HOME`. Local SDK paths and signing material must not be committed.
 
 ```sh
 sdkmanager 'platforms;android-35' 'build-tools;35.0.0' \
@@ -44,44 +162,38 @@ python3 scripts/prepare-alpine-riscv64.py
 ./gradlew test assembleDebug lintDebug
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`.
-The APK contains `libflyby.so`, OpenSBI, the Linux Image and an Alpine initramfs;
-there is no first-launch network download. Start verifies/copies the packaged
-resources into `filesDir/vm/default/` on an IO dispatcher. An APK build fails
-explicitly if guest resources have not been prepared.
+The debug APK is written to
+`app/build/outputs/apk/debug/app-debug.apk`. The APK includes the native
+interpreter, firmware, Linux kernel and initial Alpine resources, so the first boot
+does not need to download them. The build fails if these guest resources have not
+been prepared.
 
-## Native and guest provisioning
+The default APK targets **arm64-v8a**. CI also builds an x86_64 test variant for the
+Android emulator.
 
-The emulator is **RVVM**, pinned to commit
-`ce8ca7c00ba4058e5f26811057573b3ff23e9316`, compiled as an MPL-2.0 library.
-Its GPL command-line tools are excluded. This staging revision has the required
-library license and Linux support; its API is deliberately pinned. There is no JIT.
+### Technical overview
 
-`prepare-native.py` downloads checksum-verified RVVM and **libvterm 0.3.3 (MIT)**
-source archives. `native/CMakeLists.txt` selects the interpreter and minimal board.
-For a standalone Android native build:
+Flyby embeds [RVVM](https://github.com/LekKit/RVVM) as an MPL-2.0 library and uses
+its interpreter without a JIT. Linux boots through OpenSBI into a pinned Alpine Edge
+RISC-V system. The Android app owns the virtual machine in a foreground service,
+while libvterm renders the terminal.
 
-```sh
-scripts/build-native-android.sh
-```
+The VM has a virtual NVMe system disk, user-mode outgoing networking and private
+communication channels for lifecycle commands, Android folder sharing and display
+input. The Wayland image uses a simple framebuffer and software rendering. The old
+QEMU proposal in `docs/qemu-android.md` is retained only as historical
+documentation; QEMU is not built or used.
 
-`prepare-alpine-riscv64.py` downloads checksum-pinned official Alpine artifacts:
-**Alpine Edge riscv64 (20260805 snapshot)**, **linux-lts 6.18.53-r0**, **OpenSBI 1.9-r0**. It extracts
-the firmware and Image, then builds the initramfs without root or mounting images.
-Boot uses a generated device tree, CLINT, PLIC and NS16550 UART (`ttyS0`).
-The development guest intentionally opens an automatic root shell. This is root
-inside the VM, not Android root. A second UART carries shutdown/resize requests,
-with a readiness handshake to avoid losing requests during boot.
+More technical documentation:
 
-Existing disks retain their current Alpine installation. See [Edge migration](docs/guest-linux.md#edge-and-existing-installations) for an in-place upgrade or create a fresh disk in Settings.
+- [Architecture](docs/architecture.md)
+- [Native runtime and memory map](docs/riscv-runtime.md)
+- [Guest Linux resources](docs/guest-linux.md)
+- [Validation and manual acceptance](docs/validation.md)
 
-Details: [native runtime and memory map](docs/riscv-runtime.md),
-[architecture](docs/architecture.md), [guest resources](docs/guest-linux.md).
-The old QEMU proposal is archived in `docs/qemu-android.md`; it is not built or used.
+### Host tests
 
-## Test on the host
-
-With CMake >=3.22 and a C/C++ compiler:
+With CMake 3.22 or newer and a C/C++ compiler:
 
 ```sh
 cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
@@ -91,91 +203,25 @@ python3 scripts/smoke-boot.py
 python3 scripts/test-wayland.py
 ```
 
-These run the **same native interpreter and board** used by Android, not a fake
-controller. They check initialization, invalid images, duplicate start, Linux and
-Alpine boot, serial commands, Ctrl+C, resize, pause/resume, idle CPU usage, graceful
-shutdown and restart. Terminal tests cover ANSI/cursor/color/history/UTF-8 behavior.
-The original Phase 1 lifecycle tests remain, adapted to `VmController`; the obsolete
-QEMU argument/path fixtures are retained only under `src/test` as historical
-regression coverage and are never packaged into the APK.
-
-GitHub Actions provisions the exact inputs, runs native/boot/persistence/network tests,
-Gradle unit tests, debug APK build and lint, plus a separate Android API 35 runtime job. No binaries or downloaded vendor trees are in Git.
-
-## Run on a physical ARM64 Android device
-
-```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n io.github.aksulightning.flyby/.MainActivity
-adb logcat -s FlybyVM FlybyRVVM
-```
-
-Press **Start**. Boot output appears in Terminal; wait for `root@flyby:~#`.
-Run `uname -a`, `cat /etc/os-release`, `ls`, `cd /`, `echo hello` and `free`.
-Tap the terminal to show the keyboard; swipe to scroll; long press or Copy copies
-the visible screen. Ctrl/Alt buttons apply to the next key. Stop is on MainScreen
-and the ongoing notification. Graceful shutdown has a 10-second deadline followed
-by native thread cleanup. Closing an Activity does not request Stop.
-
-The service declares Android's `specialUse` foreground type and a documented subtype,
-not `dataSync`. Notification permission is requested on Android 13+; denial does
-not prevent the foreground VM, but limits notification visibility. A partial wake
-lock is held only while active and released on stop/error/service destruction.
-It allows screen-off execution but consumes battery. Android may still kill the
-process; RAM state is then lost. No automatic restart or snapshot is claimed.
-
-An SDK-only device integration runner is included:
+For an Android device connected through ADB:
 
 ```sh
 ./gradlew assembleDebug assembleDebugAndroidTest
 python3 scripts/test-android.py --network
 ```
 
-See [validation and manual acceptance](docs/validation.md). Screen-off and OEM
-battery behavior still need a physical-device check in addition to the runner.
-
-## Known limitations
-
-- Android emulator execution passes; physical ARM64 hardware, keyboard apps and
-  screen-off/OEM behavior still need testing. Nightlies are development builds.
-- The SYSTEM disk keeps the entire root filesystem, including package installs.
-  Legacy DATA disks remain untouched but are no longer selectable in Settings.
-  Kernel/firmware stay app-managed.
-- User-mode outbound networking is implemented; no forwarding or network settings UI.
-- One vCPU; RAM is configurable from 128–768 MiB, default 512 MiB.
-- Interpreter performance depends on the device. The host idle check is not an
-  Android benchmark. RVVM's staging API must be reviewed before any version update.
-- Copy copies the visible screen; character-range selection is not implemented.
-  Scrollback is bounded; resize does not reflow old history lines.
-- Expected initialization failures become errors, but in-process native bugs or
-  extreme host memory exhaustion can still terminate the app. This is not an
-  audited sandbox for hostile guest kernels. Android process death loses the VM.
+These tests exercise the real native interpreter and guest system. GitHub Actions
+also checks booting, persistence, networking, Gradle tests, the debug APK and lint.
+Passing automation does not replace testing on physical Android hardware.
 
 ## Licenses
 
-Flyby source: **Apache-2.0**. RVVM library: **MPL-2.0**. libvterm: **MIT**.
-Linux and BusyBox: **GPL-2.0-only**. OpenSBI: **BSD-2-Clause**. Alpine contains
-additional packages; exact versions/licenses/source revisions are documented in
-[licenses](docs/licenses.md). Building with these libraries does not relicense
-Flyby's original source. Distributing a guest-containing APK carries the guest's
-source/notice obligations: provide complete corresponding sources/configs/patches
-alongside any binary release. The nightly job builds and uploads the matching
-corresponding-source bundle before it publishes a prerelease.
+Flyby source is licensed under **Apache-2.0**. Major included components use other
+licenses: RVVM is **MPL-2.0**, libvterm is **MIT**, Linux and BusyBox are
+**GPL-2.0-only**, and OpenSBI is **BSD-2-Clause**. Alpine packages have their own
+licenses.
 
-## Persistent disk milestone
-
-The initial milestone used a 256 MiB DATA disk for `/data` and `/root`.
-The current default is a complete Alpine SYSTEM disk; existing DATA files are retained.
-Host two-boot and Android restart persistence tests pass. DHCP, DNS, HTTP and
-HTTPS pass on the host CI and inside Android. See [storage and networking](docs/storage-network.md)
-for provisioning, limits and validation. Android runtime CI uses an explicit
-`-PflybyAbi=x86_64` test build; default APKs remain ARM64.
-
-## Configurable VM and shared folder
-
-Settings now includes RAM (128–768 MiB), a complete Alpine Disk Creator
-(1–100 GiB), Android folder selection for `/shared`, terminal customization and
-an offline Licenses screen. See [settings and sharing](docs/settings-and-sharing.md)
-for upgrade behavior, storage semantics and validation.
-
-Disk Creator offers **Minimal Alpine** (the existing Alpine Edge system with BusyBox init) and **Service Alpine** (Alpine Edge with OpenRC init and service management). Minimal remains the default; choosing an image only affects a newly created disk after replacement confirmation.
+Exact versions, notices and source information are listed in
+[docs/licenses.md](docs/licenses.md). Anyone distributing an APK that contains the
+Linux guest must also follow the guest components' source-code and notice
+requirements.
