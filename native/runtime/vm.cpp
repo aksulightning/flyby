@@ -44,22 +44,40 @@ struct Console {
     size_t inStart = 0, inSize = 0, outStart = 0, outSize = 0, readyMatch = 0;
     bool closed = false, enabled;
     const std::string ready;
-    explicit Console(bool gated = false, const char *marker = "FLYBY_CONTROL_READY\n") : enabled(!gated), ready(marker) {
+    const bool pacedReports;
+    size_t reportBytes = 0;
+    std::chrono::steady_clock::time_point nextReport{};
+    bool readable() const { // Caller holds mutex.
+        return enabled && inSize && (!pacedReports || std::chrono::steady_clock::now() >= nextReport);
+    }
+    explicit Console(bool gated = false, const char *marker = "FLYBY_CONTROL_READY\n", bool paced = false)
+        : enabled(!gated), ready(marker), pacedReports(paced) {
         dev.data = this;
         dev.poll = [](chardev_t *d) {
             auto &c = *static_cast<Console *>(d->data);
             std::lock_guard lock(c.mutex);
-            return uint32_t(CHARDEV_TX | (c.inSize && c.enabled ? CHARDEV_RX : 0));
+            return uint32_t(CHARDEV_TX | (c.readable() ? CHARDEV_RX : 0));
         };
         dev.read = [](chardev_t *d, void *bytes, size_t size) {
             auto &c = *static_cast<Console *>(d->data);
             std::lock_guard lock(c.mutex);
-            size = c.enabled ? std::min(size, c.inSize) : 0;
+            size = c.readable() ? std::min(size, c.inSize) : 0;
+            if (c.pacedReports) size = std::min(size, 16 - c.reportBytes);
             auto *b = static_cast<uint8_t *>(bytes);
             for (size_t i = 0; i < size; ++i) {
                 b[i] = c.incoming[c.inStart];
                 c.inStart = (c.inStart + 1) % InputCapacity;
                 --c.inSize;
+            }
+            if (c.pacedReports && size) {
+                c.reportBytes += size;
+                if (c.reportBytes == 16) {
+                    c.reportBytes = 0;
+                    // A whole IME commit can otherwise fill evdev's queue before
+                    // Weston runs, causing SYN_DROPPED. Keep pending reports in
+                    // our bounded host queue instead of flooding the guest UART.
+                    c.nextReport = std::chrono::steady_clock::now() + std::chrono::milliseconds(25);
+                }
             }
             return size;
         };
@@ -110,7 +128,7 @@ struct Vm::Impl {
     Console console;
     Console control{true};
     Console shared;
-    Console displayInput{true, "FLYBY_DISPLAY_READY\n"};
+    Console displayInput{true, "FLYBY_DISPLAY_READY\n", true};
     Display display;
     ~Impl() {
         if (machine)

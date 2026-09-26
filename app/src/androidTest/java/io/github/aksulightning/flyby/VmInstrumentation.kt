@@ -36,6 +36,7 @@ class VmInstrumentation : Instrumentation() {
     override fun onStart() {
         var activity: Activity? = null
         var service: VmService? = null
+        var checkingWayland = false
         var bound = false
         var connected = CountDownLatch(1)
         val connection = object : ServiceConnection {
@@ -85,7 +86,7 @@ class VmInstrumentation : Instrumentation() {
             await(10_000) { pickerSettings.state.value.sharedTree == sharedUri.toString() }
             waitForIdleSync()
             clickStart()
-            await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             await(30_000) { "FLYBY_SHARED_READY" in vmService.session.transcript.value }
             check("PRETTY_NAME=\"Alpine Linux edge\"" in vmService.session.transcript.value)
             runBlocking { vmService.session.sendInput((
@@ -203,6 +204,7 @@ class VmInstrumentation : Instrumentation() {
             runBlocking { vmService.vm.stop() }
             backup.delete()
             // Exercise the new image and Android view/IME against the real guest.
+            checkingWayland = true
             runOnMainSync {
                 check(vmService.setMemory(512))
                 vmService.onStartCommand(Intent(targetContext, VmService::class.java)
@@ -213,14 +215,18 @@ class VmInstrumentation : Instrumentation() {
             check(vmService.transfer.value.message?.startsWith("Minimal Alpine Wayland disk created") == true)
             sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) // Settings -> Main.
             clickStart()
-            await(300_000) { "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            // Start is dispatched asynchronously from the UI. The previous
+            // boot's transcript remains visible until VmManager starts again.
+            // RUNNING is only published after that transcript has been cleared.
+            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             runBlocking { vmService.session.sendInput((
-                "i=0; until rc-service flyby-wayland-terminal status >/dev/null 2>&1; do " +
-                "i=\$((i+1)); [ \$i -lt 60 ] || break; sleep 1; done; " +
+                "i=0; until test -s /run/flyby-wayland/terminal-ready; do " +
+                "i=\$((i+1)); [ \$i -lt 90 ] || break; sleep 1; done\n" +
+                "test -S /run/flyby-wayland/wayland-0 && kill -0 \$(cat /run/flyby-wayland/terminal-ready) && " +
                 "rc-service flyby-wayland-terminal status && printf '\\nFLYBY_WAYLAND_READY\\n'\n").toByteArray()) }
             await(120_000) { "\nFLYBY_WAYLAND_READY\r\n" in vmService.session.transcript.value }
             val frame = IntArray(800 * 600)
-            await(30_000) { runBlocking { vmService.vm.displayFrame(frame) } && frame.toSet().size > 16 }
+            await(60_000) { runBlocking { vmService.vm.displayFrame(frame) } && frame.toSet().size > 16 }
             sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) // Terminal -> Main.
             clickText("Display")
             var display: DisplayView? = null
@@ -260,6 +266,17 @@ class VmInstrumentation : Instrumentation() {
             result = Activity.RESULT_OK
             report.putString("stream", "PASS: JNI validation, shared-folder result before service rebind, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart, Wayland 800x600 frame, Display IME, Display recreation and Stop\n")
         } catch (failure: Throwable) {
+            if (checkingWayland) service?.let { currentService ->
+                runCatching {
+                    if (currentService.vm.status.value.state == VmState.RUNNING) {
+                        runBlocking { currentService.session.sendInput((
+                            "\u0003\nrc-status -a; cat /var/log/weston*.log; " +
+                            "cat /proc/bus/input/devices; ls -l /dev/dri /dev/input; " +
+                            "printf '\\nFLYBY_WAYLAND_DIAGNOSTICS_DONE\\n'\n").toByteArray()) }
+                        await(10_000) { "\nFLYBY_WAYLAND_DIAGNOSTICS_DONE\r\n" in currentService.session.transcript.value }
+                    }
+                }
+            }
             report.putString("uiTree", uiTree)
             report.putString("guestOutput", service?.session?.transcript?.value.orEmpty())
             report.putString("stream", "FAIL: ${failure.stackTraceToString()}\n")
