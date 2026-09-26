@@ -68,6 +68,21 @@ typed into the graphical terminal through HID, pointer events and graceful shutd
 It writes a framebuffer capture and boot log to `out/wayland-test/`.
 Run after provisioning and building the native host targets, as in README.md.
 
+OpenRC's `started` status means that the supervised process was launched, not
+that a desktop frame or terminal window is ready. The terminal's shell wrapper
+writes `/run/flyby-wayland/terminal-ready` after Weston configures its window;
+the tests wait for that live shell and actual framebuffer content before typing.
+Android acceptance also waits for the new VM's RUNNING state, so a previous
+boot's serial readiness marker cannot satisfy the next boot's check.
+
 For diagnosis, use Terminal: `rc-status`, `cat /var/log/weston.log`,
+`cat /var/log/weston-clients.log`, `cat /var/log/weston-terminal.log`,
 `cat /proc/bus/input/devices`, and `ls -l /dev/dri /dev/input`.
+The login shell loads the Wayland environment so programs started from Terminal
+can connect to the same desktop. Service startup waits are bounded, with explicit
+errors when DRM/input devices or the compositor socket do not become available.
+
+After updating the APK, create a fresh **Minimal Alpine Wayland** disk to get
+these image changes. Existing persistent disks keep their installed services;
+export an existing disk before replacing it.
 Physical Android touch/IME behavior and rendering performance remain device checks.

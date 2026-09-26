@@ -66,6 +66,16 @@ path=/usr/bin/weston-terminal
 export WAYLAND_DISPLAY=wayland-0
 export XDG_SESSION_TYPE=wayland
 ''')
+    # Flyby's minimal /etc/profile does not source Alpine's profile.d directory.
+    # Make native Wayland clients launched from the serial login find Weston too.
+    with (root/'etc/profile').open('a') as profile:
+        profile.write('\n. /etc/profile.d/wayland.sh\n')
+    # Weston executes --shell only after the terminal window is configured.
+    # Expose that milestone separately from OpenRC's process-start status.
+    write('usr/local/bin/flyby-wayland-shell', '''#!/bin/sh
+printf '%s\\n' "$$" > /run/flyby-wayland/terminal-ready
+exec /bin/sh -l
+''', 0o755)
     write('etc/init.d/flyby-display-prepare', '''#!/sbin/openrc-run
 description="Prepare Flyby display devices"
 depend() { need flyby-boot; before udev; }
@@ -91,6 +101,8 @@ description="Flyby Wayland desktop (800x600)"
 supervisor="supervise-daemon"
 command="/usr/bin/weston"
 command_args="--backend=drm --renderer=pixman --socket=wayland-0 --config=/etc/xdg/weston/weston.ini --log=/var/log/weston.log"
+output_log="/var/log/weston-clients.log"
+error_log="/var/log/weston-clients.log"
 export XDG_RUNTIME_DIR=/run/flyby-wayland
 export WAYLAND_DISPLAY=wayland-0
 export XDG_SESSION_TYPE=wayland
@@ -102,16 +114,23 @@ depend() { need flyby-display-input seatd udev-trigger; }
 start_pre() {
     local i=0
     while [ ! -e /dev/dri/card0 ] || [ ! -e /dev/input/event0 ]; do
-        i=$((i+1)); [ "$i" -lt 100 ] || return 1
-        sleep 0.1
+        i=$((i+1))
+        if [ "$i" -ge 60 ]; then
+            eerror "Timed out waiting for Flyby DRM/input devices; check /dev/dri and /dev/input"
+            return 1
+        fi
+        sleep 1
     done
-    udevadm settle --timeout=10
+    udevadm settle --timeout=60
 }
 ''', 0o755)
     write('etc/init.d/flyby-wayland-terminal', '''#!/sbin/openrc-run
 description="Flyby Wayland terminal"
 supervisor="supervise-daemon"
 command="/usr/bin/weston-terminal"
+command_args="--shell=/usr/local/bin/flyby-wayland-shell"
+output_log="/var/log/weston-terminal.log"
+error_log="/var/log/weston-terminal.log"
 export XDG_RUNTIME_DIR=/run/flyby-wayland
 export WAYLAND_DISPLAY=wayland-0
 export XDG_SESSION_TYPE=wayland
@@ -120,10 +139,15 @@ respawn_max=5
 retry="TERM/2/KILL/2"
 depend() { need flyby-wayland; }
 start_pre() {
+    rm -f "$XDG_RUNTIME_DIR/terminal-ready"
     local i=0
     while [ ! -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; do
-        i=$((i+1)); [ "$i" -lt 100 ] || return 1
-        sleep 0.1
+        i=$((i+1))
+        if [ "$i" -ge 60 ]; then
+            eerror "Timed out waiting for Weston; see /var/log/weston.log and /var/log/weston-clients.log"
+            return 1
+        fi
+        sleep 1
     done
 }
 ''', 0o755)
