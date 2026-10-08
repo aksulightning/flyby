@@ -1,5 +1,17 @@
 # Flyby
 
+> [!WARNING]
+> **Project closed — 8 October 2026.** Flyby development has ended due to
+> Android lockdown. No further releases, bug fixes, security updates or support
+> are planned. The source and existing releases are retained for reference and
+> forks under their existing licenses.
+>
+> If you use Flyby, stop Linux and export your disk before uninstalling the app
+> or clearing its data. Back up files in `/shared` separately; they are not included
+> in a Flyby disk export.
+>
+> The documentation below describes the final experimental state of the project.
+
 > [!IMPORTANT]
 > **An honest note about this project:** Flyby has been created largely with the
 > help of AI. It may contain mistakes, unfinished ideas or bugs that have not been
@@ -70,9 +82,10 @@ More detail is available in
 [storage and networking](docs/storage-network.md) and
 [Wayland notes](docs/wayland.md).
 
-## How to try it
+## Historical development builds
 
-Flyby currently provides development builds rather than a stable release.
+Existing development prereleases are retained for reference. They are unsupported;
+no stable release or further builds are planned.
 
 1. Open the repository's [Releases](https://github.com/aksulightning/flyby/releases)
    page.
@@ -210,8 +223,10 @@ For an Android device connected through ADB:
 python3 scripts/test-android.py --network
 ```
 
-These tests exercise the real native interpreter and guest system. GitHub Actions
-also checks booting, persistence, networking, Gradle tests, the debug APK and lint.
+These tests exercise the real native interpreter and guest system. Before closure,
+GitHub Actions also checked booting, persistence, networking, Gradle tests, the debug
+APK and lint. The former workflow is preserved in
+[docs/android-workflow.yml](docs/android-workflow.yml) for reference.
 Passing automation does not replace testing on physical Android hardware.
 
 ## Licenses

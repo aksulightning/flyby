@@ -1,6 +1,11 @@
 # Nightly builds, appearance and disk backups
 
-## Download and identify the new build
+> [!WARNING]
+> Flyby closed on 8 October 2026 due to Android lockdown. Existing releases are
+> unsupported and no further nightlies are planned. Build and signing details
+> below are historical; backup instructions remain available for existing users.
+
+## Download and identify an existing build
 
 Open https://github.com/aksulightning/flyby/releases and choose a `nightly-*`
 **prerelease**, then download its uniquely named `flyby-nightly-…-arm64-v8a.apk`.
@@ -10,10 +15,11 @@ The APK, SHA256SUMS, development signing fingerprint and matching corresponding
 sources are assets of the same release. Do not use GitHub's generic source ZIP as
 an APK or as a substitute for the complete corresponding-source bundle.
 
-The existing Android workflow publishes only after **both** host/build/unit and
-Android API 35 runtime jobs pass. Pushes to `codex/riscv-phase2` and manual runs on
-that branch produce nightlies; PRs cannot publish. This is a tested-build channel,
-not a daily timer (scheduled workflows would need to live on the default branch).
+The former [Android workflow](android-workflow.yml) published only after **both**
+host/build/unit and Android API 35 runtime jobs passed. Pushes to
+`codex/riscv-phase2` and manual runs on that branch produced nightlies; PRs could
+not publish. This was a tested-build channel, not a daily timer. The workflow has
+been removed from `.github/workflows` on the default branch.
 
 Nightlies use an explicit `out/signing/debug.keystore` selected with
 `-PflybyNightly=true`, retained in Actions cache; it is never committed. Before publication the job saves the key, deletes the local copy, restores it
