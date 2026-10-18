@@ -30,7 +30,8 @@ object GuestResources {
         DiskImage.prepare(root, manifest.getString(mode.fileName), mode) { context.assets.open("vm/${mode.seedName}") }
         GuestFiles(root, mode).validated()
     }
-    suspend fun createSystem(context: Context, gib: Int, image: ImageVariant = ImageVariant.MINIMAL) = withContext(Dispatchers.IO) {
+    suspend fun createSystem(context: Context, gib: Int, image: ImageVariant = ImageVariant.MINIMAL, gpuEnabled: Boolean = false) = withContext(Dispatchers.IO) {
+        require(image.available(gpuEnabled)) { "Enable GPU in Settings before creating an X11 GPU disk." }
         val root = File(context.filesDir, "vm/default").apply { check(mkdirs() || isDirectory) }
         check(root.canonicalFile.toPath().startsWith(context.filesDir.canonicalFile.toPath()))
         val manifest = JSONObject(context.assets.open("vm/manifest.json").bufferedReader().use { it.readText() })

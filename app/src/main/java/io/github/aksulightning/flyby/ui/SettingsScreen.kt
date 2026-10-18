@@ -17,7 +17,7 @@ import io.github.aksulightning.flyby.service.VmService
 
 @Composable
 fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transfer,
-                   preferences: AppSettings, memory: (Int) -> Unit, cpuCount: (Int) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
+                   preferences: AppSettings, memory: (Int) -> Unit, cpuCount: (Int) -> Unit, gpuEnabled: (Boolean) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
                    selectShared: () -> Unit, clearShared: () -> Unit, licenses: () -> Unit,
                    export: () -> Unit, import: () -> Unit, back: () -> Unit, modifier: Modifier, error: String? = null) {
     var ram by rememberSaveable(settings.memoryMiB) { mutableStateOf(settings.memoryMiB.toString()) }
@@ -30,7 +30,7 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
         onDismissRequest = { confirmCreate = null },
         title = { Text("Create a new ${image.title} disk?") },
         text = { Text("This replaces the current system disk with a fresh $size GiB ${image.title} installation. All files and installed packages on the current system disk will be lost. Export it first if needed. The old Home/Data disk is kept separately.") },
-        confirmButton = { TextButton({ createDisk(size, image); confirmCreate = null }, enabled = idle) { Text("Create and replace") } },
+        confirmButton = { TextButton({ createDisk(size, image); confirmCreate = null }, enabled = idle && image.available(settings.gpuEnabled)) { Text("Create and replace") } },
         dismissButton = { TextButton({ confirmCreate = null }) { Text("Cancel") } }) }
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         TextButton(back) { Text("Back") }
@@ -55,17 +55,24 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
             }
         }
         Text("CPU changes apply at the next start.")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Enable GPU", Modifier.weight(1f).padding(top = 12.dp))
+            Switch(settings.gpuEnabled, gpuEnabled, enabled = idle)
+        }
+        Text("Enables the X11 GPU image. When off, X11 GPU disks cannot be created or started, including imported disks. Existing files are kept. Stop Linux before changing GPU. Other images work with GPU off.")
         Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
         ImageVariant.entries.forEach { variant ->
+            val available = idle && variant.available(settings.gpuEnabled)
             Row {
-                RadioButton(image == variant, { image = variant }, enabled = idle)
-                TextButton({ image = variant }, enabled = idle) { Text(variant.title) }
+                RadioButton(image == variant, { image = variant }, enabled = available)
+                TextButton({ image = variant }, enabled = available) { Text(variant.title) }
             }
         }
         Text(image.description)
         OutlinedTextField(disk, { disk = it }, label = { Text("System disk · 1–100 GiB") }, singleLine = true,
             isError = diskValue == null, enabled = idle, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-        Button({ confirmCreate = diskValue }, enabled = idle && diskValue != null) { Text("Create ${image.title} disk") }
+        if (!image.available(settings.gpuEnabled)) Text("Enable GPU to use this image.")
+        Button({ confirmCreate = diskValue }, enabled = idle && diskValue != null && image.available(settings.gpuEnabled)) { Text("Create ${image.title} disk") }
         Text("A complete persistent Alpine Edge system (main + community repositories), including /etc, /usr and /root. Updating Flyby keeps your existing installation; only new disks use this system image. The filesystem expands to the selected size on its first boot. Disk space is allocated as it is used; keep enough free Android storage. /run and /tmp stay temporary.")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(export, enabled = idle) { Text("Export disk") }

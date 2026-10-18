@@ -30,22 +30,24 @@ replace Android or to be a polished desktop-computer experience.
 - Export and import a compressed `.flyby` backup of the Linux disk.
 - Adjust the virtual machine's memory from 128 to 768 MiB.
 - Choose one or two virtual CPUs in Settings.
+- Enable an experimental virtual GPU for the separate X11 GPU image.
 
 The virtual Linux computer uses one or two virtual processors, selectable in
 Settings. It runs through a built-in RISC-V interpreter, so performance depends heavily on the Android device and is
 not expected to match a normal native Android app.
 
-## The four disk images
+## The five disk images
 
 A **disk image** is a file that acts like the virtual Linux computer's hard drive.
 It contains the Linux system, installed programs, settings and files. Flyby's Disk
-Creator offers four starting images:
+Creator offers five starting images:
 
 | Image | What it provides | Best for |
 | --- | --- | --- |
 | **Minimal Alpine** | A small Alpine Linux system with a command line and a simple BusyBox startup system. This is the default. | Basic Linux commands, learning and the smallest setup. |
 | **Service Alpine** | Alpine Linux with OpenRC, which can start and manage background services. It has no graphical desktop. | Server-like tools and programs that should run as services. |
 | **Minimal Alpine X11** | Service Alpine plus Xorg, a lightweight window manager and xterm. No Wayland session. | Running X11 applications on Android. |
+| **Alpine X11 GPU** | X11 with experimental Virtio-GPU/VirGL OpenGL acceleration. Requires **Enable GPU** and a compatible Android GLES 3 driver. | Trying 3D X11 applications; use 768 MiB RAM. |
 | **Minimal Alpine Wayland** | Service Alpine plus a simple Weston/Wayland desktop and graphical terminal. | Trying a basic Linux desktop on Android. |
 
 Important things to know about disks:
@@ -71,6 +73,12 @@ More detail is available in
 [Settings, Disk Creator and sharing](docs/settings-and-sharing.md),
 [storage and networking](docs/storage-network.md) and
 [Wayland notes](docs/wayland.md) and [X11 notes](docs/x11.md).
+
+**Enable GPU** can be changed while Linux is stopped. Turning it off prevents
+creation and startup of X11 GPU disks, including imported backups, while retaining
+their files. Turn it back on to use that disk again. Other images do not use the
+GPU. The first GPU implementation retains the current 800 × 600 display path and
+its 10 fps presentation limit. See [X11 GPU notes](docs/x11-gpu.md).
 
 ## How to try it
 
@@ -120,9 +128,9 @@ raw disk images or ZIP files.
   mean every device has been tested.
 - There are one or two virtual CPUs and 128–768 MiB of virtual RAM. Programs may be slow,
   and large or demanding Linux applications may not work.
-- The graphical desktop is fixed at 800 × 600, has no GPU acceleration and
-  supports native RISC-V applications: Wayland clients on the Wayland image,
-  X11 clients on the X11 image. Neither image includes XWayland.
+- The graphical desktop is fixed at 800 × 600 with a 10 fps presentation limit.
+  GPU acceleration is experimental and available only in the X11 GPU image.
+  Images run native RISC-V applications and do not include XWayland.
 - The initial graphical keyboard layout is US. Android text input supports a limited
   set of extra characters. Physical keyboards use the Linux guest's configured
   layout.
@@ -153,7 +161,9 @@ raw disk images or ZIP files.
 ### Build the Android app
 
 Requirements include JDK 17, Android SDK 35, Android NDK
-`27.2.12479018`, CMake 3.22.1, Python 3 and `e2fsprogs`. Set
+`27.2.12479018`, CMake 3.22.1, Python 3 with PyYAML and `e2fsprogs`.
+Linux host tests also need EGL headers and GLES libraries (`libegl1-mesa-dev`
+and `libgles2` on Ubuntu). Set
 `ANDROID_HOME`. Local SDK paths and signing material must not be committed.
 
 ```sh

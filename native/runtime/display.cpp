@@ -7,6 +7,11 @@ extern "C" {
 #include <stdexcept>
 namespace flyby {
 Display::Display() : pixels(Width * Height * 4) {}
+void Display::update(const std::vector<uint8_t>& frame) {
+    if (frame.size() != Width * Height * 4) throw std::invalid_argument("Invalid GPU frame size");
+    std::lock_guard lock(mutex);
+    std::copy(frame.begin(), frame.end(), pixels.begin());
+}
 void Display::attach(rvvm_machine_t *machine) {
     static const rvvm_reg_type_t type = [] {
         rvvm_reg_type_t t{};

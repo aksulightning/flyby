@@ -39,6 +39,11 @@ class VmService : Service() {
         settings.cpuCount(value)
         return true
     }
+    fun setGpuEnabled(value: Boolean): Boolean {
+        if (!idle()) return false
+        settings.gpuEnabled(value)
+        return true
+    }
     fun setSharedTree(value: String?): Boolean {
         if (!idle()) return false
         settings.sharedTree(value)
@@ -120,7 +125,8 @@ class VmService : Service() {
                     ).apply { setReferenceCounted(false); acquire() }
                 }
                 scope.launch {
-                    val accepted = vm.start(VmConfig(memoryMiB = settings.state.value.memoryMiB, cpuCount = settings.state.value.cpuCount)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
+                    val saved = settings.state.value
+                    val accepted = vm.start(VmConfig(memoryMiB = saved.memoryMiB, cpuCount = saved.cpuCount, gpuEnabled = saved.gpuEnabled)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
                     if (!accepted && vm.status.value.state in listOf(VmState.STOPPED, VmState.ERROR)) {
                         releaseWakeLock()
                         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -137,6 +143,10 @@ class VmService : Service() {
                 val image = intent.getStringExtra(EXTRA_IMAGE)?.let { value ->
                     ImageVariant.entries.firstOrNull { it.name == value } ?: return START_NOT_STICKY
                 } ?: ImageVariant.MINIMAL
+                if (!image.available(settings.state.value.gpuEnabled)) {
+                    storage.value = Transfer(message = "Enable GPU in Settings before creating an X11 GPU disk.")
+                    return START_NOT_STICKY
+                }
                 storage.value = Transfer(busy = true, message = "Creating ${image.title} system disk")
                 if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                 else startForeground(NOTIFICATION, notification())
@@ -146,7 +156,7 @@ class VmService : Service() {
                 scope.launch {
                     var result = "${image.title} disk created ($gib GiB). Start Linux to expand its filesystem."
                     try {
-                        GuestResources.createSystem(this@VmService, gib, image)
+                        GuestResources.createSystem(this@VmService, gib, image, settings.state.value.gpuEnabled)
                         settings.diskSize(gib)
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) { result = "Disk creation failed: ${failure.message}" }

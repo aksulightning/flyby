@@ -5,6 +5,8 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 SOURCES={
  'rvvm': ('https://codeload.github.com/LekKit/RVVM/tar.gz/ce8ca7c00ba4058e5f26811057573b3ff23e9316','e14f95d6b9fd03e35374297e66ea6c082f0b417bbc796e34e1c35bead2d17867'),
  'libvterm': ('https://www.leonerd.org.uk/code/libvterm/libvterm-0.3.3.tar.gz','09156f43dd2128bd347cbeebe50d9a571d32c64e0cf18d211197946aff7226e0'),
+ 'virglrenderer': ('https://gitlab.freedesktop.org/virgl/virglrenderer/-/archive/1.1.1/virglrenderer-1.1.1.tar.gz','1fc34ffbf2a4f5cf161228f13242e28283bd818901d7daf0027e6ae5fcaeaf9b'),
+ 'libepoxy': ('https://codeload.github.com/anholt/libepoxy/tar.gz/refs/tags/1.5.10','a7ced37f4102b745ac86d6a70a9da399cc139ff168ba6b8002b4d8d43c900c15'),
 }
 def main():
  for name,(url,digest) in SOURCES.items():
@@ -23,6 +25,9 @@ def main():
    for item in tar:
     parts=pathlib.PurePosixPath(item.name).parts[1:]
     if not parts: continue
+    # Upstream virglrenderer shares formatting rules through symlinks;
+    # these are not build inputs. Never create archive symlinks on the host.
+    if item.issym() and parts[-1] == '.clang-format': continue
     if '..' in parts or item.name.startswith('/') or not (item.isfile() or item.isdir()): raise ValueError('Unsafe source archive entry')
     path=dest.joinpath(*parts)
     if item.isdir(): path.mkdir(parents=True,exist_ok=True)

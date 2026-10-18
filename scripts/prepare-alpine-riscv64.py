@@ -4,6 +4,7 @@ import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subp
 from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
 from guest_modules import select_modules
 from x11_image import PACKAGES as X11_PACKAGES, LOCK as X11_LOCK, build as build_x11
+from x11_gpu_image import PACKAGES as GPU_PACKAGES, LOCK as GPU_LOCK, build as build_gpu
 from wayland_image import PACKAGES as WAYLAND_PACKAGES, LOCK as WAYLAND_LOCK, build as build_wayland
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
@@ -251,9 +252,9 @@ def provenance(paths):
     # Read the final installed databases: graphical packages may upgrade shared
     # dependencies, so the base minirootfs alone is not sufficient provenance.
     packages = {}
-    repositories = {(p['name'], p['version']): p['repository'] for p in WAYLAND_LOCK + X11_LOCK}
+    repositories = {(p['name'], p['version']): p['repository'] for p in WAYLAND_LOCK + X11_LOCK + GPU_LOCK}
     for image, directory in [('minimal', 'system-root'), ('service', 'service-root'),
-                             ('wayland', 'wayland-root'), ('x11', 'x11-root')]:
+                             ('wayland', 'wayland-root'), ('x11', 'x11-root'), ('x11-gpu', 'x11-gpu-root')]:
         database = (ROOT/'out/guest'/directory/'lib/apk/db/installed').read_text()
         for block in database.strip().split('\n\n'):
             fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
@@ -267,18 +268,19 @@ def provenance(paths):
         fields = dict(line.split(' = ', 1) for line in member(paths[name], '.PKGINFO').decode().splitlines() if ' = ' in line)
         packages[(fields['pkgname'], fields['pkgver'])] = dict(name=fields['pkgname'], version=fields['pkgver'],
             license=fields['license'], origin=fields['origin'], commit=fields['commit'], repository='main',
-            images=['minimal', 'service', 'wayland', 'x11'],
+            images=['minimal', 'service', 'wayland', 'x11', 'x11-gpu'],
             source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['commit']}/main/{fields['origin']}")
     return dict(branch='edge', rootfs_snapshot='20260805',
-                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES).items()},
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
                 images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),
                         'wayland': dict(seed='wayland.seed', init='OpenRC', display='Weston, 800x600, Pixman; no Xorg/XWayland'),
-                        'x11': dict(seed='x11.seed', init='OpenRC', display='Xorg, 800x600, software rendering; no Wayland compositor')},
+                        'x11': dict(seed='x11.seed', init='OpenRC', display='Xorg, 800x600, software rendering; no Wayland compositor'),
+                        'x11-gpu': dict(seed='x11-gpu.seed', init='OpenRC', display='Xorg, 800x600, Virtio-GPU/VirGL; GPU required')},
                 packages=sorted(packages.values(), key=lambda p: (p['name'], p['version'])))
 
 def main():
-    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES).items()}
+    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()}
     apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
     DEST.mkdir(parents=True, exist_ok=True)
     # aapt transparently expands .gz assets and strips their suffix. Keep gzip bytes
@@ -296,9 +298,10 @@ def main():
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
     build_wayland(config_dir/'service-root', config_dir/'wayland-root', paths)
     build_x11(config_dir/'service-root', config_dir/'x11-root', paths)
+    build_gpu(config_dir/'x11-root', config_dir/'x11-gpu-root', paths)
     (DEST/'provenance.json').write_text(json.dumps(provenance(paths), indent=2)+'\n')
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
-    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root'), ('x11', 1024, config_dir/'x11-root')]:
+    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root'), ('x11', 1024, config_dir/'x11-root'), ('x11-gpu', 1024, config_dir/'x11-gpu-root')]:
         disk = config_dir/(name+'-seed.raw')
         disk.unlink(missing_ok=True)
         with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)

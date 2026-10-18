@@ -1,4 +1,5 @@
 #include "vm.h"
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
@@ -90,7 +91,8 @@ int main(int argc, char **argv) {
     const bool x11 = argc == 5;
     try {
         unsigned cpus = std::getenv("FLYBY_CPUS") ? std::stoul(std::getenv("FLYBY_CPUS")) : 1;
-        flyby::Vm vm(argv[1], 512, cpus, argv[2], true);
+        const bool gpu = std::getenv("FLYBY_GPU") && std::string(std::getenv("FLYBY_GPU")) == "1";
+        flyby::Vm vm(argv[1], gpu ? 768 : 512, cpus, argv[2], true, false, gpu);
         vm.start();
         try {
             wait(vm, "FLYBY_ALPINE_READY");
@@ -104,6 +106,23 @@ int main(int argc, char **argv) {
                 ? "xdpyinfo && kill -0 $(cat /run/flyby-x11/terminal-ready) && rc-service flyby-x11-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n"
                 : "cat /var/log/weston.log; test -S /run/flyby-wayland/wayland-0 && kill -0 $(cat /run/flyby-wayland/terminal-ready) && rc-service flyby-wayland-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n");
             wait(vm, "\r\nDISPLAY_TEST_READY_FOR_INPUT\r\n");
+            if (gpu) {
+                shell(vm, "glxinfo -B > /tmp/gpu-info; cat /tmp/gpu-info; grep -qi 'OpenGL renderer string: virgl' /tmp/gpu-info && echo GPU_VIRGL_READY\n");
+                wait(vm, "\r\nGPU_VIRGL_READY\r\n", 120);
+                shell(vm, "glxgears -geometry 320x240+400+200 > /tmp/gears.log 2>&1 & echo $! > /tmp/gears.pid; sleep 10; cat /tmp/gears.log; kill -0 $(cat /tmp/gears.pid) && grep -q 'frames in' /tmp/gears.log && echo GPU_GEARS_READY\n");
+                wait(vm, "\r\nGPU_GEARS_READY\r\n", 120);
+                auto gears = vm.displayFrame();
+                size_t colored = 0;
+                std::ofstream shot(std::string(argv[3]) + ".gears.ppm", std::ios::binary);
+                shot << "P6\n800 600\n255\n";
+                for (auto p : gears) {
+                    int r = (p >> 16) & 255, g = (p >> 8) & 255, b = p & 255;
+                    if (std::max({r, g, b}) - std::min({r, g, b}) > 40) ++colored;
+                    char rgb[]{char(r), char(g), char(b)}; shot.write(rgb, 3);
+                }
+                if (colored < 100) throw std::runtime_error("GLX gears did not reach the visible GPU framebuffer");
+                shell(vm, "kill $(cat /tmp/gears.pid)\n");
+            }
             auto pixels = waitForDesktop(vm);
             shell(vm, x11
                 ? "test \"$DISPLAY\" = :0 && test \"$XAUTHORITY\" = /run/flyby-x11/Xauthority && printf '\\nDISPLAY_TEST_ENV_OK\\n'\n"
@@ -143,8 +162,8 @@ int main(int argc, char **argv) {
             std::ofstream finalImage(argv[3], std::ios::binary);
             finalImage << "P6\n800 600\n255\n";
             for (auto p : pixels) { char rgb[]{char(p >> 16), char(p >> 8), char(p)}; finalImage.write(rgb, 3); }
-            shell(vm, "dd if=/dev/input/event1 of=/tmp/pointer-event bs=24 count=1 2>/dev/null &\n");
-            std::this_thread::sleep_for(500ms);
+            shell(vm, "for event in /sys/class/input/event*; do if [ \"$(cat \"$event/device/name\")\" = 'Flyby pointer' ]; then (exec 3<\"/dev/input/${event##*/}\"; printf '\\nDISPLAY_POINTER_READER_READY\\n'; dd <&3 of=/tmp/pointer-event bs=24 count=1 2>/dev/null) & break; fi; done\n");
+            wait(vm, "\r\nDISPLAY_POINTER_READER_READY\r\n", 30);
             pointer(vm, 350, 280, 0); pointer(vm, 350, 280, 1); pointer(vm, 350, 280, 0);
             shell(vm, x11
                 ? "sleep 1; test -s /tmp/pointer-event && apk info -e xorg-server && ! apk info -e weston && ! apk info -e xwayland && echo DISPLAY_TEST_POINTER_OK\n"

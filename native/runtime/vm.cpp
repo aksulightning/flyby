@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "display.h"
+#include "gpu.h"
 extern "C" {
 #include <devices/ns16550a.h>
 #include <devices/rtl8169.h>
@@ -130,14 +131,22 @@ struct Vm::Impl {
     Console shared;
     Console displayInput{true, "FLYBY_DISPLAY_READY\n", true};
     Display display;
+    std::unique_ptr<Gpu> gpu;
     ~Impl() {
         if (machine)
             rvvm_free_machine(machine);
     }
 };
 Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
-       bool fullSystem, bool sharedFolder)
+       bool fullSystem, bool sharedFolder, bool gpuEnabled)
     : impl(std::make_unique<Impl>()) {
+    if (!diskPath.empty()) {
+        std::ifstream disk(diskPath, std::ios::binary);
+        std::array<char, 16> label{};
+        disk.seekg(1144); disk.read(label.data(), label.size());
+        if (std::string(label.data(), 13) == "flyby-x11-gpu" && !gpuEnabled)
+            throw std::invalid_argument("This X11 GPU disk requires GPU. Enable GPU in Settings before starting Linux.");
+    }
     if (memoryMiB < 128 || memoryMiB > 768 || (cpus < 1 || cpus > 2))
         throw std::invalid_argument("RV64 requires 128–768 MiB and one or two CPUs");
     auto kernel = load(dir + "/kernel", 120 * 1024 * 1024);
@@ -161,7 +170,8 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         !rvvm_ns16550a_init(m, &impl->shared.dev, SharedUart, 0, irq, 8) ||
         !rvvm_ns16550a_init(m, &impl->displayInput.dev, 0x10003000, 0, irq, 9))
         throw std::runtime_error("Native board initialization failed");
-    impl->display.attach(m);
+    if (gpuEnabled) impl->gpu = std::make_unique<Gpu>(m, irq, impl->display);
+    else impl->display.attach(m);
     const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
     if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
         !rvvm_rtc_goldfish_init(m, Rtc, irq, 7) || !rtl8169_init_auto(m))
@@ -183,6 +193,8 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
         command += " flyby.root=1";
     if (sharedFolder)
         command += " flyby.shared=1";
+    if (gpuEnabled)
+        command += " flyby.gpu=1";
     rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {
@@ -211,6 +223,7 @@ void Vm::stop() {
 }
 bool Vm::running() {
     std::lock_guard lock(impl->lifecycle);
+    if (impl->gpu) impl->gpu->check();
     return impl->machine && rvvm_machine_running(impl->machine);
 }
 void Vm::input(const uint8_t *data, size_t size) {

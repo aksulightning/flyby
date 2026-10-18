@@ -725,6 +725,14 @@
     "x11-zstd-libs.apk": {
       "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/zstd-libs-1.5.7-r2.apk",
       "sha256": "5292eb5e595bc06f27aeb7728211c414ff065fa5f5091a046ef3d4ff821a917c"
+    },
+    "x11-gpu-mesa-dri-gallium.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/mesa-dri-gallium-26.2.4-r1.apk",
+      "sha256": "e83c95b62da2ed45125e8307822fcf6852db5db9d08abd3dc98293dc9e635522"
+    },
+    "x11-gpu-mesa-utils.apk": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/mesa-utils-9.0.0-r6.apk",
+      "sha256": "9097c6cdc5936dbb08c24ee936e1621ac08eab60fc30cdc55603d2b63984d15c"
     }
   },
   "build_tools": {
@@ -751,6 +759,11 @@
       "seed": "x11.seed",
       "init": "OpenRC",
       "display": "Xorg, 800x600, software rendering; no Wayland compositor"
+    },
+    "x11-gpu": {
+      "seed": "x11-gpu.seed",
+      "init": "OpenRC",
+      "display": "Xorg, 800x600, Virtio-GPU/VirGL; GPU required"
     }
   },
   "packages": [
@@ -766,7 +779,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -781,7 +795,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -796,7 +811,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -811,7 +827,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -826,7 +843,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -839,7 +857,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1ee249c9da168084b1c6c9f7488bdffa2ac33c84/main/brotli",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -865,7 +884,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -891,7 +911,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -905,7 +926,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -920,7 +942,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -945,7 +968,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c690d2215724c06db60faa7a7de4b8f0d2720682/main/encodings",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -958,7 +982,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -971,7 +996,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -984,7 +1010,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6b4d520a838bd137811a56ffa569e2431ce5b903/main/eudev",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -996,7 +1023,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/fb03d82ca5c516e6d8b6a59e2888a47dfaacd6fa/main/font-alias",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1008,7 +1036,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b24a4cdf2a2e4b41de4d78979aa9aae0d1383ebc/main/font-cursor-misc",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1021,7 +1050,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/59420f440b2e664f7be1a6e135a3175aab56cd51/main/font-dejavu",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1033,7 +1063,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b24a4cdf2a2e4b41de4d78979aa9aae0d1383ebc/main/font-misc-misc",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1046,7 +1077,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d026b8a2a0e11062ac18d1b94791eb358b2f7f8c/main/fontconfig",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1059,7 +1091,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/ad16b0afc1a315c4095a75ff72ebbe3cfa29b671/main/freetype",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1095,7 +1128,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8bfc27fafbf6c27761b150c571c3075a5a3db0de/main/gmp",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1132,7 +1166,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8ebbba93d0d228433dc8490576a716e6c6293e99/main/hwdata",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1145,7 +1180,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/1997195d08a4d0e04899714802276d89d1ad4cb2/main/kmod",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1172,7 +1208,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1185,7 +1222,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/087ea48145e24307010ba91f403c5ff8f402568c/main/util-linux",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1198,7 +1236,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/02365e78d654a7beb23fd35d7d69f4a649009ede/main/libbsd",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1211,7 +1250,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/33283848034c9885d984c8e8697c645c57324938/main/bzip2",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1225,7 +1265,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1251,7 +1292,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1276,7 +1318,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2015800769b781bef45917b668d10bffe2ac538f/main/libdrm",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1289,7 +1332,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/96066c3b6d2992dd2b72db6492c4e65d7f17520f/main/libeconf",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1302,7 +1346,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/8f13294206888f3dd44ed74a8eb3dd9934499e81/main/elfutils",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1326,7 +1371,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/84a227baf001b6e0208e3352b294e4d7a40e93de/main/libepoxy",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1339,7 +1385,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2af4dd0082956420a61fe680bb3da04034e67e34/community/libevdev",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1352,7 +1399,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/46440e4654dc1e4e7d3a69b8a0a9e22fdeda4a88/main/expat",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1365,7 +1413,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/58a77443f37614ab608c580baf2b7f898184bec9/main/libffi",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1378,7 +1427,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9667f1121e207bb3819d91ab6734375f7698e5a7/main/libfontenc",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1391,7 +1441,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/21530a8b7b00b34c648a6b3744d461f32203a885/main/gcc",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1403,7 +1454,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d4941e833167c30aa1172e6d8420d084698254ab/main/libice",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1416,7 +1468,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/465ef3d8307203fa3762b0871478ce2d702937a4/community/libinput",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1429,7 +1482,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/465ef3d8307203fa3762b0871478ce2d702937a4/community/libinput",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1466,7 +1520,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b9f624c71024df38a4cd84bc84b51fc3498f15a7/main/libmd",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1490,7 +1545,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6e2a3aef9dfb4a7d82e29b9418cf7d3a68835b52/main/ncurses",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1503,7 +1559,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/d5de88aad8098d25c1b9e53d4ca5e6ff6c90e234/main/libpciaccess",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1516,7 +1573,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/a25817f5080047111598530e33f3589ff819d840/main/libpng",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1552,7 +1610,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/4eaa957537767ad0344894ad0e609068b26bf85d/main/libsm",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1578,7 +1637,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1591,7 +1651,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/21530a8b7b00b34c648a6b3744d461f32203a885/main/gcc",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1603,7 +1664,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/087ea48145e24307010ba91f403c5ff8f402568c/main/util-linux",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1640,7 +1702,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f993bc30142d46271ede4a746c1abefaa1a78eee/main/libx11",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1653,7 +1716,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/c911b00ecb8f42c3281d4be61ce9acb4fe985a14/main/libxau",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1665,7 +1729,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/614e9166706cec427fc3d907b8d981390a42e088/main/libxaw",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1678,7 +1743,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/5e1b822309fb17cc2ebd46d6fbacb1763acbcdd1/main/libxcb",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1690,7 +1756,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/68e887cbf59009caf08c641174e4d706c87074d7/community/libxcvt",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1703,7 +1770,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/614e9166706cec427fc3d907b8d981390a42e088/main/libxdmcp",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1716,7 +1784,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/4ec252fa3e6e8edf16d0d6da3fe6dd39e2263942/main/libxext",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1728,7 +1797,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ec05102de0da5c34fde4d53a546e460cb7ff138/community/libxfont2",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1741,7 +1811,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9a4062b0f278b43370faa58195206c5ef94e7899/main/libxft",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1753,7 +1824,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/472fb58e237c5ace7489b1073b2758d28658d80d/main/libxi",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1777,7 +1849,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/4caf66685895cb1db7bfdfc9f63c1dbf726712fd/main/libxkbfile",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1790,7 +1863,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f1bd5b6767a0e7fdda380c95138a1c938eb6e102/main/libxml2",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1802,7 +1876,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6975763371783f76ea45b6a55d224ca72b73d090/main/libxmu",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1814,7 +1889,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/30778c48d72b12e64d7de8dfcef2937aa2886690/main/libxpm",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1827,7 +1903,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/74030d4140b68e8d4d36a357751f156ab31840c2/main/libxrender",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1840,7 +1917,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/92c045b6cdda2c1d423337a68cc814cad86b651a/main/libxshmfence",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1852,7 +1930,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/60222ebeadec75e483e49194130c6963d0fcbf75/main/libxt",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1864,7 +1943,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f285d63f704f8e1c74e14ca7abceb419383922c9/main/libxtst",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1876,7 +1956,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/ac89fbb35d37756385378e461847c2b0a61613dd/main/libxxf86vm",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1890,7 +1971,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/b249f09c82e1e52f3072a6832f0407953788f21d/main/linux-lts"
     },
@@ -1904,7 +1986,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f83f6983d187146ddcb3ba0bb49e23b89f988919/main/llvm23",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1917,7 +2000,20 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
+      ]
+    },
+    {
+      "name": "mesa-dri-gallium",
+      "version": "26.2.4-r1",
+      "license": "MIT AND SGI-B-2.0 AND BSL-1.0",
+      "origin": "mesa",
+      "commit": "2d7942ded48bd1fcf619894d72b88cfa14102cd3",
+      "repository": "main",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
+      "images": [
+        "x11-gpu"
       ]
     },
     {
@@ -1930,7 +2026,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1943,7 +2040,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1955,7 +2053,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1968,7 +2067,20 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/2d7942ded48bd1fcf619894d72b88cfa14102cd3/main/mesa",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
+      ]
+    },
+    {
+      "name": "mesa-utils",
+      "version": "9.0.0-r6",
+      "license": "custom",
+      "origin": "mesa-demos",
+      "commit": "4efd8c6054b419a527a7af2276becc91ee3e0b56",
+      "repository": "community",
+      "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/4efd8c6054b419a527a7af2276becc91ee3e0b56/community/mesa-demos",
+      "images": [
+        "x11-gpu"
       ]
     },
     {
@@ -1981,7 +2093,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4301c788920ece9e1cd96dfa9d0ea6e7875e755/main/mkfontscale",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -1994,7 +2107,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e08040e6d605215afce727b42ff584868d0a61df/community/mtdev",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2020,7 +2134,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2046,7 +2161,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2058,7 +2174,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/6e2a3aef9dfb4a7d82e29b9418cf7d3a68835b52/main/ncurses",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2070,7 +2187,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/bf898e6d067c1c0ecc0f5ff39c79fc893399acd8/main/nettle",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2084,7 +2202,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2098,7 +2217,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2112,7 +2232,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2126,7 +2247,8 @@
         "minimal",
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ],
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/e3e95307fe4ab08caf28babdaac0b11e2cedb305/main/opensbi"
     },
@@ -2164,7 +2286,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9337ac809a431f004386ea3e279e3d55f770e7d3/main/pixman",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2176,7 +2299,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/83e5ba9223ef757cadbca2533d29ebaaa7aa7b76/main/pkgconf",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2190,7 +2314,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2252,7 +2377,8 @@
       "images": [
         "service",
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2264,7 +2390,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/47f647302cb34f3b273a465477c04d2e3d652c2c/community/twm",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2277,7 +2404,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7501172a312403cb494042f8aa8f9faf7b354790/main/udev-init-scripts",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2290,7 +2418,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7501172a312403cb494042f8aa8f9faf7b354790/main/udev-init-scripts",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2302,7 +2431,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/ff5bcaba738490af891f11024ced8940d8f9eeb4/main/util-macros",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2327,7 +2457,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/13b755bcd1f1ee9fc241c6e02d7ea22519ea7729/main/wayland",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2411,7 +2542,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/f26dc74fee419e8a1d85d27df6bd760540dd8329/community/xauth",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2423,7 +2555,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/743b0d2f60b7518aa3e531ea7d407667f96e2818/community/xdpyinfo",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2435,7 +2568,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/7787f52ced2a897fd64df3f78dd0fac3d9426f5c/community/xf86-input-libinput",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2447,7 +2581,8 @@
       "repository": "main",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/aa8ee026b4c1ab3a33ac7feeba3bbdd2ee151ea6/main/xkbcomp",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2460,7 +2595,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/a20d42e8221431ce8caab197d2aa0b0da152929c/main/xkeyboard-config",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2472,7 +2608,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/460ea88b4ae9df66d51f5ea1c1f4e5d53e214993/community/xorg-server",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2484,7 +2621,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/460ea88b4ae9df66d51f5ea1c1f4e5d53e214993/community/xorg-server",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2496,7 +2634,8 @@
       "repository": "community",
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/9eb3e1da1f2139ebe22dc308873718e39993bedd/community/xterm",
       "images": [
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2509,7 +2648,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/950af2f9ad0e4518d167e8ce0b41e7be0a7a730e/main/xz",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2535,7 +2675,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/ed7d11b8c5de5f1744b2cf762c160c2385f28212/main/zlib",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     },
     {
@@ -2548,7 +2689,8 @@
       "source_recipe": "https://gitlab.alpinelinux.org/alpine/aports/-/tree/3c6e2ee2b16f403d53eab39c4426eb61f003c322/main/zstd",
       "images": [
         "wayland",
-        "x11"
+        "x11",
+        "x11-gpu"
       ]
     }
   ]

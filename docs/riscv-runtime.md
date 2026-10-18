@@ -11,6 +11,11 @@ There are no upstream source patches. An Android-only CMake logging adapter send
 upstream diagnostics to logcat. JIT, KVM, GUI, host TAP, VFIO and process
 isolation are disabled; ART retains ownership of host signals.
 
+The optional X11 GPU image adds Flyby's own Virtio-GPU device at `0x10004000`.
+Its interrupt is allocated through RVVM and recorded in the device tree.
+VirGL rendering uses a separate EGL/GLES thread; the ordinary images keep their
+simple framebuffer. See [X11 GPU](x11-gpu.md).
+
 RVVM implements integer, multiply/divide, atomics, compressed, F/D floating-point,
 privileged execution, traps, interrupts and virtual memory (including Sv39).
 The standard Alpine kernel discovers optional extensions from RVVM's generated

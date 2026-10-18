@@ -21,6 +21,8 @@ sources. The debug APK contains the compiled RVVM/libvterm runtime and guest ass
 | JetBrains annotations | transitive dependency | Apache-2.0 ([license](https://github.com/JetBrains/java-annotations/blob/master/LICENSE.txt)) |
 | Guava listenablefuture | AndroidX transitive dependency | Apache-2.0 ([license](https://github.com/google/guava/blob/master/COPYING)) |
 | libvterm | 0.3.3 | MIT; [full notice](licenses/libvterm-MIT.txt), verified source archive in prepare-native.py |
+| virglrenderer | 1.1.1 | MIT; [full notice](licenses/virglrenderer-MIT.txt), pinned source archive in prepare-native.py |
+| libepoxy | 1.5.10 | MIT; [full notice](licenses/libepoxy-MIT.txt), pinned source archive in prepare-native.py |
 | RVVM library | ce8ca7c00ba4058e5f26811057573b3ff23e9316 | MPL-2.0; [full notice](licenses/RVVM-MPL-2.0.txt); GPL CLI excluded |
 | GitHub Actions checkout / setup-java | v5, SHA-pinned, CI only | MIT ([checkout](https://github.com/actions/checkout/blob/v5/LICENSE), [setup-java](https://github.com/actions/setup-java/blob/v5/LICENSE)) |
 | android-actions/setup-android | v3, SHA-pinned, CI only | MIT ([license](https://github.com/android-actions/setup-android/blob/v3/LICENSE)) |

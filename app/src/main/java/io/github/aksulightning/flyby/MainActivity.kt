@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
                         LicensesScreen({ licensesVisible = false }, content)
                     } else if (settingsVisible) {
                         SettingsScreen(settings, idle, transfer, preferences,
-                            { connected?.setMemory(it) }, { connected?.setCpuCount(it) }, { gib, image -> createDisk(gib, image) },
+                            { connected?.setMemory(it) }, { connected?.setCpuCount(it) }, { connected?.setGpuEnabled(it) }, { gib, image -> createDisk(gib, image) },
                             { sharedPicker.launch(settings.sharedTree?.let(android.net.Uri::parse)) },
                             { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },

@@ -18,6 +18,18 @@ object DiskImage {
         return disk
     }
     const val GIB = 1024L * 1024 * 1024
+    /** ext4 volume label travels with the disk, including existing backup format. */
+    fun requiresGpu(disk: File): Boolean = RandomAccessFile(disk, "r").use { input ->
+        require(input.length() >= 1160) { "Disk is too short to identify" }
+        input.seek(1144)
+        val label = ByteArray(16); input.readFully(label)
+        label.toString(Charsets.US_ASCII).trimEnd('\u0000') == "flyby-x11-gpu"
+    }
+    fun requireGpuAllowed(disk: File, gpuEnabled: Boolean): Boolean {
+        val required = requiresGpu(disk)
+        require(!required || gpuEnabled) { "This X11 GPU disk requires GPU. Enable GPU in Settings before starting Linux." }
+        return required
+    }
     fun validSize(mode: DiskMode, bytes: Long): Boolean = if (mode == DiskMode.SYSTEM)
         bytes in GIB..100 * GIB && bytes % GIB == 0L else bytes == mode.size
 

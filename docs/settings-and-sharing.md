@@ -36,6 +36,15 @@ Guest preparation requires `gcc-riscv64-linux-gnu` in addition to e2fsprogs.
 CI installs the compiler, builds the helper from source and packages its bytes in
 the verified initrd/system seed.
 
+## GPU setting
+
+**Enable GPU** defaults to off and can only change while Linux and disk operations
+are stopped. It unlocks the separate **Alpine X11 GPU** image. With GPU off, both
+creation and startup of GPU disks are rejected; imported disks retain this
+requirement through their ext4 label. Disabling GPU never deletes or converts a
+disk. Re-enable it to start the same disk. Other images remain usable with GPU off.
+See [X11 GPU](x11-gpu.md) for compatibility and current performance limits.
+
 ## /shared
 
 **Choose Android folder** uses `OpenDocumentTree` and takes persistent read/write

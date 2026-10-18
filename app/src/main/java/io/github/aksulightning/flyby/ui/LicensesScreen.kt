@@ -23,6 +23,7 @@ fun LicensesScreen(back: () -> Unit, modifier: Modifier) {
         "RVVM · MPL 2.0" to "RVVM-MPL-2.0.txt", "Linux · GPL 2.0" to "Linux-GPL-2.0.txt",
         "OpenSBI · BSD 2-Clause" to "OpenSBI-BSD-2-Clause.txt", "libvterm · MIT" to "libvterm-MIT.txt",
         "OpenRC · BSD 2-Clause" to "OpenRC-BSD-2-Clause.txt",
+        "virglrenderer · MIT" to "virglrenderer-MIT.txt", "libepoxy · MIT" to "libepoxy-MIT.txt",
         "Alpine package licenses and sources" to "vm/provenance.json",
     )
     val navigateBack = { if (selected != null) selected = null else back() }

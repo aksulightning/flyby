@@ -14,6 +14,7 @@ public:
     Display();
     void attach(rvvm_machine_t *machine);
     std::vector<int32_t> frame();
+    void update(const std::vector<uint8_t>& frame);
 private:
     std::mutex mutex;
     std::vector<uint8_t> pixels;

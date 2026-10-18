@@ -28,11 +28,12 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
         mutex.withLock {
             check(handle == 0L) { "VM already running" }
             config.validateRuntime()
-            DiskImage.validate(files.directory, files.mode)
+            val disk = DiskImage.validate(files.directory, files.mode)
+            val gpu = DiskImage.requireGpuAllowed(disk, config.gpuEnabled)
             log("VM_CREATE")
             try {
                 shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null)
+                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null, gpu)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 NativeBridge.startVm(handle)
