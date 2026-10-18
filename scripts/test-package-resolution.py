@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Offline regressions for release selection, provenance and source fallback."""
 import hashlib
+import http.client
+import ssl
 import importlib.util
 import io
 import os
@@ -107,6 +109,90 @@ class PackageResolutionTests(unittest.TestCase):
                 self.assertEqual(bundle.source_archive('alias.tar.gz', digest, upstream).read_bytes(), content)
                 with self.assertRaises(ValueError):
                     bundle.source_archive('alias.tar.gz', '0'*128, upstream)
+
+
+class SourceDownloadTests(unittest.TestCase):
+    @staticmethod
+    def response(content, length=None):
+        response = io.BytesIO(content)
+        response.headers = {'Content-Length': str(len(content) if length is None else length)}
+        return response
+
+    def test_disconnect_is_retried_then_complete_download_is_cached(self):
+        content = b'complete source'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle.time, 'sleep') as sleep:
+            target = pathlib.Path(tmp)/'source.tar.gz'
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    http.client.RemoteDisconnected('connection closed'), self.response(content)]) as request:
+                self.assertEqual(bundle.download('https://example.test/source', target).read_bytes(), content)
+                bundle.download('https://example.test/source', target)
+                self.assertEqual(request.call_count, 2)
+            sleep.assert_called_once_with(2)
+            self.assertFalse(target.with_name(target.name + '.partial').exists())
+
+    def test_truncated_body_restarts_without_caching_partial_bytes(self):
+        content = b'complete source'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle.time, 'sleep'):
+            target = pathlib.Path(tmp)/'source.tar.gz'
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    self.response(b'partial', 100), self.response(content)]) as request:
+                self.assertEqual(bundle.download('https://example.test/source', target).read_bytes(), content)
+                self.assertEqual(request.call_count, 2)
+            self.assertFalse(target.with_name(target.name + '.partial').exists())
+
+    def test_exhausted_mirror_retries_use_upstream_and_verify_checksum(self):
+        content = b'exact corresponding source'
+        checksum = hashlib.sha512(content).hexdigest()
+        upstream = 'https://example.test/source'
+        errors = [http.client.RemoteDisconnected('closed') for _ in range(4)]
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle.time, 'sleep') as sleep:
+            with patch.object(bundle, 'CACHE', pathlib.Path(tmp)), patch.object(
+                    bundle.urllib.request, 'urlopen', side_effect=errors + [self.response(content)]) as request:
+                self.assertEqual(bundle.source_archive('source.tar.gz', checksum, upstream).read_bytes(), content)
+                self.assertEqual(request.call_count, 5)
+                self.assertEqual(request.call_args.args[0], upstream)
+                self.assertEqual([call.args[0] for call in sleep.call_args_list], [2, 4, 8])
+
+    def test_all_endpoints_failing_is_fatal_and_leaves_no_cached_file(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle.time, 'sleep'):
+            with patch.object(bundle, 'CACHE', pathlib.Path(tmp)), patch.object(
+                    bundle.urllib.request, 'urlopen', side_effect=TimeoutError('timed out')) as request:
+                with self.assertRaisesRegex(FileNotFoundError, 'source.tar.gz.*example.test'):
+                    bundle.source_archive('source.tar.gz', 'a'*128, 'https://example.test/source')
+                self.assertEqual(request.call_count, 8)
+                self.assertEqual([p for p in pathlib.Path(tmp).rglob('*') if p.is_file()], [])
+
+    def test_http_503_is_retried(self):
+        url = 'https://example.test/source'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle.time, 'sleep'):
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    urllib.error.HTTPError(url, 503, 'unavailable', {}, None), self.response(b'ok')]) as request:
+                self.assertEqual(bundle.download(url, pathlib.Path(tmp)/'source').read_bytes(), b'ok')
+                self.assertEqual(request.call_count, 2)
+
+    def test_permanent_failures_are_not_retried(self):
+        url = 'https://example.test/source'
+        errors = [
+            urllib.error.HTTPError(url, 404, 'gone', {}, None),
+            urllib.error.URLError(ssl.SSLCertVerificationError('invalid certificate')),
+            PermissionError('not writable'),
+        ]
+        for error in errors:
+            with self.subTest(error=error), tempfile.TemporaryDirectory() as tmp:
+                with patch.object(bundle.time, 'sleep') as sleep, patch.object(
+                        bundle.urllib.request, 'urlopen', side_effect=error) as request:
+                    with self.assertRaises(type(error)):
+                        bundle.download(url, pathlib.Path(tmp)/'source')
+                    request.assert_called_once()
+                    sleep.assert_not_called()
+
+    def test_bad_checksum_is_fatal_without_trying_another_endpoint(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen', return_value=self.response(b'wrong')) as request:
+                with self.assertRaisesRegex(ValueError, 'Source checksum mismatch'):
+                    bundle.source_archive('source.tar.gz', 'a'*128, 'https://example.test/source')
+                request.assert_called_once()
+                self.assertEqual([p for p in pathlib.Path(tmp).rglob('*') if p.is_file()], [])
 
 
 if __name__ == '__main__':

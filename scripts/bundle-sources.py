@@ -2,19 +2,58 @@
 """Collect pinned Alpine recipes, all SHA512-listed sources, native sources and Flyby.
 Fails closed: a nightly must not publish if a required corresponding source is missing.
 """
-import hashlib, io, json, pathlib, shutil, subprocess, tarfile, urllib.request, urllib.error
+import hashlib, http.client, io, json, pathlib, shutil, socket, ssl, subprocess, tarfile, time, urllib.request, urllib.error
 from alpine_sources import recipe_sources
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT/'out/corresponding-source'
 CACHE = ROOT/'out/source-downloads'
 
+DOWNLOAD_ATTEMPTS = 4
+RETRYABLE_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+
+
+class DownloadUnavailable(RuntimeError):
+    """A source endpoint remained unavailable after bounded retries."""
+
+
+def transient_download_error(error):
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code in RETRYABLE_HTTP_STATUS
+    if isinstance(error, urllib.error.URLError):
+        error = error.reason
+    # Never turn certificate failures or local filesystem errors into retries.
+    return isinstance(error, (ConnectionError, TimeoutError, socket.gaierror,
+                              http.client.IncompleteRead, ssl.SSLEOFError))
+
+
 def download(url, path):
+    if path.exists():
+        return path
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        tmp = path.with_suffix('.partial')
-        with urllib.request.urlopen(url, timeout=120) as src, tmp.open('wb') as dest: shutil.copyfileobj(src, dest)
-        tmp.replace(path)
-    return path
+    tmp = path.with_name(path.name + '.partial')
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        print(f'Downloading ({attempt}/{DOWNLOAD_ATTEMPTS}): {url}', flush=True)
+        try:
+            with urllib.request.urlopen(url, timeout=120) as src, tmp.open('wb') as dest:
+                shutil.copyfileobj(src, dest)
+                # A fixed-length response can end early without read(size) raising.
+                length = src.headers.get('Content-Length')
+                if length is not None and dest.tell() < int(length):
+                    raise http.client.IncompleteRead(b'', int(length) - dest.tell())
+            tmp.replace(path)
+            return path
+        except (OSError, http.client.HTTPException) as error:
+            if not transient_download_error(error):
+                raise
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise DownloadUnavailable(
+                    f'Download failed after {attempt} attempts: {url}: {error}') from error
+            delay = 2 ** attempt
+            print(f'Temporary download failure: {url}: {error}; retrying in {delay}s', flush=True)
+        finally:
+            # Never reuse an interrupted transfer, including on permanent failures.
+            tmp.unlink(missing_ok=True)
+        time.sleep(delay)
 
 def digest(path, algorithm='sha256'):
     h = hashlib.new(algorithm)
@@ -28,15 +67,21 @@ def source_archive(name, expected, upstream=None):
     urls = [f'https://distfiles.alpinelinux.org/distfiles/edge/{name}']
     if upstream:
         urls.append(upstream)
-    for url in urls:
+    failures = []
+    for url in dict.fromkeys(urls):
         try:
             path = download(url, CACHE/expected/name)
-        except urllib.error.HTTPError as failure:
-            if failure.code == 404: continue
-            raise
-        if digest(path, 'sha512') != expected: raise ValueError(f'Source checksum mismatch: {name}')
+        except (urllib.error.HTTPError, DownloadUnavailable) as failure:
+            if isinstance(failure, urllib.error.HTTPError) and failure.code not in (404, 410):
+                raise
+            failures.append(f'{url}: {failure}')
+            print(f'Source endpoint unavailable for {name}: {url}: {failure}', flush=True)
+            continue
+        if digest(path, 'sha512') != expected:
+            path.unlink()
+            raise ValueError(f'Source checksum mismatch: {name} from {url}')
         return path
-    raise FileNotFoundError(f'Pinned source unavailable: {name}')
+    raise FileNotFoundError(f'Pinned source unavailable: {name}; ' + '; '.join(failures))
 
 def main():
     if OUT.exists(): shutil.rmtree(OUT)
