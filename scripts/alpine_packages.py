@@ -86,15 +86,18 @@ def resolve(refresh=False):
         stage = pathlib.Path(temporary).resolve()
         groups = {'tool': ['apk-tools-static'], 'boot': ['linux-lts', 'opensbi'], **WORLDS}
         lines = ['set -eu',
+                 f"trap 'chown -R {os.getuid()}:{os.getgid()} /output' EXIT",
                  'printf "%s\\n" "$BASE/main" "$BASE/community" > /etc/apk/repositories',
                  'mkdir -p /tmp/host-cache /tmp/guest-cache']
         for group, names in groups.items():
             arch = 'x86_64' if group == 'tool' else 'riscv64'
             cache = 'host' if group == 'tool' else 'guest'
             recursive = '' if group in ('tool', 'boot') else '--recursive'
+            update = '--update-cache' if group in ('tool', 'boot') else ''
             lines += [f'mkdir -p /output/{group}',
-                      f'apk --arch {arch} --cache-dir /tmp/{cache}-cache fetch {recursive} '
-                      f'--url --output /output/{group} {" ".join(names)} > /output/{group}/urls.txt']
+                      f'apk --arch {arch} --cache-dir /tmp/{cache}-cache {update} fetch {recursive} '
+                      f'--url --output /output/{group} {" ".join(names)} > /output/{group}/urls.txt '
+                      f'|| {{ cat /output/{group}/urls.txt; exit 1; }}']
         # The container only receives this disposable output directory.
         lines += [f'chown -R {os.getuid()}:{os.getgid()} /output']
         subprocess.run(['docker', 'run', '--rm', '--platform=linux/amd64',
