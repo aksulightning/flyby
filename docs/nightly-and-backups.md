@@ -1,10 +1,5 @@
 # Nightly builds, appearance and disk backups
 
-> [!WARNING]
-> Flyby closed on 8 October 2026 due to Android lockdown. Existing releases are
-> unsupported and no further nightlies are planned. Build and signing details
-> below are historical; backup instructions remain available for existing users.
-
 ## Download and identify an existing build
 
 Open https://github.com/aksulightning/flyby/releases and choose a `nightly-*`
