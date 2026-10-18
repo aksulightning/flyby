@@ -190,6 +190,24 @@ been prepared.
 The default APK targets **arm64-v8a**. CI also builds an x86_64 test variant for the
 Android emulator.
 
+### Compile without tests in GitHub Actions
+
+The [Build APK workflow](.github/workflows/build.yml) runs on pushes to
+`codex/main` and supports `workflow_dispatch`. It prepares the current Alpine
+guest and native sources, then runs only `./gradlew assembleDebug`. It does not
+run unit tests, host tests, emulator tests or lint. Required guest asset integrity
+checks still run during packaging.
+
+Download `flyby-arm64-debug-<commit>` from the completed run's **Artifacts**
+section. It contains the ARM64 debug APK, its matching source bundle, the resolved
+Alpine package lock, guest provenance and SHA-256 checksums. Artifacts are retained
+for 14 days. These APKs use the runner's ordinary debug signing key; they are not
+nightly releases and do not promise signing-key continuity for in-place updates.
+
+The existing [Android workflow](.github/workflows/android.yml) retains the full
+test suite for pull requests to `codex/main` and manual runs. Its guarded nightly
+publication remains separate from this compilation-only workflow.
+
 ### Technical overview
 
 Flyby embeds [RVVM](https://github.com/LekKit/RVVM) as an MPL-2.0 library and uses

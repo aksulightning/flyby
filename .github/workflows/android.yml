@@ -1,8 +1,6 @@
 name: Android
 
 on:
-  push:
-    branches: ['codex/main']
   pull_request:
     branches: ['codex/main']
   workflow_dispatch:
