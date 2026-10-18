@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tarfile
@@ -72,10 +73,48 @@ def cache_package(path, name, digest):
     shutil.copy2(path, target)
 
 
+
+def base_packages(rootfs):
+    with tarfile.open(rootfs) as archive:
+        database = next(item for item in archive if item.name.removeprefix('./') == 'lib/apk/db/installed')
+        names = [line[2:] for line in archive.extractfile(database).read().decode().splitlines()
+                 if line.startswith('P:')]
+    if not names or any(not re.fullmatch(r'[a-z0-9][a-z0-9+_.-]*', name) for name in names):
+        raise ValueError('Invalid base package database')
+    return names
+
+
+def image_requirements(base):
+    # Include the existing root's complete package set, not just forward
+    # dependencies of the additions: e.g. libssl and libcrypto upgrade together.
+    service = sorted(set(base + WORLDS['service']))
+    x11 = sorted(set(service + WORLDS['x11']))
+    return {'service': service, 'wayland': sorted(set(service + WORLDS['wayland'])),
+            'x11': x11, 'x11-gpu': sorted(set(x11 + WORLDS['x11-gpu']))}
+
+
+def current_rootfs():
+    import yaml
+    with urllib.request.urlopen(BASE+'releases/riscv64/latest-releases.yaml', timeout=90) as response:
+        release = rootfs_release(yaml.safe_load(response))
+    target = ROOT/'out/downloads'/release['sha256']/'alpine-minirootfs.tar.gz'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        pending = target.with_suffix('.partial')
+        with urllib.request.urlopen(BASE+'releases/riscv64/'+release['file'], timeout=90) as source, pending.open('wb') as output:
+            shutil.copyfileobj(source, output)
+        if sha256(pending) != release['sha256']:
+            raise ValueError('Minirootfs SHA256 mismatch')
+        pending.replace(target)
+    if sha256(target) != release['sha256']:
+        raise ValueError('Minirootfs SHA256 mismatch')
+    return release, target
+
 def resolve(refresh=False):
     if LOCK_PATH.exists() and not refresh:
         return json.loads(LOCK_PATH.read_text())
-    import yaml
+    release, rootfs = current_rootfs()
+    requirements = image_requirements(base_packages(rootfs))
     # Docker supplies the current official apk and Alpine trust keys without a
     # versioned bootstrap APK URL. Pin the pulled image ID for this resolution.
     subprocess.run(['docker', 'pull', '--platform=linux/amd64', 'alpine:edge'], check=True)
@@ -84,7 +123,7 @@ def resolve(refresh=False):
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=LOCK_PATH.parent) as temporary:
         stage = pathlib.Path(temporary).resolve()
-        groups = {'tool': ['apk-tools-static'], 'boot': ['linux-lts', 'opensbi'], **WORLDS}
+        groups = {'tool': ['apk-tools-static'], 'boot': ['linux-lts', 'opensbi'], **requirements}
         lines = ['set -eu',
                  f"trap 'chown -R {os.getuid()}:{os.getgid()} /output' EXIT",
                  'printf "%s\\n" "$BASE/main" "$BASE/community" > /etc/apk/repositories']
@@ -116,8 +155,6 @@ def resolve(refresh=False):
             if not records or not set(groups[group]) <= {p['name'] for p in records}:
                 raise ValueError(f'Incomplete apk resolution for {group}')
             lock['groups'][group] = records
-        with urllib.request.urlopen(BASE+'releases/riscv64/latest-releases.yaml', timeout=90) as response:
-            release = rootfs_release(yaml.safe_load(response))
         lock['rootfs_snapshot'] = release['version']
         lock['artifacts']['alpine-minirootfs.tar.gz'] = [
             'releases/riscv64/'+release['file'], release['sha256']]

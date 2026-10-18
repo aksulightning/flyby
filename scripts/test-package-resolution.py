@@ -10,7 +10,7 @@ import tempfile
 import unittest
 import urllib.error
 from unittest.mock import patch
-from alpine_packages import BASE, package_record, rootfs_release, resolve
+from alpine_packages import BASE, package_record, rootfs_release, resolve, base_packages, image_requirements
 from alpine_sources import source_manifest, recipe_sources
 
 spec = importlib.util.spec_from_file_location('bundle', pathlib.Path(__file__).with_name('bundle-sources.py'))
@@ -29,6 +29,19 @@ class PackageResolutionTests(unittest.TestCase):
                 'sha512sums="'+'a'*128+' example-pkgver.tar.gz"\n')
             self.assertEqual(recipe_sources(directory),
                              [('a'*128, 'example-pkgver.tar.gz', 'https://example.test/99.2.tar.gz')])
+
+    def test_images_resolve_reverse_dependencies_and_parent_packages(self):
+        content = b'P:libcrypto3\nV:old\n\nP:libssl3\nV:old\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            rootfs = pathlib.Path(tmp)/'root.tar.gz'
+            with tarfile.open(rootfs, 'w:gz') as archive:
+                item = tarfile.TarInfo('./lib/apk/db/installed')
+                item.size = len(content)
+                archive.addfile(item, io.BytesIO(content))
+            requirements = image_requirements(base_packages(rootfs))
+        for packages in requirements.values():
+            self.assertTrue({'libcrypto3', 'libssl3', 'openrc-init'} <= set(packages))
+        self.assertTrue(set(requirements['x11']) <= set(requirements['x11-gpu']))
 
     def test_release_is_selected_from_metadata(self):
         release = dict(flavor='alpine-minirootfs', arch='riscv64',
