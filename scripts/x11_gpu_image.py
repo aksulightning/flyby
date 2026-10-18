@@ -5,8 +5,9 @@ import shutil
 import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-LOCK = json.loads((ROOT/'scripts/x11-gpu-packages.json').read_text())
-PACKAGES = {'x11-gpu-'+p['name']+'.apk': (p['path'], p['sha256']) for p in LOCK}
+# Filled from the per-build resolution before creating any images.
+LOCK = []
+PACKAGES = {}
 
 
 def build(x11, root, paths):

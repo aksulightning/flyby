@@ -1,4 +1,4 @@
-"""Pinned, offline Weston image derived from the Service root (no X server)."""
+"""Resolved, offline Weston image derived from the Service root (no X server)."""
 import json
 import pathlib
 import shutil
@@ -6,8 +6,9 @@ import subprocess
 from display_image import prepare as prepare_display
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-LOCK = json.loads((ROOT/'scripts/wayland-packages.json').read_text())
-PACKAGES = {p['name']+'.apk': (p['path'], p['sha256']) for p in LOCK}
+# Filled from the per-build resolution before creating any images.
+LOCK = []
+PACKAGES = {}
 
 
 def build(service, root, paths):

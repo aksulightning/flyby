@@ -36,8 +36,9 @@ build/test tools do not automatically become APK contents.
 
 Read from each final image's APK database and the kernel/firmware `.PKGINFO`,
 not inferred from project names. Full immutable source recipe links, versions and
-archive SHA-256 values are in [guest-provenance.json](guest-provenance.json), also
-packaged as `assets/vm/provenance.json`. Kernel config is extracted to
+archive SHA-256 values are generated as `assets/vm/provenance.json` for each build.
+[guest-provenance.json](guest-provenance.json) is the historical snapshot from
+before automatic package resolution; the table below describes that snapshot. Kernel config is extracted to
 `out/guest/kernel.config` by the preparation script.
 
 The table below lists the Minimal image and shared kernel/firmware. The JSON
@@ -87,11 +88,10 @@ by those APKBUILD files; preserve their notices. A generic upstream URL, this
 inventory, or just the kernel config is not a complete GPL source distribution.
 `scripts/bundle-sources.py` assembles all SHA512-listed distfiles and the exact
 aports directories, plus native archives, Flyby source and kernel config. The
-source downloader checks Edge first, then Alpine's v3.24/v3.23 source mirrors for
-older files pruned from Edge. Every file must match the pinned recipe's SHA512;
-OpenSBI 1.9 uses the exact upstream archive URL in its APKBUILD when Alpine has no
-mirror copy, with the same SHA512 verification. These source fallbacks do not add
-stable binary repositories to the guest. The
+source downloader checks Edge first, then the expanded upstream URL from the
+exact APKBUILD, including renamed source aliases. Every file must match that
+recipe's SHA512. No package-specific fallback URL or stable-release mirror list
+is maintained. The per-build `alpine-lock.json` accompanies the source bundle. The
 nightly job fails closed if this source bundle cannot be built and uploads it
 alongside the APK. Physical ARM64 acceptance remains required for a stable release;
 the user-requested nightly is explicitly a development prerelease.
@@ -132,5 +132,6 @@ either guest image. OpenRC's full license is shown in the license menu.
 
 The X11 image adds Xorg, twm, xterm and their dependencies. Exact image membership,
 versions, licenses and immutable source recipes are recorded in the generated
-provenance JSON. `scripts/x11-packages.json`, `scripts/wayland-packages.json` and
-`scripts/service-packages.json` pin the offline installation inputs.
+provenance JSON. `scripts/alpine_packages.py` declares the requested packages. Alpine's solver
+selects current versions and dependencies, then `out/alpine/lock.json` fixes the
+verified offline installation inputs for the entire workflow.

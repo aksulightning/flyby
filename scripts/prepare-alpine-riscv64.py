@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Pinned Alpine artifacts -> deterministic development initramfs. No root/tools needed."""
+"""Resolve current Alpine artifacts and build the development initramfs."""
 import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
-from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
+from service_image import PACKAGES as SERVICE_PACKAGES, build as build_service
+from alpine_packages import BASE, resolve, configure
 from guest_modules import select_modules
 from x11_image import PACKAGES as X11_PACKAGES, LOCK as X11_LOCK, build as build_x11
 from x11_gpu_image import PACKAGES as GPU_PACKAGES, LOCK as GPU_LOCK, build as build_gpu
@@ -9,12 +10,9 @@ from wayland_image import PACKAGES as WAYLAND_PACKAGES, LOCK as WAYLAND_LOCK, bu
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
-BASE = 'https://dl-cdn.alpinelinux.org/alpine/edge/'
-ARTIFACTS = {
- 'linux-lts.apk': ('main/riscv64/linux-lts-6.18.56-r0.apk', '72799119966b0eeb06f941d0883b47761023c6ee9f319b99e03dc08a6292021c'),
- 'opensbi.apk': ('main/riscv64/opensbi-1.9-r0.apk', 'a27f535aeb52580a7c2b531999fef249e8d402af25e276e6c269188c38889c3c'),
- 'alpine-minirootfs.tar.gz': ('releases/riscv64/alpine-minirootfs-20260805-riscv64.tar.gz', 'fc8f2160b00fea310db5c2e49f8f57582ae5e3f870e7e6ef3859db6ed6682e5a'),
-}
+ARTIFACTS = {}
+APK_TOOL = None
+RESOLVED = None
 def fetch(name, url, digest):
     path = CACHE / digest / name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -270,7 +268,7 @@ def provenance(paths):
             license=fields['license'], origin=fields['origin'], commit=fields['commit'], repository='main',
             images=['minimal', 'service', 'wayland', 'x11', 'x11-gpu'],
             source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['commit']}/main/{fields['origin']}")
-    return dict(branch='edge', rootfs_snapshot='20260805',
+    return dict(branch='edge', rootfs_snapshot=RESOLVED['rootfs_snapshot'],
                 artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
                 images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),
@@ -280,6 +278,16 @@ def provenance(paths):
                 packages=sorted(packages.values(), key=lambda p: (p['name'], p['version'])))
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--refresh-packages', action='store_true',
+                        help='Resolve current Edge versions instead of reusing out/alpine/lock.json')
+    args = parser.parse_args()
+    global APK_TOOL, RESOLVED
+    RESOLVED = resolve(refresh=args.refresh_packages)
+    configure(RESOLVED)
+    ARTIFACTS.update(RESOLVED['artifacts'])
+    APK_TOOL = RESOLVED['apk_tool']
     paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()}
     apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
     DEST.mkdir(parents=True, exist_ok=True)
@@ -292,7 +300,11 @@ def main():
     (DEST/'kernel').write_bytes(kernel)
     config_dir = ROOT/'out/guest'
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.56-0-lts'))
+    with tarfile.open(paths['linux-lts.apk'], ignore_zeros=True) as archive:
+        configs = [n for n in archive.getnames() if n.startswith('boot/config-') and n.endswith('-lts')]
+        if len(configs) != 1:
+            raise ValueError('Expected one linux-lts kernel config')
+        (config_dir/'kernel.config').write_bytes(archive.extractfile(configs[0]).read())
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)

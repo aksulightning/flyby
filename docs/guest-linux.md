@@ -1,23 +1,41 @@
 # Alpine riscv64 guest
 
-Run `python3 scripts/prepare-alpine-riscv64.py`. It produces `kernel`, `firmware`,
-`initrd`, `disk.seed` and a SHA-256 manifest in `app/src/main/assets/vm/` using pinned official
-Alpine archives. These generated resources are packaged into the APK, not Git.
-`out/downloads` caches the original archives. No random prebuilt image is accepted.
+Run `python3 scripts/prepare-alpine-riscv64.py`. It produces the kernel, firmware,
+initramfs, five image seeds and provenance in `app/src/main/assets/vm/`.
+The Linux build host needs Docker, Python/PyYAML, the RISC-V helper compiler and
+e2fsprogs. Guest installation still runs without root or target-architecture
+install scripts.
 
-Inputs:
-- Alpine Edge minirootfs 20260805 riscv64 (`edge/releases/riscv64`).
-- Alpine Edge linux-lts 6.18.56-r0: gzip-compressed Image and its package kernel config.
-- Alpine Edge OpenSBI 1.9-r0: `generic/firmware/fw_jump.bin`.
+## Package resolution
 
-Exact URLs/checksums are source-controlled in the script. Kernel config confirms
-built-in initramfs, gzip, devtmpfs and 8250 serial console. Optional ISA features
-are discovered at runtime from the generated FDT. No patched Linux ABI or fake
-Alpine identification is used. To rebuild instead of using official packages,
-check out each exact aports revision in `docs/licenses.md` and use that package's
-APKBUILD, sources, config and patches with Alpine's `abuild` for riscv64. That full
-cross-build has not been run here; provisioning and booting the official artifacts
-have been run. Do not substitute arbitrary firmware or kernels without retesting.
+A clean build resolves current Alpine Edge packages using the official
+`alpine:edge` container's apk and trust keys. Only requested package names are
+maintained in `scripts/alpine_packages.py`; apk selects current versions and
+their transitive dependencies from signed main/community indexes. No individual
+APK filenames, versions or download URLs are hardcoded. Kernel configuration is
+discovered inside the selected linux-lts package. The minirootfs filename and
+SHA256 come from the official riscv64 `latest-releases.yaml`.
+
+The resolved versions, recipe commits, repositories, URLs and SHA256 values are
+saved atomically in `out/alpine/lock.json`. Downloads are content-addressed in
+`out/downloads`. Image construction uses this snapshot offline and verifies
+hashes and package signatures. Re-running preparation reuses the snapshot;
+`python3 scripts/prepare-alpine-riscv64.py --refresh-packages` selects newer
+packages. If a saved snapshot has been pruned upstream and is not cached, refresh
+it explicitly and rerun the acceptance tests. Mismatching bytes are never accepted.
+
+CI resolves once per workflow and passes the same lock to the host tests,
+Android emulator and nightly build. The lock is retained as a workflow artifact
+and included as `alpine-lock.json` in the corresponding-source archive.
+Native runtime sources remain independently pinned in `prepare-native.py`.
+
+The APK's generated `assets/vm/provenance.json` records the actual installed
+packages for every image. `docs/guest-provenance.json` is a historical reference;
+the generated metadata is authoritative for a new build. Source bundling reads
+each exact APKBUILD in a network-disabled, read-only container, expands its shell
+variables and handles `filename::URL` aliases. It tries Alpine's Edge distfiles
+mirror followed by the recipe's upstream URL, and always verifies the recipe's
+SHA512. A newer source release is never substituted for an older binary.
 
 The script creates a root-owned newc archive with fixed timestamps and gzip mtime.
 It uses the real minirootfs and installs a small `/init`: mount proc/sys/devtmpfs/
@@ -75,8 +93,7 @@ in RAM except `/root` and `/data`, which use the private ext4/NVMe disk. See
 
 ## Edge and existing installations
 
-New installations and Disk Creator use the official Edge 20260805 snapshot
-(`VERSION_ID=3.25.0_alpha20260805`, `PRETTY_NAME="Alpine Linux edge"`).
+New installations and Disk Creator use the current official Edge minirootfs.
 Both initramfs and SYSTEM seed configure exactly these repositories:
 
 ```text
@@ -84,20 +101,17 @@ https://dl-cdn.alpinelinux.org/alpine/edge/main
 https://dl-cdn.alpinelinux.org/alpine/edge/community
 ```
 
-`testing` is not enabled by default. Build inputs remain version/checksum-pinned;
-`apk update` fetches the current Edge package indexes. Edge packages can change
-between builds and runtime upgrades. If a pinned package disappears upstream,
-refresh the pin and provenance together and run the acceptance tests again;
-never silently accept different bytes for the same pin.
+`testing` is not enabled. Each workflow selects current Edge packages and locks them
+for all of its jobs. Runtime `apk update` fetches fresh Edge package indexes.
 
 ## Image variants
 
 Disk Creator offers **Minimal Alpine** (the default, existing BusyBox init) and
-**Service Alpine** (OpenRC 0.63.2-r1, including `openrc-init` as PID 1).
-Both use the same pinned Edge base, kernel, networking, 1–100 GiB persistent
+**Service Alpine** (OpenRC, including `openrc-init` as PID 1).
+Both use the same resolved Edge base, kernel, networking, 1–100 GiB persistent
 root and Android `/shared` support. Minimal's boot and package set stay unchanged.
-Service adds the pinned OpenRC packages and dependencies listed in provenance.
-The build uses a pinned x86_64 Linux `apk.static` with signature verification,
+Service adds the resolved OpenRC packages and dependencies listed in provenance.
+The build uses a resolved x86_64 Linux `apk.static` with signature verification,
 offline dependency resolution and no cross-architecture install scripts.
 Runlevels are configured explicitly; no package metadata is fabricated.
 

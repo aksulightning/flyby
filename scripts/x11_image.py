@@ -1,4 +1,4 @@
-"""Pinned Xorg-only image derived from Service Alpine; no Wayland compositor."""
+"""Resolved Xorg-only image derived from Service Alpine; no Wayland compositor."""
 import json
 import pathlib
 import shutil
@@ -6,9 +6,9 @@ import subprocess
 from display_image import prepare as prepare_display
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-LOCK = json.loads((ROOT/'scripts/x11-packages.json').read_text())
-# Keep each image's versions separate when a shared dependency has different pins.
-PACKAGES = {'x11-'+p['name']+'.apk': (p['path'], p['sha256']) for p in LOCK}
+# Filled from the per-build resolution before creating any images.
+LOCK = []
+PACKAGES = {}
 
 
 def build(service, root, paths):

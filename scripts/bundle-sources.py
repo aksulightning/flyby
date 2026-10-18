@@ -2,14 +2,11 @@
 """Collect pinned Alpine recipes, all SHA512-listed sources, native sources and Flyby.
 Fails closed: a nightly must not publish if a required corresponding source is missing.
 """
-import hashlib, io, json, pathlib, re, shutil, subprocess, tarfile, urllib.request, urllib.error
+import hashlib, io, json, pathlib, shutil, subprocess, tarfile, urllib.request, urllib.error
+from alpine_sources import recipe_sources
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT/'out/corresponding-source'
 CACHE = ROOT/'out/source-downloads'
-# Exact upstream location from the pinned OpenSBI APKBUILD (not mirrored by Alpine).
-UPSTREAM_SOURCES = {
-    'opensbi-1.9.tar.gz': 'https://github.com/riscv/opensbi/archive/refs/tags/v1.9.tar.gz',
-}
 
 def download(url, path):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -25,12 +22,12 @@ def digest(path, algorithm='sha256'):
         while chunk := stream.read(1024*1024): h.update(chunk)
     return h.hexdigest()
 
-def source_archive(name, expected):
-    # Edge prunes older distfiles. The pinned snapshot may share the exact same
-    # upstream source with a stable release. These are source mirrors only;
-    # the guest's binary package repositories always remain Edge.
-    urls = [f'https://distfiles.alpinelinux.org/distfiles/{branch}/{name}' for branch in ('edge', 'v3.24', 'v3.23')]
-    if name in UPSTREAM_SOURCES: urls.append(UPSTREAM_SOURCES[name])
+def source_archive(name, expected, upstream=None):
+    # Prefer the distribution mirror, then the expanded URL in the exact
+    # binary package's APKBUILD. No package-specific or release-specific URLs.
+    urls = [f'https://distfiles.alpinelinux.org/distfiles/edge/{name}']
+    if upstream:
+        urls.append(upstream)
     for url in urls:
         try:
             path = download(url, CACHE/expected/name)
@@ -42,6 +39,7 @@ def source_archive(name, expected):
     raise FileNotFoundError(f'Pinned source unavailable: {name}')
 
 def main():
+    if OUT.exists(): shutil.rmtree(OUT)
     OUT.mkdir(parents=True, exist_ok=True)
     metadata = json.loads((ROOT/'app/src/main/assets/vm/provenance.json').read_text())
     recipes = sorted({(p.get('repository', 'main'),p['origin'],p['commit']) for p in metadata['packages']})
@@ -58,15 +56,14 @@ def main():
                 target = dest/relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(tar.extractfile(item).read()); target.chmod(item.mode & 0o777)
-        recipe = (dest/'APKBUILD').read_text()
-        sources = re.findall(r'([a-f0-9]{128})\s+([^\s"\'\\]+)', recipe)
+        sources = recipe_sources(dest)
         if not sources and origin != 'alpine-base': raise ValueError(f'No SHA512 source manifest for {origin}')
         # alpine-base generates release metadata entirely from this APKBUILD.
-        for expected, name in sources:
+        for expected, name, upstream in sources:
             if '/' in name or name in ('.','..'): raise ValueError('Unsafe source filename')
             path = dest/name
             if not path.exists():
-                path = source_archive(name, expected)
+                path = source_archive(name, expected, upstream)
                 shutil.copy2(path, dest/name)
                 path = dest/name
             if digest(path, 'sha512') != expected: raise ValueError(f'Source checksum mismatch: {origin}/{name}')
@@ -84,11 +81,12 @@ def main():
     subprocess.run(['git','archive','--format=tar.gz','--prefix=flyby/','-o',str(OUT/'flyby-source.tar.gz'),revision],cwd=ROOT,check=True)
     (OUT/'guest-provenance.json').write_text(json.dumps(metadata,indent=2)+'\n')
     shutil.copy2(ROOT/'out/guest/kernel.config',OUT/'kernel.config')
+    shutil.copy2(ROOT/'out/alpine/lock.json',OUT/'alpine-lock.json')
     (OUT/'BUILDING.txt').write_text('Flyby '+revision+'\n\nExtract flyby-source.tar.gz and follow README.md. Native archives match scripts/prepare-native.py.\n'
         'Alpine recipe directories include all checksum-listed upstream distfiles, patches and configs.\n'
         'Use Alpine abuild for riscv64 with the exact APKBUILD in each directory; package versions/revisions\n'
         'are recorded in guest-provenance.json. Copy these distfiles into abuild SRCDEST for offline fetch.\n'
-        'The packaged guest is produced by scripts/prepare-alpine-riscv64.py from official pinned APKs.\n'
+        'The packaged guest is produced by scripts/prepare-alpine-riscv64.py from official APKs resolved in out/alpine/lock.json.\n'
         'Sources for every package in that guest, including Linux, BusyBox, apk-tools and OpenSBI, are included.\n')
     hashes = {str(p.relative_to(OUT)):digest(p) for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS.json'}
     (OUT/'SHA256SUMS.json').write_text(json.dumps(hashes,indent=2)+'\n')

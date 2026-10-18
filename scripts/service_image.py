@@ -6,10 +6,9 @@ import subprocess
 import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-LOCK = json.loads((ROOT/'scripts/service-packages.json').read_text())
-PACKAGES = {p['name']+'.apk': (p['path'], p['sha256']) for p in LOCK}
-# Build-only host tool; never copied into a guest or APK. Linux x86_64 build host.
-APK_TOOL = ('main/x86_64/apk-tools-static-3.0.8-r0.apk', '673f1bfb22136fc42ca035321cf731a4ad0452c000928666cb39a138f0c277bf')
+# Filled from the per-build resolution before creating any images.
+LOCK = []
+PACKAGES = {}
 
 
 def build(minimal, service, paths, apk_archive):
@@ -21,7 +20,7 @@ def build(minimal, service, paths, apk_archive):
     apk.chmod(0o755)
     # Use apk's real dependency solver, file tracking and installed database. No
     # cross-architecture scripts or network resolution. Signatures are verified
-    # against the pinned minirootfs's Alpine keys, in addition to SHA256 pins.
+    # against the minirootfs's Alpine keys, in addition to the snapshot SHA256.
     subprocess.run([str(apk), '--root', str(service), '--arch', 'riscv64',
                     '--no-scripts', '--no-network', 'add',
                     *[str(paths[name]) for name in PACKAGES]], check=True)

@@ -42,8 +42,8 @@ Vulkan, video or an external render server. The small Android adapters use publi
 NDK APIs for the embedded Mesa utilities. Source archives and notices are included
 in the corresponding-source release and APK license viewer.
 
-Guest packages are pinned in `scripts/x11-gpu-packages.json`, on top of the X11
-lockfile. The image loads `virtio_mmio` and `virtio_gpu`, enables GLX and glamor,
+Guest packages and their dependencies are resolved by apk and recorded alongside
+X11 in the shared `out/alpine/lock.json` snapshot. The image loads `virtio_mmio` and `virtio_gpu`, enables GLX and glamor,
 and uses a software cursor. Xorg remains local-only and cookie authenticated.
 
 ## Verification

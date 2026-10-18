@@ -161,7 +161,7 @@ raw disk images or ZIP files.
 ### Build the Android app
 
 Requirements include JDK 17, Android SDK 35, Android NDK
-`27.2.12479018`, CMake 3.22.1, Python 3 with PyYAML and `e2fsprogs`.
+`27.2.12479018`, CMake 3.22.1, Python 3 with PyYAML, `e2fsprogs`, and Docker (Linux amd64 containers).
 Linux host tests also need EGL headers and GLES libraries (`libegl1-mesa-dev`
 and `libgles2` on Ubuntu). Set
 `ANDROID_HOME`. Local SDK paths and signing material must not be committed.
@@ -173,6 +173,13 @@ python3 scripts/prepare-native.py
 python3 scripts/prepare-alpine-riscv64.py
 ./gradlew test assembleDebug lintDebug
 ```
+
+A clean build resolves current Edge packages using Alpine's signed indexes and
+`apk` dependency solver. The result is saved in `out/alpine/lock.json`; repeated
+local preparation reuses it. Use `python3 scripts/prepare-alpine-riscv64.py
+--refresh-packages` on one line to resolve newer versions. CI resolves once per
+workflow and shares that snapshot across build, emulator and nightly jobs.
+See [guest package resolution](docs/guest-linux.md) for details.
 
 The debug APK is written to
 `app/build/outputs/apk/debug/app-debug.apk`. The APK includes the native

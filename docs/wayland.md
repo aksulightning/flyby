@@ -57,7 +57,7 @@ Existing disks are never converted or upgraded automatically by this feature.
   Cairo/Mesa dependencies do include X11 client libraries; they do not provide
   an X11 session. Native Wayland applications must also be available for riscv64.
 
-`scripts/wayland-packages.json` pins the complete additional APK set by SHA256.
+`out/alpine/lock.json` records the resolved additional APK set and SHA256 values.
 The cross-build uses apk signature checks and its installed database, with scripts
 disabled. Required boot directories and the seatd group are created explicitly.
 Build-only tools never enter the guest. Package licenses and source recipes,
