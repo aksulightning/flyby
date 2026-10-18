@@ -24,9 +24,9 @@ class PackageResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             directory = pathlib.Path(tmp)
             (directory/'APKBUILD').write_text(
-                'pkgname=example\\npkgver=99.2\\n'
-                'source="$pkgname-pkgver.tar.gz::https://example.test/$pkgver.tar.gz"\\n'
-                'sha512sums="'+'a'*128+' example-pkgver.tar.gz"\\n')
+                'pkgname=example\npkgver=99.2\n'
+                'source="$pkgname-pkgver.tar.gz::https://example.test/$pkgver.tar.gz"\n'
+                'sha512sums="'+'a'*128+' example-pkgver.tar.gz"\n')
             self.assertEqual(recipe_sources(directory),
                              [('a'*128, 'example-pkgver.tar.gz', 'https://example.test/99.2.tar.gz')])
 
