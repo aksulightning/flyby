@@ -19,7 +19,7 @@ class DisplayView(context: Context) : View(context) {
     private var ready = false
     private var pointerX = 0f
     private var pointerY = 0f
-    init { isFocusable = true; isFocusableInTouchMode = true; contentDescription = "Wayland desktop, 800 by 600" }
+    init { isFocusable = true; isFocusableInTouchMode = true; contentDescription = "Linux desktop, 800 by 600" }
     fun update(pixels: IntArray) { bitmap.setPixels(pixels, 0, 800, 0, 0, 800, 600); ready = true; invalidate() }
     fun clear() { ready = false; invalidate() }
     fun keyboard() { requestFocus(); context.getSystemService(InputMethodManager::class.java).showSoftInput(this, InputMethodManager.SHOW_IMPLICIT) }

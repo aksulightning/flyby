@@ -17,7 +17,7 @@ import io.github.aksulightning.flyby.service.VmService
 
 @Composable
 fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transfer,
-                   preferences: AppSettings, memory: (Int) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
+                   preferences: AppSettings, memory: (Int) -> Unit, cpuCount: (Int) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
                    selectShared: () -> Unit, clearShared: () -> Unit, licenses: () -> Unit,
                    export: () -> Unit, import: () -> Unit, back: () -> Unit, modifier: Modifier, error: String? = null) {
     var ram by rememberSaveable(settings.memoryMiB) { mutableStateOf(settings.memoryMiB.toString()) }
@@ -46,7 +46,15 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
         OutlinedTextField(ram, { ram = it }, label = { Text("RAM · 128–768 MiB") }, singleLine = true,
             isError = ramValue == null, enabled = idle, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
         Button({ ramValue?.let(memory) }, enabled = idle && ramValue != null && ramValue != settings.memoryMiB) { Text("Save RAM") }
-        Text("Saved RAM: ${settings.memoryMiB} MiB. Stop Linux before changing RAM, disks or the shared folder. Changes apply at the next start.")
+        Text("Saved RAM: ${settings.memoryMiB} MiB. Stop Linux before changing RAM, CPUs, disks or the shared folder. Changes apply at the next start.")
+        Text("Virtual CPUs")
+        (1..2).forEach { count ->
+            Row {
+                RadioButton(settings.cpuCount == count, { cpuCount(count) }, enabled = idle)
+                TextButton({ cpuCount(count) }, enabled = idle) { Text(if (count == 1) "1 CPU" else "2 CPUs") }
+            }
+        }
+        Text("CPU changes apply at the next start.")
         Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
         ImageVariant.entries.forEach { variant ->
             Row {

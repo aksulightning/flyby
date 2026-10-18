@@ -3,13 +3,14 @@
 import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subprocess, shutil
 from service_image import PACKAGES as SERVICE_PACKAGES, APK_TOOL, build as build_service
 from guest_modules import select_modules
+from x11_image import PACKAGES as X11_PACKAGES, LOCK as X11_LOCK, build as build_x11
 from wayland_image import PACKAGES as WAYLAND_PACKAGES, LOCK as WAYLAND_LOCK, build as build_wayland
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'out/downloads'
 DEST = ROOT / 'app/src/main/assets/vm'
 BASE = 'https://dl-cdn.alpinelinux.org/alpine/edge/'
 ARTIFACTS = {
- 'linux-lts.apk': ('main/riscv64/linux-lts-6.18.53-r0.apk', 'eeadfce6e7a3740ffda666b1d694ef23ecc04007b4f989198208fe61e6b0fda3'),
+ 'linux-lts.apk': ('main/riscv64/linux-lts-6.18.56-r0.apk', '72799119966b0eeb06f941d0883b47761023c6ee9f319b99e03dc08a6292021c'),
  'opensbi.apk': ('main/riscv64/opensbi-1.9-r0.apk', 'a27f535aeb52580a7c2b531999fef249e8d402af25e276e6c269188c38889c3c'),
  'alpine-minirootfs.tar.gz': ('releases/riscv64/alpine-minirootfs-20260805-riscv64.tar.gz', 'fc8f2160b00fea310db5c2e49f8f57582ae5e3f870e7e6ef3859db6ed6682e5a'),
 }
@@ -17,6 +18,7 @@ def fetch(name, url, digest):
     path = CACHE / digest / name
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
+        print('Downloading:', url, flush=True)
         tmp = path.with_suffix('.partial')
         with urllib.request.urlopen(url, timeout=90) as source, tmp.open('wb') as target:
             import shutil
@@ -114,6 +116,15 @@ if grep -q 'flyby.root=1' /proc/cmdline; then
     mount -t ext4 /dev/nvme0n1 /newroot || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     /sbin/flyby-grow-root || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     [ -x /newroot/sbin/init ] || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    # App updates replace the kernel. Install its matching module set on older
+    # disks before switching roots; preserve existing versions and user data.
+    modules=/lib/modules/$(uname -r)
+    if [ ! -d "/newroot$modules" ]; then
+        mkdir -p /newroot/lib/modules || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+        pending="/newroot$modules.flyby-pending"
+        rm -rf "$pending"
+        cp -a "$modules" "$pending" && mv "$pending" "/newroot$modules" || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
+    fi
     mkdir -p /newroot/run /newroot/tmp /newroot/dev /newroot/proc /newroot/sys
     mount -t tmpfs tmpfs /newroot/run || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
     mount -t tmpfs -o mode=1777 tmpfs /newroot/tmp || { echo FLYBY_STORAGE_ERROR; exec /bin/sh; }
@@ -237,54 +248,57 @@ done <&3
     return bytes(compressed)
 
 def provenance(paths):
-    packages = []
-    with tarfile.open(paths['alpine-minirootfs.tar.gz']) as tar:
-        database = tar.extractfile('./lib/apk/db/installed').read().decode()
-    for block in database.strip().split('\n\n'):
-        fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
-        packages.append(dict(name=fields['P'], version=fields['V'], license=fields['L'],
-                             origin=fields['o'], commit=fields['c']))
-    for name in ['linux-lts.apk', 'opensbi.apk', *SERVICE_PACKAGES]:
+    # Read the final installed databases: graphical packages may upgrade shared
+    # dependencies, so the base minirootfs alone is not sufficient provenance.
+    packages = {}
+    repositories = {(p['name'], p['version']): p['repository'] for p in WAYLAND_LOCK + X11_LOCK}
+    for image, directory in [('minimal', 'system-root'), ('service', 'service-root'),
+                             ('wayland', 'wayland-root'), ('x11', 'x11-root')]:
+        database = (ROOT/'out/guest'/directory/'lib/apk/db/installed').read_text()
+        for block in database.strip().split('\n\n'):
+            fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
+            key = (fields['P'], fields['V'])
+            repository = repositories.get(key, 'main')
+            package = packages.setdefault(key, dict(name=fields['P'], version=fields['V'],
+                license=fields['L'], origin=fields['o'], commit=fields['c'], repository=repository,
+                source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['c']}/{repository}/{fields['o']}", images=[]))
+            package['images'].append(image)
+    for name in ['linux-lts.apk', 'opensbi.apk']:
         fields = dict(line.split(' = ', 1) for line in member(paths[name], '.PKGINFO').decode().splitlines() if ' = ' in line)
-        packages.append(dict(name=fields['pkgname'], version=fields['pkgver'], license=fields['license'],
-                             origin=fields['origin'], commit=fields['commit'], images=['service'] if name in SERVICE_PACKAGES else ['minimal', 'service']))
-    for package in packages:
-        package.setdefault('images', ['minimal', 'service'])
-        package['images'].append('wayland')
-        package['repository'] = 'main'
-        package['source_recipe'] = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{package['commit']}/main/{package['origin']}"
-    for p in WAYLAND_LOCK:
-        packages.append({k: p[k] for k in ('name', 'version', 'license', 'origin', 'commit', 'repository')} |
-                        dict(images=['wayland'], source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{p['commit']}/{p['repository']}/{p['origin']}"))
+        packages[(fields['pkgname'], fields['pkgver'])] = dict(name=fields['pkgname'], version=fields['pkgver'],
+            license=fields['license'], origin=fields['origin'], commit=fields['commit'], repository='main',
+            images=['minimal', 'service', 'wayland', 'x11'],
+            source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['commit']}/main/{fields['origin']}")
     return dict(branch='edge', rootfs_snapshot='20260805',
-                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES).items()},
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
                 images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),
-                        'wayland': dict(seed='wayland.seed', init='OpenRC', display='Weston, 800x600, Pixman; no Xorg/XWayland')},
-                packages=packages)
+                        'wayland': dict(seed='wayland.seed', init='OpenRC', display='Weston, 800x600, Pixman; no Xorg/XWayland'),
+                        'x11': dict(seed='x11.seed', init='OpenRC', display='Xorg, 800x600, software rendering; no Wayland compositor')},
+                packages=sorted(packages.values(), key=lambda p: (p['name'], p['version'])))
 
 def main():
-    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES).items()}
+    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES).items()}
     apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
-    metadata = provenance(paths)
     DEST.mkdir(parents=True, exist_ok=True)
     # aapt transparently expands .gz assets and strips their suffix. Keep gzip bytes
     # under a neutral extension so Android and host consume the exact same seed.
     (DEST/'disk.raw.gz').unlink(missing_ok=True)
-    (DEST/'provenance.json').write_text(json.dumps(metadata, indent=2)+'\n')
     kernel = member(paths['linux-lts.apk'], 'boot/vmlinuz-lts')
     if kernel[:2] == b'\x1f\x8b': kernel = gzip.decompress(kernel)
     if kernel[56:60] != b'RSC\x05': raise ValueError('Not a RISC-V Linux Image')
     (DEST/'kernel').write_bytes(kernel)
     config_dir = ROOT/'out/guest'
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.53-0-lts'))
+    (config_dir/'kernel.config').write_bytes(member(paths['linux-lts.apk'], 'boot/config-6.18.56-0-lts'))
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
     build_wayland(config_dir/'service-root', config_dir/'wayland-root', paths)
+    build_x11(config_dir/'service-root', config_dir/'x11-root', paths)
+    (DEST/'provenance.json').write_text(json.dumps(provenance(paths), indent=2)+'\n')
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
-    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root')]:
+    for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root'), ('x11', 1024, config_dir/'x11-root')]:
         disk = config_dir/(name+'-seed.raw')
         disk.unlink(missing_ok=True)
         with disk.open('wb') as stream: stream.truncate(size * 1024 * 1024)

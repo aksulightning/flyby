@@ -34,6 +34,11 @@ class VmService : Service() {
         settings.memory(value)
         return true
     }
+    fun setCpuCount(value: Int): Boolean {
+        if (!idle()) return false
+        settings.cpuCount(value)
+        return true
+    }
     fun setSharedTree(value: String?): Boolean {
         if (!idle()) return false
         settings.sharedTree(value)
@@ -115,7 +120,7 @@ class VmService : Service() {
                     ).apply { setReferenceCounted(false); acquire() }
                 }
                 scope.launch {
-                    val accepted = vm.start(VmConfig(memoryMiB = settings.state.value.memoryMiB)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
+                    val accepted = vm.start(VmConfig(memoryMiB = settings.state.value.memoryMiB, cpuCount = settings.state.value.cpuCount)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
                     if (!accepted && vm.status.value.state in listOf(VmState.STOPPED, VmState.ERROR)) {
                         releaseWakeLock()
                         stopForeground(STOP_FOREGROUND_REMOVE)

@@ -68,10 +68,11 @@ int main(int argc, char **argv) {
     try {
         terminalTests();
         rejects([] { flyby::Vm vm("/missing", 0, 1); });
-        rejects([] { flyby::Vm vm("/missing", 512, 2); });
         rejects([] { flyby::Vm vm("/missing", 512, 1); });
         if (argc != 2)
             throw std::runtime_error("Guest directory argument required");
+        rejects([&] { flyby::Vm vm(argv[1], 512, 0); });
+        rejects([&] { flyby::Vm vm(argv[1], 512, 3); });
         auto invalid = std::filesystem::path(argv[1]) / "invalid-test";
         std::filesystem::create_directories(invalid);
         {

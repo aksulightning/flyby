@@ -17,11 +17,11 @@ import io.github.aksulightning.flyby.vm.VmStatus
 fun MainScreen(status: VmStatus, onStart: () -> Unit, onStop: () -> Unit,
                onTerminal: () -> Unit, modifier: Modifier = Modifier, connected: Boolean = true,
                onSettings: () -> Unit = {}, memoryMiB: Int = 512, diskGiB: Int = 1,
-               onDisplay: () -> Unit = {}) {
+               onDisplay: () -> Unit = {}, cpuCount: Int = 1) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Linux VM", style = MaterialTheme.typography.headlineMedium)
         Text("Status: ${status.state.label()}")
-        Text("RISC-V 64 · Alpine Linux · ${memoryMiB} MiB RAM")
+        Text("RISC-V 64 · Alpine Linux · ${memoryMiB} MiB RAM · $cpuCount ${if (cpuCount == 1) "CPU" else "CPUs"}")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onStart, enabled = connected && (status.state == VmState.STOPPED || status.state == VmState.ERROR)) {
                 Text("Start")

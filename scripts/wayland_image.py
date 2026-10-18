@@ -1,9 +1,9 @@
 """Pinned, offline Weston image derived from the Service root (no X server)."""
 import json
-import os
 import pathlib
 import shutil
 import subprocess
+from display_image import prepare as prepare_display
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOCK = json.loads((ROOT/'scripts/wayland-packages.json').read_text())
@@ -27,12 +27,7 @@ def build(service, root, paths):
         if p.is_symlink(): p.unlink()
         p.write_text(value); p.chmod(mode)
 
-    helper = root/'usr/local/sbin/flyby-display-input'
-    helper.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-static', '-s',
-                    '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector',
-                    '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start', '-Wall', '-Wextra', '-Werror',
-                    str(ROOT/'native/guest/display-input.c'), '-o', str(helper)], check=True)
+    prepare_display(root)
     write('etc/flyby-image', 'Minimal Alpine Wayland\n')
     # apk scripts cannot execute on the cross-build host. Reproduce seatd's
     # pre-install group creation explicitly, without changing existing IDs.
@@ -76,26 +71,6 @@ export XDG_SESSION_TYPE=wayland
 printf '%s\\n' "$$" > /run/flyby-wayland/terminal-ready
 exec /bin/sh -l
 ''', 0o755)
-    write('etc/init.d/flyby-display-prepare', '''#!/sbin/openrc-run
-description="Prepare Flyby display devices"
-depend() { need flyby-boot; before udev; }
-start() {
-    modprobe evdev && modprobe hid-generic && modprobe uhid || return 1
-    mkdir -p /run/flyby-wayland /dev/shm || return 1
-    chmod 700 /run/flyby-wayland
-    mountpoint -q /dev/shm || mount -t tmpfs -o mode=1777,nosuid,nodev,size=64m tmpfs /dev/shm || return 1
-    stty -F /dev/ttyS3 raw -echo || return 1
-}
-''', 0o755)
-    write('etc/init.d/flyby-display-input', '''#!/sbin/openrc-run
-description="Flyby keyboard and absolute pointer"
-supervisor="supervise-daemon"
-command="/usr/local/sbin/flyby-display-input"
-respawn_delay=1
-respawn_max=5
-retry="TERM/2/KILL/2"
-depend() { need flyby-display-prepare udev; }
-''', 0o755)
     write('etc/init.d/flyby-wayland', '''#!/sbin/openrc-run
 description="Flyby Wayland desktop (800x600)"
 supervisor="supervise-daemon"
@@ -112,6 +87,8 @@ respawn_max=5
 retry="TERM/3/KILL/2"
 depend() { need flyby-display-input seatd udev-trigger; }
 start_pre() {
+    mkdir -p "$XDG_RUNTIME_DIR" || return 1
+    chmod 700 "$XDG_RUNTIME_DIR"
     local i=0
     while [ ! -e /dev/dri/card0 ] || [ ! -e /dev/input/event0 ]; do
         i=$((i+1))
@@ -156,4 +133,5 @@ start_pre() {
         for name in names:
             link = root/'etc/runlevels'/level/name
             link.parent.mkdir(parents=True, exist_ok=True)
+            link.unlink(missing_ok=True)
             link.symlink_to('/etc/init.d/'+name)

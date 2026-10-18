@@ -2,8 +2,9 @@ name: Android
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: ['codex/main']
   pull_request:
+    branches: ['codex/main']
   workflow_dispatch:
 
 permissions:
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -44,13 +45,17 @@ jobs:
           cmake --build out/host -j2
           ctest --test-dir out/host --output-on-failure
           python3 scripts/smoke-boot.py
+          FLYBY_CPUS=2 python3 scripts/smoke-boot.py
           python3 scripts/test-storage.py
           python3 scripts/test-storage.py --system --network
           FLYBY_RAM_MIB=128 FLYBY_DISK_GIB=2 python3 scripts/test-storage.py --system
           FLYBY_RAM_MIB=768 FLYBY_DISK_GIB=100 python3 scripts/test-storage.py --system
           python3 scripts/test-network.py
           python3 scripts/test-service.py
+          python3 scripts/test-kernel-update.py
           python3 scripts/test-wayland.py
+          python3 scripts/test-x11.py
+          FLYBY_CPUS=2 python3 scripts/test-x11.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 
@@ -93,7 +98,7 @@ jobs:
 
   nightly:
     needs: [build, android-runtime]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/codex/riscv-phase2'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/codex/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

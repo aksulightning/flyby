@@ -12,6 +12,7 @@ data class Settings(
     // DATA remains readable for legacy backups; new sessions use the system disk.
     val disk: DiskMode = DiskMode.SYSTEM,
     val memoryMiB: Int = 512,
+    val cpuCount: Int = 1,
     val diskGiB: Int = 1,
     val sharedTree: String? = null,
     val fontSize: Int = 14,
@@ -26,6 +27,7 @@ class AppSettings(context: Context) {
     private val current = MutableStateFlow(Settings(
         theme = runCatching { ThemeMode.valueOf(prefs.getString("theme", "SYSTEM")!!) }.getOrDefault(ThemeMode.SYSTEM),
         memoryMiB = prefs.getInt("memoryMiB", 512).coerceIn(128, 768),
+        cpuCount = prefs.getInt("cpuCount", 1).takeIf { it in 1..2 } ?: 1,
         diskGiB = prefs.getInt("diskGiB", 1).coerceIn(1, 100),
         sharedTree = prefs.getString("sharedTree", null),
         fontSize = prefs.getInt("fontSize", 14).coerceIn(8, 32),
@@ -37,6 +39,7 @@ class AppSettings(context: Context) {
     val state = current.asStateFlow()
     fun theme(value: ThemeMode) { prefs.edit().putString("theme", value.name).apply(); current.value = current.value.copy(theme = value) }
     fun memory(value: Int) { require(value in 128..768); prefs.edit().putInt("memoryMiB", value).apply(); current.value = current.value.copy(memoryMiB = value) }
+    fun cpuCount(value: Int) { require(value in 1..2); prefs.edit().putInt("cpuCount", value).apply(); current.value = current.value.copy(cpuCount = value) }
     fun diskSize(value: Int) { require(value in 1..100); prefs.edit().putInt("diskGiB", value).apply(); current.value = current.value.copy(diskGiB = value) }
     fun sharedTree(value: String?) { prefs.edit().putString("sharedTree", value).apply(); current.value = current.value.copy(sharedTree = value) }
     fun fontSize(value: Int) { require(value in 8..32); prefs.edit().putInt("fontSize", value).apply(); current.value = current.value.copy(fontSize = value) }

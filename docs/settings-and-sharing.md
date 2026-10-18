@@ -88,3 +88,12 @@ python3 scripts/test-android.py --network
 Disk Creator selects Minimal Alpine (BusyBox init, default) or Service Alpine
 (OpenRC init). This selection only controls the next disk creation. Both images
 use the same disk format and backup flow; creating either requires confirmation.
+
+## Virtual CPU count
+
+Settings → Virtual machine offers exactly **1 CPU** (default) or **2 CPUs**.
+Stop Linux before changing this setting; changes are saved and apply at the next
+start. Disk transfers also block CPU changes. Existing installations default to
+one CPU. Two CPUs do not guarantee a speedup in the interpreter.
+
+Disk Creator also offers **Minimal Alpine X11**; see [X11 notes](x11.md).

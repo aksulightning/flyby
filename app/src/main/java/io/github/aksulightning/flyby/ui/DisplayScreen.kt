@@ -67,7 +67,7 @@ fun DisplayScreen(vm: VmManager, status: VmStatus, onBack: () -> Unit, onTermina
             Text("800 × 600", Modifier.padding(12.dp))
         }
         if (!ready) Text(if (status.state == VmState.RUNNING)
-            "Waiting for Wayland. Use a Minimal Alpine Wayland disk; see Terminal for boot messages."
+            "Waiting for the desktop. Use a Minimal Alpine Wayland or X11 disk; see Terminal for boot messages."
             else "Start the VM to use Display.")
         (error ?: status.error)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         AndroidView(factory = { DisplayView(it).also { v -> view = v } },

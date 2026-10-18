@@ -7,7 +7,7 @@ Alpine archives. These generated resources are packaged into the APK, not Git.
 
 Inputs:
 - Alpine Edge minirootfs 20260805 riscv64 (`edge/releases/riscv64`).
-- Alpine Edge linux-lts 6.18.53-r0: gzip-compressed Image and its package kernel config.
+- Alpine Edge linux-lts 6.18.56-r0: gzip-compressed Image and its package kernel config.
 - Alpine Edge OpenSBI 1.9-r0: `generic/firmware/fw_jump.bin`.
 
 Exact URLs/checksums are source-controlled in the script. Kernel config confirms
@@ -52,8 +52,9 @@ mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
 Register the desired interpreter separately. This supplies kernel support, not
 QEMU interpreters, a container engine, VPN configuration or FUSE daemons. Install
 userspace tools such as `nftables`, `iproute2`, `wireguard-tools`, `fuse3` or
-filesystem utilities with apk as needed. Existing persistent disks retain their
-previous module files; the expanded set is installed with a newly created disk.
+filesystem utilities with apk as needed. When an app update changes the kernel version, the boot initramfs installs its
+matching module set if that version is missing from the persistent disk. Older
+module versions and user files are preserved. New disks already contain the set.
 
 Both image tests load every requested module, resolve TUN/veth aliases and execute
 an extension handler through binfmt_misc. They also verify OverlayFS copy-up and

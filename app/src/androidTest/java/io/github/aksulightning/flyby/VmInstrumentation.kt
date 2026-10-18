@@ -66,7 +66,7 @@ class VmInstrumentation : Instrumentation() {
             waitForIdleSync()
             val sharedUri = android.provider.DocumentsContract.buildTreeDocumentUri("io.github.aksulightning.flyby.test.shared", "root")
             check(io.github.aksulightning.flyby.shared.AndroidSharedTree(targetContext.contentResolver, sharedUri).root().id == "root") { "Fixture root document ID must be stable" }
-            runOnMainSync { check(vmService.setMemory(128)); check(vmService.setSharedTree(null)) }
+            runOnMainSync { check(vmService.setMemory(128)); check(vmService.setCpuCount(1)); check(vmService.setSharedTree(null)) }
             // A real picker stops MainActivity and returns its result before the service reconnects.
             // Exercise that order: retain the selected URI while disconnected, then apply on rebind.
             runOnMainSync { checkNotNull(activity).moveTaskToBack(true) }
@@ -168,6 +168,9 @@ class VmInstrumentation : Instrumentation() {
             val preferences = (targetContext.applicationContext as FlybyApplication).settings
             check(preferences.state.value.theme == ThemeMode.DARK)
             check(preferences.state.value.disk == DiskMode.SYSTEM)
+            clickText("2 CPUs", scroll = true)
+            check(preferences.state.value.cpuCount == 2)
+            check(io.github.aksulightning.flyby.settings.AppSettings(targetContext).state.value.cpuCount == 2)
             clickText("Service Alpine", scroll = true)
             clickText("Create Service Alpine disk", scroll = true)
             clickText("Cancel")
@@ -181,7 +184,9 @@ class VmInstrumentation : Instrumentation() {
             await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_SYSTEM_READY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
             runBlocking { vmService.session.sendInput("[ \"\$(cat /proc/1/comm)\" = openrc-init ] && rc-service flyby-control status && printf '\\nFLYBY_OPENRC_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_OPENRC_OK\r\n" in vmService.session.transcript.value }
-            runOnMainSync { check(!vmService.setMemory(768)); check(!vmService.setSharedTree(null)) }
+            runBlocking { vmService.session.sendInput("[ \"\$(grep -c '^processor' /proc/cpuinfo)\" = 2 ] && printf '\\nFLYBY_TWO_CPUS_OK\\n'\n".toByteArray()) }
+            await(15_000) { "\nFLYBY_TWO_CPUS_OK\r\n" in vmService.session.transcript.value }
+            runOnMainSync { check(!vmService.setMemory(768)); check(!vmService.setCpuCount(1)); check(!vmService.setSharedTree(null)) }
             runBlocking { vmService.session.sendInput("echo $token > /etc/flyby-system-test; sync; printf '\\nFLYBY_SYSTEM_WRITE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_SYSTEM_WRITE_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }

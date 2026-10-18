@@ -18,7 +18,7 @@ restarts during cleanup are rejected. A cleanup failure blocks reuse until retri
 
 Guest provisioning runs under STARTING and can be cancelled. The package's resource
 hashes are checked before installing fixed filenames inside app-private storage.
-Both Kotlin paths and native sizes/Image headers are validated. Configuration validates 128–768 MiB RAM and `validateRuntime` enforces one CPU.
+Both Kotlin paths and native sizes/Image headers are validated. Configuration validates 128–768 MiB RAM and both Kotlin and native validation enforce exactly one or two CPUs.
 The native boundary enforces the same limits.
 No UI-supplied path, host shell, external process or broad storage permission exists.
 

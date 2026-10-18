@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
                         LicensesScreen({ licensesVisible = false }, content)
                     } else if (settingsVisible) {
                         SettingsScreen(settings, idle, transfer, preferences,
-                            { connected?.setMemory(it) }, { gib, image -> createDisk(gib, image) },
+                            { connected?.setMemory(it) }, { connected?.setCpuCount(it) }, { gib, image -> createDisk(gib, image) },
                             { sharedPicker.launch(settings.sharedTree?.let(android.net.Uri::parse)) },
                             { disconnectSharedFolder() }, { licensesVisible = true },
                             { exportPicker.launch("flyby-${settings.disk.name.lowercase()}-${System.currentTimeMillis()}.flyby") },
@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
                                 notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                             else startServiceVm()
                         }, { connected?.stopVm() }, { terminalVisible = true }, content, connected != null && !transfer.busy, { settingsVisible = true }, settings.memoryMiB, settings.diskGiB,
-                            onDisplay = { displayVisible = true })
+                            onDisplay = { displayVisible = true }, cpuCount = settings.cpuCount)
                     }
                 }
             }

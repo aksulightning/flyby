@@ -15,12 +15,14 @@ class VmConfigTest {
         assertEquals(1, VmConfig().cpuCount)
         VmConfig().validate()
         VmConfig(128, 1).validate()
-        VmConfig(768, 4).validate()
+        VmConfig(768, 2).validate()
     }
 
     @Test fun currentRuntimeLimitsAreExplicit() {
-        listOf(128, 129, 256, 512, 768).forEach { VmConfig(it).validateRuntime() }
-        listOf(VmConfig(127), VmConfig(769), VmConfig(cpuCount = 2)).forEach {
+        listOf(128, 129, 256, 512, 768).forEach { ram ->
+            (1..2).forEach { cpus -> VmConfig(ram, cpus).validateRuntime() }
+        }
+        listOf(VmConfig(127), VmConfig(769), VmConfig(cpuCount = 3)).forEach {
             assertThrows(IllegalArgumentException::class.java) { it.validateRuntime() }
         }
     }
@@ -32,7 +34,7 @@ class VmConfigTest {
     }
 
     @Test fun invalidCpuCountIsRejected() {
-        listOf(-1, 0, 5, Int.MAX_VALUE).forEach {
+        listOf(Int.MIN_VALUE, -1, 0, 3, 4, 5, Int.MAX_VALUE).forEach {
             assertThrows(IllegalArgumentException::class.java) { VmConfig(cpuCount = it).validate() }
         }
     }

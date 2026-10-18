@@ -1,6 +1,7 @@
 #include "vm.h"
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -80,33 +81,50 @@ static void diagnostics(flyby::Vm &vm) {
     if (!vm.running()) return;
     shell(vm, "\003\n");
     std::this_thread::sleep_for(100ms);
-    shell(vm, "stty -echo; rc-status -a; cat /var/log/weston*.log; cat /proc/bus/input/devices; ls -l /dev/dri /dev/input; free; echo WAYLAND_DIAGNOSTICS_DONE\n");
-    try { wait(vm, "\r\nWAYLAND_DIAGNOSTICS_DONE\r\n", 10); }
+    shell(vm, "stty -echo; rc-status -a; cat /var/log/weston*.log /var/log/Xorg.0.log /var/log/flyby-x11*.log; cat /proc/bus/input/devices; ls -l /dev/dri /dev/input; free; echo DISPLAY_TEST_DIAGNOSTICS_DONE\n");
+    try { wait(vm, "\r\nDISPLAY_TEST_DIAGNOSTICS_DONE\r\n", 10); }
     catch (const std::exception &e) { std::cerr << "Diagnostics: " << e.what() << '\n'; }
 }
 int main(int argc, char **argv) {
-    if (argc != 4) return 2;
+    if (argc != 4 && (argc != 5 || std::string(argv[4]) != "--x11")) return 2;
+    const bool x11 = argc == 5;
     try {
-        flyby::Vm vm(argv[1], 512, 1, argv[2], true);
+        unsigned cpus = std::getenv("FLYBY_CPUS") ? std::stoul(std::getenv("FLYBY_CPUS")) : 1;
+        flyby::Vm vm(argv[1], 512, cpus, argv[2], true);
         vm.start();
         try {
             wait(vm, "FLYBY_ALPINE_READY");
             shell(vm, "stty -echo\n");
             // Do not let early terminal echo satisfy a later output assertion.
-            shell(vm, "printf '\\nWAYLAND_SERIAL_READY\\n'\n");
-            wait(vm, "\r\nWAYLAND_SERIAL_READY\r\n");
-            shell(vm, "i=0; until test -s /run/flyby-wayland/terminal-ready; do i=$((i+1)); [ $i -lt 90 ] || break; sleep 1; done\n");
-            shell(vm, "cat /var/log/weston.log; test -S /run/flyby-wayland/wayland-0 && kill -0 $(cat /run/flyby-wayland/terminal-ready) && rc-service flyby-wayland-terminal status && echo WAYLAND_READY_FOR_INPUT\n");
-            wait(vm, "\r\nWAYLAND_READY_FOR_INPUT\r\n");
+            shell(vm, "printf '\\nDISPLAY_TEST_SERIAL_READY\\n'\n");
+            wait(vm, "\r\nDISPLAY_TEST_SERIAL_READY\r\n");
+            const std::string runtime = x11 ? "/run/flyby-x11" : "/run/flyby-wayland";
+            shell(vm, "i=0; until test -s " + runtime + "/terminal-ready; do i=$((i+1)); [ $i -lt 90 ] || break; sleep 1; done\n");
+            shell(vm, x11
+                ? "xdpyinfo && kill -0 $(cat /run/flyby-x11/terminal-ready) && rc-service flyby-x11-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n"
+                : "cat /var/log/weston.log; test -S /run/flyby-wayland/wayland-0 && kill -0 $(cat /run/flyby-wayland/terminal-ready) && rc-service flyby-wayland-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n");
+            wait(vm, "\r\nDISPLAY_TEST_READY_FOR_INPUT\r\n");
             auto pixels = waitForDesktop(vm);
-            shell(vm, "test \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" = /run/flyby-wayland/wayland-0 && printf '\\nWAYLAND_ENV_OK\\n'\n");
-            wait(vm, "\r\nWAYLAND_ENV_OK\r\n", 10);
+            shell(vm, x11
+                ? "test \"$DISPLAY\" = :0 && test \"$XAUTHORITY\" = /run/flyby-x11/Xauthority && printf '\\nDISPLAY_TEST_ENV_OK\\n'\n"
+                : "test \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" = /run/flyby-wayland/wayland-0 && printf '\\nDISPLAY_TEST_ENV_OK\\n'\n");
+            wait(vm, "\r\nDISPLAY_TEST_ENV_OK\r\n", 10);
+            shell(vm, "test $(grep -c '^processor' /proc/cpuinfo) = " + std::to_string(cpus) + " && printf '\\nDISPLAY_CPUS_OK\\n'\n");
+            wait(vm, "\r\nDISPLAY_CPUS_OK\r\n", 10);
+            shell(vm, "rm -f /root/flyby-gui-test /root/wayland-android-test /tmp/pointer-event\n");
+            if (x11) {
+                // twm uses pointer focus: enter the terminal before typing.
+                pointer(vm, 100, 100, 0);
+                std::this_thread::sleep_for(500ms);
+                pointer(vm, 100, 100, 1); pointer(vm, 100, 100, 0);
+                std::this_thread::sleep_for(500ms);
+            }
             std::ofstream image(argv[3], std::ios::binary);
             image << "P6\n800 600\n255\n";
             for (auto p : pixels) { char rgb[]{char(p >> 16), char(p >> 8), char(p)}; image.write(rgb, 3); }
             image.close();
             // The auto-started terminal owns keyboard focus. Type through UART ->
-            // UHID -> evdev -> libinput -> Weston, never through the serial shell.
+            // UHID -> evdev -> libinput -> the display server, never through the serial shell.
             for (char c : std::string("echo gui > /root/flyby-gui-test\n")) {
                 if (c >= 'a' && c <= 'z') key(vm, 4 + c - 'a');
                 else if (c == ' ') key(vm, 44);
@@ -116,11 +134,11 @@ int main(int argc, char **argv) {
                 else if (c == '\n') key(vm, 40);
                 else throw std::runtime_error("Unknown test character");
             }
-            shell(vm, "i=0; until grep -qx gui /root/flyby-gui-test 2>/dev/null; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; grep -qx gui /root/flyby-gui-test && echo WAYLAND_KEYBOARD_OK\n");
-            wait(vm, "WAYLAND_KEYBOARD_OK\r\n", 40);
+            shell(vm, "i=0; until grep -qx gui /root/flyby-gui-test 2>/dev/null; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; grep -qx gui /root/flyby-gui-test && echo DISPLAY_TEST_KEYBOARD_OK\n");
+            wait(vm, "DISPLAY_TEST_KEYBOARD_OK\r\n", 40);
             paste(vm, "echo android > /root/wayland-android-test\n");
-            shell(vm, "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do i=$((i+1)); [ $i -lt 20 ] || break; sleep 1; done; grep -qx android /root/wayland-android-test && echo WAYLAND_PASTE_OK\n");
-            wait(vm, "WAYLAND_PASTE_OK\r\n", 30);
+            shell(vm, "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do i=$((i+1)); [ $i -lt 20 ] || break; sleep 1; done; grep -qx android /root/wayland-android-test && echo DISPLAY_TEST_PASTE_OK\n");
+            wait(vm, "DISPLAY_TEST_PASTE_OK\r\n", 30);
             pixels = vm.displayFrame();
             std::ofstream finalImage(argv[3], std::ios::binary);
             finalImage << "P6\n800 600\n255\n";
@@ -128,15 +146,17 @@ int main(int argc, char **argv) {
             shell(vm, "dd if=/dev/input/event1 of=/tmp/pointer-event bs=24 count=1 2>/dev/null &\n");
             std::this_thread::sleep_for(500ms);
             pointer(vm, 350, 280, 0); pointer(vm, 350, 280, 1); pointer(vm, 350, 280, 0);
-            shell(vm, "sleep 1; test -s /tmp/pointer-event && ! apk info -e xwayland && ! apk info -e xorg-server && echo WAYLAND_POINTER_OK\n");
-            wait(vm, "WAYLAND_POINTER_OK\r\n");
+            shell(vm, x11
+                ? "sleep 1; test -s /tmp/pointer-event && apk info -e xorg-server && ! apk info -e weston && ! apk info -e xwayland && echo DISPLAY_TEST_POINTER_OK\n"
+                : "sleep 1; test -s /tmp/pointer-event && ! apk info -e xwayland && ! apk info -e xorg-server && echo DISPLAY_TEST_POINTER_OK\n");
+            wait(vm, "DISPLAY_TEST_POINTER_OK\r\n");
             vm.requestStop();
             const auto deadline = std::chrono::steady_clock::now() + 30s;
             while (vm.running() && std::chrono::steady_clock::now() < deadline) vm.output(50);
-            if (vm.running()) throw std::runtime_error("Wayland shutdown timed out");
+            if (vm.running()) throw std::runtime_error("Desktop shutdown timed out");
             vm.stop();
             if (!vm.displayFrame().empty()) throw std::runtime_error("Stale frame after Stop");
-            std::cout << "PASS: Wayland 800x600 framebuffer, keyboard, pointer and graceful shutdown\n";
+            std::cout << "PASS: Linux desktop 800x600 framebuffer, keyboard, pointer and graceful shutdown\n";
         } catch (...) { diagnostics(vm); throw; }
     } catch (const std::exception &e) { std::cerr << e.what() << '\n'; return 1; }
 }

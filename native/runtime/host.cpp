@@ -12,7 +12,8 @@ int main(int argc, char **argv) {
     }
     try {
         unsigned ram = std::getenv("FLYBY_RAM_MIB") ? std::stoul(std::getenv("FLYBY_RAM_MIB")) : 512;
-        flyby::Vm vm(argv[1], ram, 1, argc >= 3 ? argv[2] : "",
+        unsigned cpus = std::getenv("FLYBY_CPUS") ? std::stoul(std::getenv("FLYBY_CPUS")) : 1;
+        flyby::Vm vm(argv[1], ram, cpus, argc >= 3 ? argv[2] : "",
                      argc == 4);
         vm.start();
         std::atomic<bool> done{false};

@@ -32,11 +32,15 @@ build/test tools do not automatically become APK contents.
 
 ## Guest packages actually bundled
 
-Read from the pinned minirootfs APK database and the kernel/firmware `.PKGINFO`,
+Read from each final image's APK database and the kernel/firmware `.PKGINFO`,
 not inferred from project names. Full immutable source recipe links, versions and
 archive SHA-256 values are in [guest-provenance.json](guest-provenance.json), also
 packaged as `assets/vm/provenance.json`. Kernel config is extracted to
 `out/guest/kernel.config` by the preparation script.
+
+The table below lists the Minimal image and shared kernel/firmware. The JSON
+inventory additionally covers Service, Wayland and X11, including upgraded
+dependency versions in those images.
 
 | Package | Version | License expression | Exact Alpine source recipe |
 | --- | --- | --- | --- |
@@ -56,7 +60,7 @@ packaged as `assets/vm/provenance.json`. Kernel config is extracted to
 | scanelf | 1.3.9-r1 | GPL-2.0-only | [c61801ee](https://gitlab.alpinelinux.org/alpine/aports/-/tree/c61801eeacb3ffcd9c2025b09e402153bb93fb39/main/pax-utils) |
 | ssl_client | 1.38.0-r4 | GPL-2.0-only | [9ac9bf53](https://gitlab.alpinelinux.org/alpine/aports/-/tree/9ac9bf5318a9ccc8af34b1389eba3df432488673/main/busybox) |
 | zlib | 1.3.2-r0 | Zlib | [f248b33b](https://gitlab.alpinelinux.org/alpine/aports/-/tree/f248b33b5943c7dc69bf691031d7612ab2e8ed93/main/zlib) |
-| linux-lts | 6.18.53-r0 | GPL-2.0-only | [e4f5708a](https://gitlab.alpinelinux.org/alpine/aports/-/tree/e4f5708adc6a4e631b7dde47106bab095d5f1914/main/linux-lts) |
+| linux-lts | 6.18.56-r0 | GPL-2.0-only | [b249f09c](https://gitlab.alpinelinux.org/alpine/aports/-/tree/b249f09c82e1e52f3072a6832f0407953788f21d/main/linux-lts) |
 | opensbi | 1.9-r0 | BSD-2-Clause | [e3e95307](https://gitlab.alpinelinux.org/alpine/aports/-/tree/e3e95307fe4ab08caf28babdaac0b11e2cedb305/main/opensbi) |
 
 ## Native integration and distribution
@@ -123,3 +127,8 @@ APK's offline license menu. The corresponding source bundle includes these
 recipes and their upstream sources as well as the Minimal Alpine sources.
 The pinned x86_64 apk-tools-static is only a build tool; it is not shipped in
 either guest image. OpenRC's full license is shown in the license menu.
+
+The X11 image adds Xorg, twm, xterm and their dependencies. Exact image membership,
+versions, licenses and immutable source recipes are recorded in the generated
+provenance JSON. `scripts/x11-packages.json`, `scripts/wayland-packages.json` and
+`scripts/service-packages.json` pin the offline installation inputs.

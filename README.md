@@ -29,21 +29,23 @@ replace Android or to be a polished desktop-computer experience.
 - Create Linux disks from 1 to 100 GiB.
 - Export and import a compressed `.flyby` backup of the Linux disk.
 - Adjust the virtual machine's memory from 128 to 768 MiB.
+- Choose one or two virtual CPUs in Settings.
 
-The virtual Linux computer uses one virtual processor. It runs through a built-in
-RISC-V interpreter, so performance depends heavily on the Android device and is
+The virtual Linux computer uses one or two virtual processors, selectable in
+Settings. It runs through a built-in RISC-V interpreter, so performance depends heavily on the Android device and is
 not expected to match a normal native Android app.
 
-## The three disk images
+## The four disk images
 
 A **disk image** is a file that acts like the virtual Linux computer's hard drive.
 It contains the Linux system, installed programs, settings and files. Flyby's Disk
-Creator offers three starting images:
+Creator offers four starting images:
 
 | Image | What it provides | Best for |
 | --- | --- | --- |
 | **Minimal Alpine** | A small Alpine Linux system with a command line and a simple BusyBox startup system. This is the default. | Basic Linux commands, learning and the smallest setup. |
 | **Service Alpine** | Alpine Linux with OpenRC, which can start and manage background services. It has no graphical desktop. | Server-like tools and programs that should run as services. |
+| **Minimal Alpine X11** | Service Alpine plus Xorg, a lightweight window manager and xterm. No Wayland session. | Running X11 applications on Android. |
 | **Minimal Alpine Wayland** | Service Alpine plus a simple Weston/Wayland desktop and graphical terminal. | Trying a basic Linux desktop on Android. |
 
 Important things to know about disks:
@@ -68,7 +70,7 @@ Important things to know about disks:
 More detail is available in
 [Settings, Disk Creator and sharing](docs/settings-and-sharing.md),
 [storage and networking](docs/storage-network.md) and
-[Wayland notes](docs/wayland.md).
+[Wayland notes](docs/wayland.md) and [X11 notes](docs/x11.md).
 
 ## How to try it
 
@@ -84,8 +86,8 @@ Flyby currently provides development builds rather than a stable release.
 6. Type a simple command such as `ls` or `cat /etc/os-release`.
 
 For the graphical image, first stop Linux, open **Settings → Disk Creator**, select
-**Minimal Alpine Wayland**, create the disk and start Linux again. Then open
-**Display**. Using 512–768 MiB of RAM is recommended for the desktop.
+**Minimal Alpine Wayland** or **Minimal Alpine X11**, create the disk and start
+Linux again. Then open **Display**. Using 512–768 MiB of RAM is recommended for the desktop.
 
 See [nightly downloads and disk backups](docs/nightly-and-backups.md) for detailed
 download, update, export and import instructions.
@@ -116,11 +118,11 @@ raw disk images or ZIP files.
   battery management still need broader testing.
 - Android 8.0 (API 26) is the minimum configured Android version, but this does not
   mean every device has been tested.
-- There is one virtual CPU and only 128–768 MiB of virtual RAM. Programs may be slow,
+- There are one or two virtual CPUs and 128–768 MiB of virtual RAM. Programs may be slow,
   and large or demanding Linux applications may not work.
-- The graphical desktop is fixed at 800 × 600, has no GPU acceleration and is
-  limited to native Wayland applications available for RISC-V. Xorg and XWayland
-  are not included.
+- The graphical desktop is fixed at 800 × 600, has no GPU acceleration and
+  supports native RISC-V applications: Wayland clients on the Wayland image,
+  X11 clients on the X11 image. Neither image includes XWayland.
 - The initial graphical keyboard layout is US. Android text input supports a limited
   set of extra characters. Physical keyboards use the Linux guest's configured
   layout.
@@ -201,6 +203,9 @@ cmake --build out/host -j2
 ctest --test-dir out/host --output-on-failure
 python3 scripts/smoke-boot.py
 python3 scripts/test-wayland.py
+python3 scripts/test-x11.py
+FLYBY_CPUS=2 python3 scripts/smoke-boot.py
+FLYBY_CPUS=2 python3 scripts/test-x11.py
 ```
 
 For an Android device connected through ADB:
@@ -210,10 +215,9 @@ For an Android device connected through ADB:
 python3 scripts/test-android.py --network
 ```
 
-These tests exercise the real native interpreter and guest system. The previous
-GitHub Actions workflow also checked booting, persistence, networking, Gradle tests, the debug
-APK and lint. The former workflow is preserved in
-[docs/android-workflow.yml](docs/android-workflow.yml) for reference.
+These tests exercise the real native interpreter and guest system. The
+[Android workflow](.github/workflows/android.yml) checks booting with one and two
+CPUs, persistence, networking, Wayland and X11, Gradle tests, the debug APK and lint.
 Passing automation does not replace testing on physical Android hardware.
 
 ## Licenses
