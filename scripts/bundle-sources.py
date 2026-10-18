@@ -2,7 +2,9 @@
 """Collect pinned Alpine recipes, all SHA512-listed sources, native sources and Flyby.
 Fails closed: a nightly must not publish if a required corresponding source is missing.
 """
-import hashlib, http.client, io, json, pathlib, shutil, socket, ssl, subprocess, tarfile, time, urllib.request, urllib.error
+import hashlib, http.client, io, json, pathlib, re, shutil, socket, ssl, subprocess, tarfile, tempfile, time, urllib.request, urllib.error
+from functools import lru_cache
+from html.parser import HTMLParser
 from alpine_sources import recipe_sources
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT/'out/corresponding-source'
@@ -61,14 +63,57 @@ def digest(path, algorithm='sha256'):
         while chunk := stream.read(1024*1024): h.update(chunk)
     return h.hexdigest()
 
-def source_archive(name, expected, upstream=None):
-    # Prefer the distribution mirror, then the expanded URL in the exact
-    # binary package's APKBUILD. No package-specific or release-specific URLs.
-    urls = [f'https://distfiles.alpinelinux.org/distfiles/edge/{name}']
+
+DISTFILES = 'https://distfiles.alpinelinux.org/distfiles/'
+
+
+def parse_source_mirrors(index):
+    class BranchIndex(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.branches = {}
+
+        def handle_starttag(self, tag, attrs):
+            if tag != 'a':
+                return
+            href = dict(attrs).get('href') or ''
+            match = re.fullmatch(r'v([0-9]+)\.([0-9]+)/', href)
+            if match:
+                self.branches[tuple(map(int, match.groups()))] = href
+
+    parser = BranchIndex()
+    parser.feed(index)
+    return [parser.branches[version] for version in sorted(parser.branches, reverse=True)]
+
+
+@lru_cache(maxsize=1)
+def discover_source_mirrors():
+    # Discover available branches once per invocation, not from a stale disk cache.
+    # Accept only version directories on the official host, never links to other hosts.
+    try:
+        with tempfile.TemporaryDirectory(prefix='flyby-source-index-') as tmp:
+            path = download(DISTFILES, pathlib.Path(tmp)/'index.html')
+            branches = parse_source_mirrors(path.read_text())
+    except (urllib.error.HTTPError, DownloadUnavailable) as error:
+        print(f'Cannot list Alpine source mirrors; using recipe URLs: {error}', flush=True)
+        return []
+    print('Discovered Alpine source mirrors: ' + ', '.join(branches), flush=True)
+    return branches
+
+
+def source_urls(name, upstream):
+    yield DISTFILES + 'edge/' + name
+    # Older identical sources may have moved from Edge into a release directory.
+    # This changes only where bytes are fetched, not the package version or checksum.
+    for branch in discover_source_mirrors():
+        yield DISTFILES + branch + name
     if upstream:
-        urls.append(upstream)
+        yield upstream
+
+def source_archive(name, expected, upstream=None):
+    # Search discovered distribution mirrors before the exact recipe's upstream.
     failures = []
-    for url in dict.fromkeys(urls):
+    for url in source_urls(name, upstream):
         try:
             path = download(url, CACHE/expected/name)
         except (urllib.error.HTTPError, DownloadUnavailable) as failure:

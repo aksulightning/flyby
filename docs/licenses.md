@@ -88,8 +88,9 @@ by those APKBUILD files; preserve their notices. A generic upstream URL, this
 inventory, or just the kernel config is not a complete GPL source distribution.
 `scripts/bundle-sources.py` assembles all SHA512-listed distfiles and the exact
 aports directories, plus native archives, Flyby source and kernel config. The
-source downloader checks Edge first, then the expanded upstream URL from the
-exact APKBUILD, including renamed source aliases. Every file must match that
+source downloader checks Edge first, then release mirrors discovered from the
+Alpine distfiles directory index (newest first), then the expanded upstream URL
+from the exact APKBUILD, including renamed source aliases. Every file must match that
 recipe's SHA512. No package-specific fallback URL or stable-release mirror list
 is maintained. The per-build `alpine-lock.json` accompanies the source bundle. The
 nightly job fails closed if this source bundle cannot be built and uploads it

@@ -34,8 +34,9 @@ packages for every image. `docs/guest-provenance.json` is a historical reference
 the generated metadata is authoritative for a new build. Source bundling reads
 each exact APKBUILD in a network-disabled, read-only container, expands its shell
 variables and handles `filename::URL` aliases. It tries Alpine's Edge distfiles
-mirror followed by the recipe's upstream URL, and always verifies the recipe's
-SHA512. A newer source release is never substituted for an older binary.
+mirror, then release directories discovered from the official distfiles index
+(newest first), then the recipe's upstream URL. Interrupted downloads are retried
+up to four times, and every source must match the recipe's SHA512. A newer source release is never substituted for an older binary.
 
 The script creates a root-owned newc archive with fixed timestamps and gzip mtime.
 It uses the real minirootfs and installs a small `/init`: mount proc/sys/devtmpfs/

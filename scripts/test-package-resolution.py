@@ -105,13 +105,39 @@ class PackageResolutionTests(unittest.TestCase):
             path.write_bytes(content)
             return path
         with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(bundle, 'CACHE', pathlib.Path(tmp)), patch.object(bundle, 'download', side_effect=download):
+            with patch.object(bundle, 'discover_source_mirrors', return_value=[]), patch.object(bundle, 'CACHE', pathlib.Path(tmp)), patch.object(bundle, 'download', side_effect=download):
                 self.assertEqual(bundle.source_archive('alias.tar.gz', digest, upstream).read_bytes(), content)
                 with self.assertRaises(ValueError):
                     bundle.source_archive('alias.tar.gz', '0'*128, upstream)
 
 
 class SourceDownloadTests(unittest.TestCase):
+    def setUp(self):
+        mirrors = patch.object(bundle, 'discover_source_mirrors', return_value=[])
+        mirrors.start()
+        self.addCleanup(mirrors.stop)
+
+    def test_discovered_mirror_precedes_unavailable_upstream(self):
+        content = b'exact old source'
+        checksum = hashlib.sha512(content).hexdigest()
+        mirror = bundle.DISTFILES + 'v99.1/source.tar.gz'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle, 'discover_source_mirrors', return_value=['v99.1/']), patch.object(
+                    bundle.urllib.request, 'urlopen', side_effect=[
+                        urllib.error.HTTPError('edge', 404, 'gone', {}, None), self.response(content)]) as request:
+                self.assertEqual(bundle.source_archive(
+                    'source.tar.gz', checksum, 'https://unavailable.test/source').read_bytes(), content)
+                self.assertEqual(request.call_count, 2)
+                self.assertEqual(request.call_args.args[0], mirror)
+
+    def test_mirror_index_selects_newest_numeric_branches_and_rejects_other_links(self):
+        index = ('<a href="v3.9/">old</a><a href="v3.25/">new</a>'
+                 '<a href="v99.1/">future</a><a href="v3.25/">duplicate</a>'
+                 '<a href="https://untrusted.test/v100.0/">external</a>'
+                 '<a href="../">parent</a><a href="edge/">edge</a>'
+                 '<a href="v100.0/../../escape/">unsafe</a>')
+        self.assertEqual(bundle.parse_source_mirrors(index), ['v99.1/', 'v3.25/', 'v3.9/'])
+
     @staticmethod
     def response(content, length=None):
         response = io.BytesIO(content)
