@@ -87,13 +87,12 @@ def resolve(refresh=False):
         groups = {'tool': ['apk-tools-static'], 'boot': ['linux-lts', 'opensbi'], **WORLDS}
         lines = ['set -eu',
                  f"trap 'chown -R {os.getuid()}:{os.getgid()} /output' EXIT",
-                 'printf "%s\\n" "$BASE/main" "$BASE/community" > /etc/apk/repositories',
-                 'mkdir -p /tmp/host-cache /tmp/guest-cache']
+                 'printf "%s\\n" "$BASE/main" "$BASE/community" > /etc/apk/repositories']
         for group, names in groups.items():
             arch = 'x86_64' if group == 'tool' else 'riscv64'
             recursive = '' if group in ('tool', 'boot') else '--recursive'
             lines += [f'mkdir -p /output/{group}',
-                      f'apk --no-cache --arch {arch} fetch {recursive} '
+                      f'apk --no-cache --arch {arch} --keys-dir /usr/share/apk/keys/{arch} fetch {recursive} '
                       f'--url --output /output/{group} {" ".join(names)} > /output/{group}/urls.txt '
                       f'|| {{ cat /output/{group}/urls.txt; exit 1; }}']
         # The container only receives this disposable output directory.
