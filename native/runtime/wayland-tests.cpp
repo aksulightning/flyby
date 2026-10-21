@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "guest-test-login.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
         flyby::Vm vm(argv[1], gpu ? 768 : 512, cpus, argv[2], true, false, gpu);
         vm.start();
         try {
-            wait(vm, "FLYBY_ALPINE_READY");
+            guestTestLogin(vm);
             shell(vm, "stty -echo\n");
             // Do not let early terminal echo satisfy a later output assertion.
             shell(vm, "printf '\\nDISPLAY_TEST_SERIAL_READY\\n'\n");
@@ -130,7 +131,7 @@ int main(int argc, char **argv) {
             wait(vm, "\r\nDISPLAY_TEST_ENV_OK\r\n", 10);
             shell(vm, "test $(grep -c '^processor' /proc/cpuinfo) = " + std::to_string(cpus) + " && printf '\\nDISPLAY_CPUS_OK\\n'\n");
             wait(vm, "\r\nDISPLAY_CPUS_OK\r\n", 10);
-            shell(vm, "rm -f /root/flyby-gui-test /root/wayland-android-test /tmp/pointer-event\n");
+            shell(vm, "rm -f /home/flybyuser/flyby-gui-test /home/flybyuser/wayland-android-test /tmp/pointer-event\n");
             if (x11) {
                 // twm uses pointer focus: enter the terminal before typing.
                 pointer(vm, 100, 100, 0);
@@ -144,7 +145,7 @@ int main(int argc, char **argv) {
             image.close();
             // The auto-started terminal owns keyboard focus. Type through UART ->
             // UHID -> evdev -> libinput -> the display server, never through the serial shell.
-            for (char c : std::string("echo gui > /root/flyby-gui-test\n")) {
+            for (char c : std::string("echo gui > /home/flybyuser/flyby-gui-test\n")) {
                 if (c >= 'a' && c <= 'z') key(vm, 4 + c - 'a');
                 else if (c == ' ') key(vm, 44);
                 else if (c == '>') key(vm, 55, 2);
@@ -153,10 +154,10 @@ int main(int argc, char **argv) {
                 else if (c == '\n') key(vm, 40);
                 else throw std::runtime_error("Unknown test character");
             }
-            shell(vm, "i=0; until grep -qx gui /root/flyby-gui-test 2>/dev/null; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; grep -qx gui /root/flyby-gui-test && echo DISPLAY_TEST_KEYBOARD_OK\n");
+            shell(vm, "i=0; until grep -qx gui /home/flybyuser/flyby-gui-test 2>/dev/null; do i=$((i+1)); [ $i -lt 30 ] || break; sleep 1; done; grep -qx gui /home/flybyuser/flyby-gui-test && echo DISPLAY_TEST_KEYBOARD_OK\n");
             wait(vm, "DISPLAY_TEST_KEYBOARD_OK\r\n", 40);
-            paste(vm, "echo android > /root/wayland-android-test\n");
-            shell(vm, "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do i=$((i+1)); [ $i -lt 20 ] || break; sleep 1; done; grep -qx android /root/wayland-android-test && echo DISPLAY_TEST_PASTE_OK\n");
+            paste(vm, "echo android > /home/flybyuser/wayland-android-test\n");
+            shell(vm, "i=0; until grep -qx android /home/flybyuser/wayland-android-test 2>/dev/null; do i=$((i+1)); [ $i -lt 20 ] || break; sleep 1; done; grep -qx android /home/flybyuser/wayland-android-test && echo DISPLAY_TEST_PASTE_OK\n");
             wait(vm, "DISPLAY_TEST_PASTE_OK\r\n", 30);
             pixels = vm.displayFrame();
             std::ofstream finalImage(argv[3], std::ios::binary);

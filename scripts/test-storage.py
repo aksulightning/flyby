@@ -12,6 +12,7 @@ import uuid
 import sys
 import textwrap
 from module_checks import FILESYSTEM_MODULE_CHECKS
+from guest_test_login import Login
 
 ROOT = Path(__file__).resolve().parents[1]
 GUEST = ROOT / 'app/src/main/assets/vm'
@@ -29,6 +30,9 @@ def boot(command, marker, name):
     selector.register(proc.stdout, selectors.EVENT_READ)
     buffer = b''
     sent = False
+    def send(data):
+        proc.stdin.write(data); proc.stdin.flush()
+    login = Login(send) if SYSTEM else None
     try:
         with (OUT / name).open('wb') as log:
             deadline = time.monotonic() + 180
@@ -36,10 +40,11 @@ def boot(command, marker, name):
                 for key, _ in selector.select(1):
                     data = key.fileobj.read1(65536)
                     log.write(data); log.flush(); buffer += data
+                    if login: login.feed(data)
                 if b'FLYBY_STORAGE_ERROR' in buffer or b'Kernel panic' in buffer or b'Initramfs unpacking failed' in buffer:
                     raise RuntimeError(f'Guest boot failed: {name}')
                 network_ready = '--network' not in sys.argv or b'FLYBY_NETWORK_READY' in buffer
-                if not sent and b'FLYBY_ALPINE_READY' in buffer and network_ready:
+                if not sent and (login.ready if login else b'FLYBY_ALPINE_READY' in buffer) and network_ready:
                     assert b'FLYBY_STORAGE_READY' in buffer
                     # BusyBox's interactive editor truncates long input lines.
                     # Transfer a script over bounded lines instead; base64 cannot

@@ -4,6 +4,7 @@ import gzip, hashlib, io, json, pathlib, stat, tarfile, urllib.request, os, subp
 from service_image import PACKAGES as SERVICE_PACKAGES, build as build_service
 from alpine_packages import BASE, resolve, configure
 from guest_modules import select_modules
+from guest_account import PACKAGES as BASE_PACKAGES, LOCK as BASE_LOCK, configure as configure_account, owner as account_owner
 from x11_image import PACKAGES as X11_PACKAGES, LOCK as X11_LOCK, build as build_x11
 from x11_gpu_image import PACKAGES as GPU_PACKAGES, LOCK as GPU_LOCK, build as build_gpu
 from wayland_image import PACKAGES as WAYLAND_PACKAGES, LOCK as WAYLAND_LOCK, build as build_wayland
@@ -250,7 +251,7 @@ def provenance(paths):
     # Read the final installed databases: graphical packages may upgrade shared
     # dependencies, so the base minirootfs alone is not sufficient provenance.
     packages = {}
-    repositories = {(p['name'], p['version']): p['repository'] for p in WAYLAND_LOCK + X11_LOCK + GPU_LOCK}
+    repositories = {(p['name'], p['version']): p['repository'] for p in BASE_LOCK + WAYLAND_LOCK + X11_LOCK + GPU_LOCK}
     for image, directory in [('minimal', 'system-root'), ('service', 'service-root'),
                              ('wayland', 'wayland-root'), ('x11', 'x11-root'), ('x11-gpu', 'x11-gpu-root')]:
         database = (ROOT/'out/guest'/directory/'lib/apk/db/installed').read_text()
@@ -269,7 +270,7 @@ def provenance(paths):
             images=['minimal', 'service', 'wayland', 'x11', 'x11-gpu'],
             source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['commit']}/main/{fields['origin']}")
     return dict(branch='edge', rootfs_snapshot=RESOLVED['rootfs_snapshot'],
-                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()},
+                artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | BASE_PACKAGES | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
                 images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),
                         'wayland': dict(seed='wayland.seed', init='OpenRC', display='Weston, 800x600, Pixman; no Xorg/XWayland'),
@@ -288,7 +289,7 @@ def main():
     configure(RESOLVED)
     ARTIFACTS.update(RESOLVED['artifacts'])
     APK_TOOL = RESOLVED['apk_tool']
-    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()}
+    paths = {name: fetch(name, BASE+url, digest) for name, (url,digest) in (ARTIFACTS | BASE_PACKAGES | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()}
     apk_tool = fetch('apk-tools-static.apk', BASE+APK_TOOL[0], APK_TOOL[1])
     DEST.mkdir(parents=True, exist_ok=True)
     # aapt transparently expands .gz assets and strips their suffix. Keep gzip bytes
@@ -307,10 +308,19 @@ def main():
         (config_dir/'kernel.config').write_bytes(archive.extractfile(configs[0]).read())
     (DEST/'firmware').write_bytes(member(paths['opensbi.apk'], 'usr/share/opensbi/generic/firmware/fw_jump.bin'))
     (DEST/'initrd').write_bytes(initramfs(paths['alpine-minirootfs.tar.gz'], paths['linux-lts.apk'], config_dir/'system-root'))
+    # Install the same signed base packages in Minimal and every derived image.
+    apk = config_dir/'apk.static'
+    apk.write_bytes(member(apk_tool, 'sbin/apk.static'))
+    apk.chmod(0o755)
+    subprocess.run([str(apk), '--root', str(config_dir/'system-root'), '--arch', 'riscv64',
+                    '--no-scripts', '--no-network', 'add',
+                    *[str(paths[name]) for name in BASE_PACKAGES]], check=True)
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
     build_wayland(config_dir/'service-root', config_dir/'wayland-root', paths)
     build_x11(config_dir/'service-root', config_dir/'x11-root', paths)
     build_gpu(config_dir/'x11-root', config_dir/'x11-gpu-root', paths)
+    for directory in ['system-root', 'service-root', 'wayland-root', 'x11-root', 'x11-gpu-root']:
+        configure_account(config_dir/directory)
     (DEST/'provenance.json').write_text(json.dumps(provenance(paths), indent=2)+'\n')
     manifest = {name: hashlib.sha256((DEST/name).read_bytes()).hexdigest() for name in ['kernel','firmware','initrd']}
     for name, size, root in [('disk', 256, None), ('system', 1024, config_dir/'system-root'), ('service', 1024, config_dir/'service-root'), ('wayland', 1024, config_dir/'wayland-root'), ('x11', 1024, config_dir/'x11-root'), ('x11-gpu', 1024, config_dir/'x11-gpu-root')]:
@@ -328,7 +338,9 @@ def main():
             commands = config_dir/'root-ownership.txt'
             names = ['/'] + ['/'+str(p.relative_to(root)) for p in root.rglob('*')]
             if any('"' in n or '\\' in n or '\n' in n for n in names): raise ValueError('Invalid root filename')
-            commands.write_text(''.join(f'set_inode_field "{n}" uid 0\nset_inode_field "{n}" gid 0\n' for n in names))
+            commands.write_text(''.join(
+                f'set_inode_field "{n}" uid {account_owner(n.lstrip("/"))[0]}\n'
+                f'set_inode_field "{n}" gid {account_owner(n.lstrip("/"))[1]}\n' for n in names))
             result = subprocess.run(['debugfs', '-w', '-f', str(commands), str(disk)], check=True,
                                     capture_output=True, text=True, env=env)
             if any(line and not line.startswith('debugfs ') for line in result.stderr.splitlines()):

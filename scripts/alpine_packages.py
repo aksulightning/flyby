@@ -16,6 +16,7 @@ LOCK_PATH = ROOT/'out/alpine/lock.json'
 # Only application requirements belong here. apk selects versions and the full
 # dependency closure, including renamed/versioned dependencies such as LLVM.
 WORLDS = {
+    'base': ['doas', 'busybox-suid'],
     'service': ['openrc', 'openrc-init', 'openrc-user', 'busybox-ifupdown'],
     'wayland': ['weston', 'weston-backend-drm', 'weston-shell-desktop',
                 'weston-terminal', 'seatd', 'seatd-openrc', 'eudev',
@@ -25,7 +26,7 @@ WORLDS = {
             'font-dejavu', 'font-misc-misc', 'font-cursor-misc', 'font-alias'],
     'x11-gpu': ['mesa-dri-gallium', 'mesa-utils'],
 }
-PREFIXES = {'service': '', 'wayland': 'wayland-', 'x11': 'x11-', 'x11-gpu': 'x11-gpu-'}
+PREFIXES = {'base': 'base-', 'service': '', 'wayland': 'wayland-', 'x11': 'x11-', 'x11-gpu': 'x11-gpu-'}
 
 
 def sha256(path):
@@ -87,9 +88,10 @@ def base_packages(rootfs):
 def image_requirements(base):
     # Include the existing root's complete package set, not just forward
     # dependencies of the additions: e.g. libssl and libcrypto upgrade together.
-    service = sorted(set(base + WORLDS['service']))
+    minimal = sorted(set(base + WORLDS['base']))
+    service = sorted(set(minimal + WORLDS['service']))
     x11 = sorted(set(service + WORLDS['x11']))
-    return {'service': service, 'wayland': sorted(set(service + WORLDS['wayland'])),
+    return {'base': minimal, 'service': service, 'wayland': sorted(set(service + WORLDS['wayland'])),
             'x11': x11, 'x11-gpu': sorted(set(x11 + WORLDS['x11-gpu']))}
 
 
@@ -172,8 +174,8 @@ def resolve(refresh=False):
 def configure(lock):
     # Update existing dictionaries in place: image builders and their caller
     # share these references. No network work occurs merely by importing them.
-    import service_image, wayland_image, x11_image, x11_gpu_image
-    for group, module in [('service', service_image), ('wayland', wayland_image),
+    import guest_account, service_image, wayland_image, x11_image, x11_gpu_image
+    for group, module in [('base', guest_account), ('service', service_image), ('wayland', wayland_image),
                           ('x11', x11_image), ('x11-gpu', x11_gpu_image)]:
         module.LOCK[:] = lock['groups'][group]
         module.PACKAGES.clear()

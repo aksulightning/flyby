@@ -92,7 +92,7 @@ class VmInstrumentation : Instrumentation() {
             await(10_000) { pickerSettings.state.value.sharedTree == sharedUri.toString() }
             waitForIdleSync()
             clickStart()
-            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            loginAsRoot(vmService)
             await(30_000) { "FLYBY_SHARED_READY" in vmService.session.transcript.value }
             check("PRETTY_NAME=\"Alpine Linux edge\"" in vmService.session.transcript.value)
             runBlocking { vmService.session.sendInput((
@@ -157,7 +157,7 @@ class VmInstrumentation : Instrumentation() {
             runBlocking { vmService.vm.stop() }
             check(vmService.vm.status.value.state == VmState.STOPPED)
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
-            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            loginAsRoot(vmService)
             runBlocking { vmService.session.sendInput("[ \"\$(cat /root/.flyby-test-$token)\" = $token ] && printf '\\nFLYBY_PERSIST_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_PERSIST_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
@@ -197,7 +197,7 @@ class VmInstrumentation : Instrumentation() {
             check(File(targetContext.filesDir, "vm/default/system.raw").length() == 2L * 1024 * 1024 * 1024)
             check(preferences.state.value.diskGiB == 2)
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
-            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_SYSTEM_READY" in vmService.session.transcript.value && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            loginAsRoot(vmService)
             runBlocking { vmService.session.sendInput("[ \"\$(cat /proc/1/comm)\" = openrc-init ] && rc-service flyby-control status && printf '\\nFLYBY_OPENRC_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_OPENRC_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.session.sendInput("[ \"\$(grep -c '^processor' /proc/cpuinfo)\" = 2 ] && printf '\\nFLYBY_TWO_CPUS_OK\\n'\n".toByteArray()) }
@@ -219,7 +219,7 @@ class VmInstrumentation : Instrumentation() {
             check(File(targetContext.filesDir, "vm/default/system.raw").delete())
             transfer(VmService.ACTION_IMPORT, "Disk imported successfully")
             targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
-            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            loginAsRoot(vmService)
             runBlocking { vmService.session.sendInput("[ \"\$(cat /etc/flyby-system-test)\" = $token ] && printf '\\nFLYBY_RESTORE_OK\\n'\n".toByteArray()) }
             await(15_000) { "\nFLYBY_RESTORE_OK\r\n" in vmService.session.transcript.value }
             runBlocking { vmService.vm.stop() }
@@ -239,7 +239,7 @@ class VmInstrumentation : Instrumentation() {
             // Start is dispatched asynchronously from the UI. The previous
             // boot's transcript remains visible until VmManager starts again.
             // RUNNING is only published after that transcript has been cleared.
-            await(300_000) { vmService.vm.status.value.state == VmState.RUNNING && "FLYBY_ALPINE_READY" in vmService.session.transcript.value }
+            loginAsRoot(vmService)
             runBlocking { vmService.session.sendInput((
                 "i=0; until test -s /run/flyby-wayland/terminal-ready; do " +
                 "i=\$((i+1)); [ \$i -lt 90 ] || break; sleep 1; done\n" +
@@ -264,12 +264,12 @@ class VmInstrumentation : Instrumentation() {
                 view.requestFocus()
                 val input = view.onCreateInputConnection(EditorInfo())
                 input.setComposingText("echo android", 1)
-                input.commitText("echo android > /root/wayland-android-test\n", 1)
+                input.commitText("echo android > /home/flybyuser/wayland-android-test\n", 1)
             }
             runBlocking { vmService.session.sendInput((
-                "i=0; until grep -qx android /root/wayland-android-test 2>/dev/null; do " +
+                "i=0; until grep -qx android /home/flybyuser/wayland-android-test 2>/dev/null; do " +
                 "i=\$((i+1)); [ \$i -lt 30 ] || break; sleep 1; done; " +
-                "grep -qx android /root/wayland-android-test && printf '\\nFLYBY_DISPLAY_IME_OK\\n'\n").toByteArray()) }
+                "grep -qx android /home/flybyuser/wayland-android-test && printf '\\nFLYBY_DISPLAY_IME_OK\\n'\n").toByteArray()) }
             await(45_000) { "\nFLYBY_DISPLAY_IME_OK\r\n" in vmService.session.transcript.value }
             // Recreate while Display is selected; retain the VM and restore the view.
             val displayMonitor = addMonitor(MainActivity::class.java.name, null, false)
@@ -307,6 +307,37 @@ class VmInstrumentation : Instrumentation() {
             runOnMainSync { activity?.finish() }
         }
         finish(result, report)
+    }
+    private fun loginAsRoot(service: VmService) {
+        val password = "Flyby-test-setup-42!"
+        var first = false
+        var second = false
+        var elevate = false
+        var authenticate = false
+        var cursor = 0
+        var userChecked = false
+        await(300_000) {
+            if (service.vm.status.value.state != VmState.RUNNING) return@await false
+            val text = service.session.transcript.value
+            val tail = text.drop(cursor)
+            fun send(value: String) {
+                cursor = text.length
+                runBlocking { service.session.sendInput(value.toByteArray()) }
+            }
+            userChecked = userChecked || "\nFLYBY_USER_OK\r\n" in text
+            when {
+                !first && "New password:" in tail -> { first = true; send(password + "\n") }
+                !second && "Retype password:" in tail -> { second = true; send(password + "\n") }
+                !elevate && "FLYBY_ALPINE_READY" in tail -> {
+                    elevate = true
+                    send("[ \"\$(id -u)\" = 1000 ] && [ \"\$HOME\" = /home/flybyuser ] && ! test -w /etc/passwd && ! doas -n true && printf '\\nFLYBY_USER_OK\\n'\ndoas /bin/sh -l\n")
+                }
+                elevate && !authenticate && "password:" in tail.lowercase() -> { authenticate = true; send(password + "\n") }
+            }
+            val ready = authenticate && "root@flyby:" in text.drop(cursor)
+            if (ready) check(userChecked) { "Ordinary account permission checks failed" }
+            ready
+        }
     }
     private fun clickStart() = clickText("Start")
     private fun clickText(label: String, scroll: Boolean = false) {

@@ -90,7 +90,100 @@ Flyby currently provides development builds rather than a stable release.
 3. Install the APK on a compatible ARM64 Android device. Android may ask you to
    allow installation from that source.
 4. Open Flyby and press **Start**.
-5. Wait in **Terminal** until `root@flyby:~#` appears.
+5. On a fresh disk, set your `flybyuser` password in **Terminal** when asked.
+   Wait until `flybyuser@flyby:~# Flyby
+
+> [!IMPORTANT]
+> **An honest note about this project:** Flyby has been created largely with the
+> help of AI. It may contain mistakes, unfinished ideas or bugs that have not been
+> noticed yet. You do not need to use this app, and you should not trust it with
+> important or irreplaceable data. If you try it, keep backups and treat it as an
+> experimental project—not as a finished or security-audited product.
+
+Flyby is an experimental Android app that runs a small Linux computer inside your
+phone or tablet.
+
+In everyday terms, the app gives you a Linux command line and, optionally, a very
+simple Linux desktop. Linux runs locally on the Android device. Flyby does not need
+Android root access, Termux, QEMU, a remote server or a permanent internet
+connection just to start Linux.
+
+Flyby is mainly for experimenting, learning and development. It is not intended to
+replace Android or to be a polished desktop-computer experience.
+
+## What can Flyby do?
+
+- Start and stop an Alpine Linux system inside Android.
+- Keep Linux files, settings and installed packages between restarts.
+- Provide a terminal for typing Linux commands.
+- Provide an optional basic graphical desktop.
+- Let Linux use the Android device's outgoing internet connection.
+- Share a folder chosen through Android with Linux at `/shared`.
+- Create Linux disks from 1 to 100 GiB.
+- Export and import a compressed `.flyby` backup of the Linux disk.
+- Adjust the virtual machine's memory from 128 to 768 MiB.
+- Choose one or two virtual CPUs in Settings.
+- Enable an experimental virtual GPU for the separate X11 GPU image.
+
+The virtual Linux computer uses one or two virtual processors, selectable in
+Settings. It runs through a built-in RISC-V interpreter, so performance depends heavily on the Android device and is
+not expected to match a normal native Android app.
+
+## The five disk images
+
+A **disk image** is a file that acts like the virtual Linux computer's hard drive.
+It contains the Linux system, installed programs, settings and files. Flyby's Disk
+Creator offers five starting images:
+
+| Image | What it provides | Best for |
+| --- | --- | --- |
+| **Minimal Alpine** | A small Alpine Linux system with a command line and a simple BusyBox startup system. This is the default. | Basic Linux commands, learning and the smallest setup. |
+| **Service Alpine** | Alpine Linux with OpenRC, which can start and manage background services. It has no graphical desktop. | Server-like tools and programs that should run as services. |
+| **Minimal Alpine X11** | Service Alpine plus Xorg, a lightweight window manager and xterm. No Wayland session. | Running X11 applications on Android. |
+| **Alpine X11 GPU** | X11 with experimental Virtio-GPU/VirGL OpenGL acceleration. Requires **Enable GPU** and a compatible Android GLES 3 driver. | Trying 3D X11 applications; use 768 MiB RAM. |
+| **Minimal Alpine Wayland** | Service Alpine plus a simple Weston/Wayland desktop and graphical terminal. | Trying a basic Linux desktop on Android. |
+
+Important things to know about disks:
+
+- Creating any of these images makes a **fresh Linux installation**. It does not
+  upgrade or resize the contents of the current disk.
+- Creating a disk replaces the current SYSTEM disk after confirmation. Export a
+  backup first if you want to keep it.
+- The selected image affects only the next disk you create. Existing disks are not
+  automatically converted when the app is updated.
+- A disk can be configured as 1–100 GiB, but the full amount is not necessarily
+  reserved immediately. It consumes more real Android storage as Linux writes data.
+  Running out of Android storage can damage or interrupt the Linux system.
+- The whole Linux filesystem is persistent, including `/etc`, `/usr`, `/root`
+  and installed packages. Temporary locations such as `/run` and `/tmp` are not.
+- The Linux kernel and startup firmware come from the Android app. Installing a
+  kernel package inside Linux does not replace them.
+- The folder mounted at `/shared` points directly to the Android folder you chose.
+  Changes and deletions there affect the real Android files. It is not included in
+  Flyby disk backups.
+
+More detail is available in
+[Settings, Disk Creator and sharing](docs/settings-and-sharing.md),
+[storage and networking](docs/storage-network.md) and
+[Wayland notes](docs/wayland.md) and [X11 notes](docs/x11.md).
+
+**Enable GPU** can be changed while Linux is stopped. Turning it off prevents
+creation and startup of X11 GPU disks, including imported backups, while retaining
+their files. Turn it back on to use that disk again. Other images do not use the
+GPU. The first GPU implementation retains the current 800 × 600 display path and
+its 10 fps presentation limit. See [X11 GPU notes](docs/x11-gpu.md).
+
+## How to try it
+
+Flyby currently provides development builds rather than a stable release.
+
+1. Open the repository's [Releases](https://github.com/aksulightning/flyby/releases)
+   page.
+2. Choose a release marked as a **prerelease** and download the ARM64 APK.
+3. Install the APK on a compatible ARM64 Android device. Android may ask you to
+   allow installation from that source.
+4. Open Flyby and press **Start**.
+5.  appears. Use `doas COMMAND` for administration.
 6. Type a simple command such as `ls` or `cat /etc/os-release`.
 
 For the graphical image, first stop Linux, open **Settings → Disk Creator**, select

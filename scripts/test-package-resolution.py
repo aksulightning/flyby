@@ -41,7 +41,10 @@ class PackageResolutionTests(unittest.TestCase):
                 item.size = len(content)
                 archive.addfile(item, io.BytesIO(content))
             requirements = image_requirements(base_packages(rootfs))
-        for packages in requirements.values():
+        for image, packages in requirements.items():
+            if image == 'base':
+                self.assertTrue({'libcrypto3', 'libssl3', 'doas'} <= set(packages))
+                continue
             self.assertTrue({'libcrypto3', 'libssl3', 'openrc-init'} <= set(packages))
         self.assertTrue(set(requirements['x11']) <= set(requirements['x11-gpu']))
 

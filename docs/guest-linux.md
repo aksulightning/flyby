@@ -42,8 +42,13 @@ The script creates a root-owned newc archive with fixed timestamps and gzip mtim
 It uses the real minirootfs and installs a small `/init`: mount proc/sys/devtmpfs/
 devpts, set hostname, exec BusyBox init. Its inittab starts a login shell on ttyS0
 and a respawning private control daemon on ttyS1. The shell prints
-`FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. This is an intentional development
-autologin root environment, no password/login management. Alpine's default SSL CA
+`FLYBY_ALPINE_READY` and uses `TERM=xterm-256color`. The initramfs-only diagnostic environment retains its root shell. Fresh persistent
+disks instead open the serial shell as `flybyuser` (UID/GID 1000), with a private
+`/home/flybyuser`. The first serial session asks you to choose a password before
+opening that shell. Desktop clients run as the same user. Root password login
+is locked; `doas COMMAND` authenticates with your user password for administration.
+No default password is shipped. Existing/imported disks retain their accounts.
+Create a fresh disk after exporting your files to use this account arrangement. Alpine's default SSL CA
 bundle is retained for HTTPS. The RTL8169 NIC uses RVVM user-mode sockets.
 Kernel modules and their transitive dependencies come from the pinned linux-lts
 APK. `scripts/guest_modules.py` declares the same module set for initramfs,
