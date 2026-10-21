@@ -430,11 +430,14 @@ struct Gpu::Impl {
             }
             case VIRTIO_GPU_CMD_CTX_CREATE: {
                 auto p = packet<virtio_gpu_ctx_create>(bytes);
+                // context_init=0 is the legacy protocol, not capset ID zero.
                 uint32_t capset = p.context_init & VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK;
                 if (!h.ctx_id || contexts.count(h.ctx_id) || contexts.size() >= 64 || p.nlen > 64 ||
                     (p.context_init & ~VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK) ||
                     (capset != 0 && capset != 1 && capset != 2 && !(vulkan && capset == VenusCapset)) ||
-                    virgl_renderer_context_create_with_flags(h.ctx_id, p.context_init, p.nlen, p.debug_name))
+                    (p.context_init
+                        ? virgl_renderer_context_create_with_flags(h.ctx_id, p.context_init, p.nlen, p.debug_name)
+                        : virgl_renderer_context_create(h.ctx_id, p.nlen, p.debug_name)))
                     throw std::invalid_argument("Invalid GPU context");
                 if (capset == VenusCapset) venusContexts.insert(h.ctx_id);
                 contexts.insert(h.ctx_id); break;
