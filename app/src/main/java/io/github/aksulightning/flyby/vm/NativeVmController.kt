@@ -82,7 +82,12 @@ class NativeVmController(context: android.content.Context, private val log: (Str
                     check("Initramfs unpacking failed" !in tail) { "Guest initramfs could not be unpacked. See Terminal." }
                     check("FLYBY_SHARED_ERROR" !in tail) { "Shared folder could not be mounted. Check folder access in Settings and see Terminal." }
                     check("FLYBY_STORAGE_ERROR" !in tail) { "Persistent disk could not be mounted. See Terminal; disk was not reformatted." }
-                    if ("FLYBY_ALPINE_READY" in tail) { booted = true; log("LINUX_BOOT Alpine shell ready") }
+                    if ("FLYBY_PASSWORD_SETUP" in tail) {
+                        booted = true
+                        log("LINUX_BOOT Alpine is waiting for account password setup")
+                    } else if ("FLYBY_ALPINE_READY" in tail) {
+                        booted = true; log("LINUX_BOOT Alpine shell ready")
+                    }
                 }
                 // Do not treat ordinary shell text mentioning a kernel panic as a fatal event.
                 check(!kernelPanic.containsMatchIn(tail)) {

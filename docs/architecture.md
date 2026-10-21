@@ -13,7 +13,8 @@ The Activity observes `StateFlow<VmStatus>`. `TerminalSession` hides runtime han
 from UI. `VmManager` retains the Phase 1 mutex/cancellation/cleanup state machine:
 STOPPED/ERROR -> STARTING -> RUNNING -> STOPPING -> STOPPED, with failures -> ERROR.
 RUNNING means native execution has started, not that Linux finished booting. The
-`LINUX_BOOT` log identifies the actual guest shell marker. Duplicate starts and
+`LINUX_BOOT` log identifies the guest shell or first-run password setup marker.
+Waiting for the user's first password does not consume the boot timeout. Duplicate starts and
 restarts during cleanup are rejected. A cleanup failure blocks reuse until retried.
 
 Guest provisioning runs under STARTING and can be cancelled. The package's resource

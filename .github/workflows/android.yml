@@ -25,6 +25,11 @@ jobs:
       - run: python3 scripts/prepare-native.py
       - run: cmake -S native -B out/compile -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build out/compile -j2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-host-tools
+          path: out/compile/flyby-*
+          if-no-files-found: error
 
   packages:
     runs-on: ubuntu-24.04
@@ -70,6 +75,34 @@ jobs:
           path: out/venus/
           if-no-files-found: error
 
+  graphics:
+    needs: [packages, venus, native-compile]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: alpine-package-lock
+          path: out/alpine
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: riscv64-venus
+          path: out/venus
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-host-tools
+          path: out/host
+      - run: chmod +x out/host/flyby-*
+      - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu python3-yaml libegl1-mesa-dev libgles2 mesa-vulkan-drivers e2fsprogs
+      - run: |
+          python3 scripts/prepare-native.py
+          python3 scripts/prepare-alpine-riscv64.py
+      - name: OpenGL display and ordinary-user GPU access
+        run: EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
+      - name: Vulkan transport, memory and presentation
+        run: EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
+
   build:
     needs: [packages, venus]
     runs-on: ubuntu-24.04
@@ -108,10 +141,6 @@ jobs:
           cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
           cmake --build out/host -j2
           ctest --test-dir out/host --output-on-failure
-      - name: OpenGL display and ordinary-user GPU access
-        run: EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
-      - name: Vulkan transport, memory and presentation
-        run: EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
       - name: Alpine shell, storage, networking and services
         run: |
           python3 scripts/smoke-boot.py
@@ -178,7 +207,7 @@ jobs:
           script: python3 scripts/test-android.py --network
 
   nightly:
-    needs: [build, android-runtime]
+    needs: [build, android-runtime, graphics]
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
