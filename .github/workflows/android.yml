@@ -16,6 +16,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: sudo apt-get update && sudo apt-get install -y python3-yaml libegl1-mesa-dev libgles2
+      - run: python3 scripts/prepare-native.py
+      - run: cmake -S native -B out/compile -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build out/compile -j2
+
   packages:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -35,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   venus:
-    needs: packages
+    needs: [packages, native-compile]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
