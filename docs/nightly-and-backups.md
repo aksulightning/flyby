@@ -11,8 +11,10 @@ sources are assets of the same release. Do not use GitHub's generic source ZIP a
 an APK or as a substitute for the complete corresponding-source bundle.
 
 The [Android workflow](../.github/workflows/android.yml) publishes only after
-**both** host/build/unit and Android API 35 runtime jobs pass. Pushes to
-`codex/main` and manual runs on that branch produce nightlies; PRs cannot publish.
+the host/build/unit, Android API 35 runtime and graphics jobs pass. To request a
+prerelease, run that workflow manually on `codex/main`, or push a commit to that
+branch with `[prerelease]` in its commit message. Other pushes run verification;
+PRs cannot publish.
 This is a tested-build channel, not a daily timer.
 
 Nightlies use an explicit `out/signing/debug.keystore` selected with
