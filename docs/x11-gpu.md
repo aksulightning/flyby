@@ -90,6 +90,9 @@ The check fills a Vulkan buffer on a queue, waits for its fence and verifies
 mapped memory. CI runs these through the real RISC-V guest with a software host
 Vulkan driver; physical Android GPU behavior still needs device testing.
 
-Existing GPU disks are not modified. Their user can install
-`doas apk add mesa-vulkan-virtio vulkan-loader vulkan-tools`; the standalone
-`flyby-vulkan-check` helper is included in new images.
+Alpine does not publish its Venus package for riscv64. GitHub Actions builds
+the client from the exact locked Mesa recipe/source and verified patches.
+`custom_components.venus` in guest provenance records source hashes, build
+image, tool packages and output hashes. It is not represented as an official
+Alpine binary package. Existing GPU disks are not modified; create a new GPU
+disk after exporting files to obtain the driver and acceptance helper.

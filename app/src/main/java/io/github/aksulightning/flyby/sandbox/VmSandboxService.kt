@@ -19,6 +19,9 @@ class VmSandboxService : Service() {
     private val binder = object : IVmSandbox.Stub() {
         override fun vulkanSupport() = NativeBridge.vulkanSupport()
         override fun identity() = intArrayOf(Process.myPid(), Process.myUid())
+        override fun canOpenInternetSocket(): Boolean = try {
+            java.net.DatagramSocket(0).use { true }
+        } catch (_: java.net.SocketException) { false }
         override fun canReadPrivateFile(path: String) = File(path).canRead()
         @Synchronized override fun createVm(files: Array<ParcelFileDescriptor>, ram: Int, cpus: Int, system: Boolean, shared: Boolean, gpu: Boolean, vulkan: Boolean): Long {
             require(handle == 0L && files.size == 4)

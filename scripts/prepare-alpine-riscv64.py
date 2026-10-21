@@ -269,7 +269,7 @@ def provenance(paths):
             license=fields['license'], origin=fields['origin'], commit=fields['commit'], repository='main',
             images=['minimal', 'service', 'wayland', 'x11', 'x11-gpu'],
             source_recipe=f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/{fields['commit']}/main/{fields['origin']}")
-    return dict(branch='edge', rootfs_snapshot=RESOLVED['rootfs_snapshot'],
+    return dict(custom_components={'venus': json.loads((ROOT/'out/venus/build.json').read_text())}, branch='edge', rootfs_snapshot=RESOLVED['rootfs_snapshot'],
                 artifacts={name: dict(url=BASE+url, sha256=digest) for name, (url,digest) in (ARTIFACTS | BASE_PACKAGES | SERVICE_PACKAGES | WAYLAND_PACKAGES | X11_PACKAGES | GPU_PACKAGES).items()},
                 build_tools={'apk-tools-static': dict(url=BASE+APK_TOOL[0], sha256=APK_TOOL[1])},
                 images={'minimal': dict(seed='system.seed', init='BusyBox'), 'service': dict(seed='service.seed', init='OpenRC'),

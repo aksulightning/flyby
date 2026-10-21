@@ -19,6 +19,19 @@ def build(x11, root, paths):
                     *[str(paths[name]) for name in PACKAGES]], check=True)
     if not (root/'usr/lib/dri/virtio_gpu_dri.so').exists():
         raise ValueError('GPU image requires the Mesa Virtio-GPU driver')
+    # The RISC-V Venus client is built from this workflow's locked Mesa source.
+    import hashlib
+    venus = ROOT/'out/venus'
+    metadata = json.loads((venus/'build.json').read_text())
+    for name, expected in metadata['files'].items():
+        if hashlib.sha256((venus/name).read_bytes()).hexdigest() != expected:
+            raise ValueError('Venus build artifact checksum mismatch')
+    if metadata['architecture'] != 'riscv64':
+        raise ValueError('Venus build must target riscv64')
+    shutil.copy2(venus/'libvulkan_virtio.so', root/'usr/lib/libvulkan_virtio.so')
+    icds = root/'usr/share/vulkan/icd.d'
+    icds.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(venus/'virtio_icd.riscv64.json', icds/'virtio_icd.riscv64.json')
     # Build a tiny target-ABI Vulkan acceptance client against the exact
     # installed guest loader/musl, without running target code on the host.
     helper = root/'usr/local/bin/flyby-vulkan-check'

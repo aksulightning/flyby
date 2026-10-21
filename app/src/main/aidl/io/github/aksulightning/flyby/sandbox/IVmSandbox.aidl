@@ -6,6 +6,7 @@ interface IVmSandbox {
     int[] identity();
     String vulkanSupport();
     boolean canReadPrivateFile(String path);
+    boolean canOpenInternetSocket();
     long createVm(in ParcelFileDescriptor[] resources, int ram, int cpus, boolean system, boolean shared, boolean gpu, boolean vulkan);
     void startVm(long id);
     boolean runningVm(long id);

@@ -88,6 +88,6 @@ if(ANDROID)
   target_sources(flyby_virgl PRIVATE android/memfd.c)
   # memfd_create's libc symbol starts at API 30; the syscall is available on
   # supported Android kernels and keeps anonymous memory independent of paths.
-  set_source_files_properties("${VIRGL}/src/mesa/util/os_file.c" PROPERTIES
+  set_source_files_properties("${VIRGL}/src/mesa/util/os_file.c" "${VIRGL}/src/mesa/util/anon_file.c" PROPERTIES
     COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/android/memfd.h")
 endif()

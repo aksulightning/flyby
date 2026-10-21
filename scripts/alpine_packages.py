@@ -24,7 +24,7 @@ WORLDS = {
     'x11': ['xorg-server', 'xf86-input-libinput', 'twm', 'xterm', 'xauth',
             'xdpyinfo', 'eudev', 'eudev-openrc', 'udev-init-scripts-openrc',
             'font-dejavu', 'font-misc-misc', 'font-cursor-misc', 'font-alias'],
-    'x11-gpu': ['mesa-dri-gallium', 'mesa-utils', 'mesa-vulkan-virtio', 'vulkan-loader', 'vulkan-tools'],
+    'x11-gpu': ['mesa-dri-gallium', 'mesa-utils', 'vulkan-loader', 'vulkan-tools'],
 }
 PREFIXES = {'base': 'base-', 'service': '', 'wayland': 'wayland-', 'x11': 'x11-', 'x11-gpu': 'x11-gpu-'}
 

@@ -284,6 +284,34 @@ class VmInstrumentation : Instrumentation() {
             check(vmService.vm.status.value.state == VmState.RUNNING)
             runBlocking { vmService.vm.stop() }
             check(!runBlocking { vmService.vm.displayFrame(frame) })
+            // Exercise Binder death rather than a normal guest shutdown.
+            targetContext.startForegroundService(Intent(targetContext, VmService::class.java).setAction(VmService.ACTION_START))
+            loginAsRoot(vmService)
+            var worker: io.github.aksulightning.flyby.sandbox.IVmSandbox? = null
+            val workerReady = CountDownLatch(1)
+            val workerConnection = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                    worker = io.github.aksulightning.flyby.sandbox.IVmSandbox.Stub.asInterface(binder)
+                    workerReady.countDown()
+                }
+                override fun onServiceDisconnected(name: ComponentName) = Unit
+            }
+            check(targetContext.bindService(Intent(targetContext, io.github.aksulightning.flyby.sandbox.VmSandboxService::class.java), workerConnection, Context.BIND_AUTO_CREATE))
+            try {
+                check(workerReady.await(10, TimeUnit.SECONDS))
+                val api = checkNotNull(worker)
+                val identity = api.identity()
+                check(identity[0] != Process.myPid() && identity[1] != Process.myUid())
+                check(!api.canReadPrivateFile(currentDisk.path))
+                check(!api.canOpenInternetSocket())
+                try { api.terminate() } catch (_: RemoteException) { /* Expected process death. */ }
+            } finally { targetContext.unbindService(workerConnection) }
+            // This particular test deliberately expects ERROR.
+            val crashDeadline = SystemClock.elapsedRealtime() + 15_000
+            while (vmService.vm.status.value.state != VmState.ERROR && SystemClock.elapsedRealtime() < crashDeadline) SystemClock.sleep(100)
+            check(vmService.vm.status.value.state == VmState.ERROR) { "Worker crash was not reported" }
+            check(currentDisk.isFile && currentDisk.length() > 0)
+
             result = Activity.RESULT_OK
             report.putString("stream", "PASS: JNI validation, shared-folder result before service rebind, Start UI, 128 MiB Alpine boot, SAF /shared read/write/create/rename/recreate/remove, terminal IME, network=$checkNetwork, duplicate start, Activity recreate/background/return, session identity, persistent /root, Night settings UI, 2 GiB Disk Creator, full system root, service export/import, restored /etc after restart, Wayland 800x600 frame, Display IME, Display recreation and Stop\n")
         } catch (failure: Throwable) {

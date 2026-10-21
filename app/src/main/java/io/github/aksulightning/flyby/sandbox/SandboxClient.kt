@@ -47,6 +47,7 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
             check(!api.canReadPrivateFile(File(validated.directory, "kernel").path)) {
                 "VM sandbox unexpectedly has access to private application files"
             }
+            check(!api.canOpenInternetSocket()) { "VM sandbox unexpectedly has internet socket access" }
             log("SANDBOX_BOUND pid=${identity[0]} uid=${identity[1]} private_files=denied")
             val opened = mutableListOf<ParcelFileDescriptor>()
             try {

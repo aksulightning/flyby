@@ -264,6 +264,9 @@ and `libgles2` on Ubuntu). Set
 sdkmanager 'platforms;android-35' 'build-tools;35.0.0' \
   'ndk;27.2.12479018' 'cmake;3.22.1'
 python3 scripts/prepare-native.py
+python3 scripts/alpine_packages.py
+# Requires Docker riscv64 binfmt support for the build-only Venus client.
+python3 scripts/prepare-venus.py
 python3 scripts/prepare-alpine-riscv64.py
 ./gradlew test assembleDebug lintDebug
 ```
