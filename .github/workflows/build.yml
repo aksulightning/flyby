@@ -3,6 +3,7 @@ name: Build APK
 on:
   push:
     branches: ['codex/main']
+    paths-ignore: ['.github/workflows/gpu-interfaces.yml']
   workflow_dispatch:
 
 permissions:

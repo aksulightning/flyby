@@ -19,6 +19,6 @@ jobs:
           root = Path('native/vendor/virglrenderer')
           for name in ['src/venus/meson.build', 'src/virglrenderer.h', 'src/virgl_resource.c', 'src/venus/vkr_device_memory.c', 'src/meson.build']:
               print('\nFILE: '+name, flush=True)
-              print((root/name).read_text(), flush=True)
+              print((root/name).read_text() if (root/name).exists() else 'MISSING', flush=True)
           print('GENERATED PROTOCOL HEADERS')
           print('\n'.join(str(p) for p in root.rglob('*protocol*')))
