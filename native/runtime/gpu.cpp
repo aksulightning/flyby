@@ -68,6 +68,7 @@ struct Gpu::Impl {
     EGLSurface surface = EGL_NO_SURFACE;
     EGLContext rootContext = EGL_NO_CONTEXT;
     bool renderer = false;
+    struct GlContext { EGLContext context; EGLSurface surface; };
     struct Resource { std::vector<iovec> backing; uint64_t size = 0; uint32_t width, height, format;
         bool blob = false; void* mapping = nullptr; uint64_t offset = 0, mappedSize = 0; };
     std::unordered_map<uint32_t, Resource> resources;
@@ -185,10 +186,28 @@ struct Gpu::Impl {
                 // ctx0 and all guest contexts must see the same textures/buffers.
                 // Our persistent root is outside VirGL, so even its first context
                 // (shared=false in the callback) joins that root's share group.
-                return static_cast<Impl*>(p)->context(true, params->minor_ver);
+                auto& g = *static_cast<Impl*>(p);
+                auto context = g.context(true, params->minor_ver);
+                const EGLint size[] = {EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE};
+                auto surface = eglCreatePbufferSurface(g.eglDisplay, g.eglConfig, size);
+                if (context == EGL_NO_CONTEXT || surface == EGL_NO_SURFACE) {
+                    if (context != EGL_NO_CONTEXT) eglDestroyContext(g.eglDisplay, context);
+                    if (surface != EGL_NO_SURFACE) eglDestroySurface(g.eglDisplay, surface);
+                    return nullptr;
+                }
+                return new GlContext{context, surface};
             };
-            c.destroy_gl_context = [](void* p, void* ctx) { auto& g = *static_cast<Impl*>(p); eglDestroyContext(g.eglDisplay, ctx); };
-            c.make_current = [](void* p, int, void* ctx) { auto& g = *static_cast<Impl*>(p); return eglMakeCurrent(g.eglDisplay, g.surface, g.surface, ctx) ? 0 : -1; };
+            c.destroy_gl_context = [](void* p, void* ctx) {
+                auto& g = *static_cast<Impl*>(p); auto* gl = static_cast<GlContext*>(ctx);
+                if (gl) { eglDestroyContext(g.eglDisplay, gl->context); eglDestroySurface(g.eglDisplay, gl->surface); delete gl; }
+            };
+            c.make_current = [](void* p, int, void* ctx) {
+                auto& g = *static_cast<Impl*>(p); auto* gl = static_cast<GlContext*>(ctx);
+                // Renderer fence workers cannot share a current EGLSurface
+                // with the submission thread, even when contexts share objects.
+                return eglMakeCurrent(g.eglDisplay, gl ? gl->surface : EGL_NO_SURFACE,
+                    gl ? gl->surface : EGL_NO_SURFACE, gl ? gl->context : EGL_NO_CONTEXT) ? 0 : -1;
+            };
             c.write_fence = [](void* p, uint32_t id) {
                 auto& g = *static_cast<Impl*>(p);
                 std::lock_guard lock(g.callbackMutex); g.retiredLegacy.push_back(id);
@@ -462,7 +481,12 @@ struct Gpu::Impl {
                         r.width != Display::Width || r.height != Display::Height ||
                         (r.format != 1 && r.format != 2 && r.format != 67 && r.format != 68)) throw std::invalid_argument("Unsupported scanout mode");
                 }
-                scanout = p.resource_id; break;
+                scanout = p.resource_id;
+                // Page flips can flush the new buffer before selecting it.
+                // Present on selection too, otherwise alternating buffers
+                // never match scanout when RESOURCE_FLUSH arrives.
+                if (scanout) present();
+                break;
             }
             case VIRTIO_GPU_CMD_RESOURCE_FLUSH: {
                 auto p = packet<virtio_gpu_resource_flush>(bytes); resource(p.resource_id);

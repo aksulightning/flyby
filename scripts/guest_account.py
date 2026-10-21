@@ -52,10 +52,15 @@ def configure(root):
 # This fixed root-owned console entry point is never callable through doas.
 # No password, password hash or reusable credential ships in an image.
 if grep -Eq '^flybyuser:(!|\\*|:)' /etc/shadow; then
+    original_tty=$(stty -g) || exit 1
+    trap 'stty "$original_tty"' 0 1 2 15
+    stty -echo || exit 1
     printf '\\nFLYBY_PASSWORD_SETUP\\nSet a password for flybyuser to enable doas.\\n'
     until passwd flybyuser; do
         echo 'Password setup failed; please try again.'
     done
+    stty "$original_tty" || exit 1
+    trap - 0 1 2 15
 fi
 exec su - flybyuser
 """, 0o755)

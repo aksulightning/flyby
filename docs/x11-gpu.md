@@ -79,7 +79,8 @@ The guest's Vulkan calls use Venus through Virtio-GPU context initialization,
 blob resources, a bounded 128 MiB host-visible window, and per-context timeline
 fences. Host-visible memory is exposed through interpreted MMIO accesses;
 the guest never supplies a host pointer. Mappings must fit the window and cannot
-overlap. Existing GPU resource and context limits remain in effect.
+overlap. Existing GPU resource and context limits remain in effect. The blob limit bounds
+shared transport memory; driver-internal Vulkan allocations are not fully accounted.
 
 Presentation uses Mesa's `MESA_VK_WSI_DEBUG=sw` path to copy Vulkan results into
 the X11 display. Vulkan commands still execute through the host driver, while

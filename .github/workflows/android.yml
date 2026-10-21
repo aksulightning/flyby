@@ -103,11 +103,17 @@ jobs:
         run: |
           python3 scripts/prepare-native.py
           python3 scripts/prepare-alpine-riscv64.py
-      - name: Native build and Alpine shell smoke test
+      - name: Build host runtime and validate core initialization
         run: |
           cmake -S native -B out/host -DCMAKE_BUILD_TYPE=Release
           cmake --build out/host -j2
           ctest --test-dir out/host --output-on-failure
+      - name: OpenGL display and ordinary-user GPU access
+        run: EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
+      - name: Vulkan transport, memory and presentation
+        run: EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
+      - name: Alpine shell, storage, networking and services
+        run: |
           python3 scripts/smoke-boot.py
           FLYBY_CPUS=2 python3 scripts/smoke-boot.py
           python3 scripts/test-storage.py
@@ -117,11 +123,11 @@ jobs:
           python3 scripts/test-network.py
           python3 scripts/test-service.py
           python3 scripts/test-kernel-update.py
+      - name: Wayland and X11 desktop input
+        run: |
           python3 scripts/test-wayland.py
           python3 scripts/test-x11.py
           FLYBY_CPUS=2 python3 scripts/test-x11.py
-          EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
-          EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 

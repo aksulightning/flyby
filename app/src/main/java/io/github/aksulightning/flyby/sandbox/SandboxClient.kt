@@ -17,6 +17,7 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
     @Volatile private var remote: IVmSandbox? = null
     private var connection: ServiceConnection? = null
     private var broker = 0L
+    @Volatile private var death: CompletableDeferred<Unit>? = null
     private val closeMutex = kotlinx.coroutines.sync.Mutex()
     private fun runtime() = checkNotNull(remote) { "VM sandbox disconnected" }
 
@@ -27,6 +28,12 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
                 if (connection !== this) return
                 val api = IVmSandbox.Stub.asInterface(service)
+                val died = CompletableDeferred<Unit>()
+                death = died
+                try { service.linkToDeath({ died.complete(Unit) }, 0) }
+                catch (failure: RemoteException) {
+                    died.complete(Unit); connected.completeExceptionally(failure); return
+                }
                 remote = api
                 connected.complete(api)
             }
@@ -74,16 +81,25 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
     }
     suspend fun close(): Unit = closeMutex.withLock {
         val api = remote
+        val died = death
         remote = null
-        try { api?.terminate() } catch (_: RemoteException) { /* Worker exit is expected. */ }
+        try { api?.terminate() } catch (_: RemoteException) { died?.complete(Unit) }
         finally {
             val link = connection
             connection = null
             if (link != null) withContext(NonCancellable + Dispatchers.Main) {
                 runCatching { context.unbindService(link) }
             }
-            if (broker != 0L) { NativeBridge.destroyNetworkBroker(broker); broker = 0L }
+            try {
+                if (died != null) withContext(NonCancellable) {
+                    withTimeout(5_000) { died.await() }
+                    if (death === died) death = null
+                }
+            } finally {
+                if (broker != 0L) { NativeBridge.destroyNetworkBroker(broker); broker = 0L }
+            }
         }
+        Unit
     }
     fun startVm(id: Long) = runtime().startVm(id)
     fun runningVm(id: Long) = runtime().runningVm(id)
