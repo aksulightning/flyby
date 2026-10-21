@@ -315,6 +315,9 @@ def main():
     subprocess.run([str(apk), '--root', str(config_dir/'system-root'), '--arch', 'riscv64',
                     '--no-scripts', '--no-network', 'add',
                     *[str(paths[name]) for name in BASE_PACKAGES]], check=True)
+    # Alpine installs bbsuid execute-only. The unprivileged image builder
+    # must read it when copying derived roots; final guest ownership is root.
+    (config_dir/'system-root/bin/bbsuid').chmod(0o4755)
     build_service(config_dir/'system-root', config_dir/'service-root', paths, apk_tool)
     build_wayland(config_dir/'service-root', config_dir/'wayland-root', paths)
     build_x11(config_dir/'service-root', config_dir/'x11-root', paths)
