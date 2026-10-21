@@ -31,6 +31,7 @@ namespace flyby {
 namespace {
 constexpr uint64_t GpuAddress = 0x10004000;
 constexpr unsigned QueueMax = 256;
+constexpr uint32_t VenusCapset = 4; // Virtio-GPU Venus capset, absent from older host UAPI headers.
 constexpr uint64_t HostMemoryBase = 0x20000000, HostMemorySize = 128 * 1024 * 1024;
 constexpr size_t CommandLimit = 4 * 1024 * 1024, MemoryLimit = 128 * 1024 * 1024;
 std::mutex rendererOwner; // virglrenderer has process-global state.
@@ -307,12 +308,12 @@ struct Gpu::Impl {
                 auto p = packet<virtio_gpu_get_capset_info>(bytes);
                 if (p.capset_index > (vulkan ? 2u : 1u)) throw std::invalid_argument("Invalid capset index");
                 virtio_gpu_resp_capset_info r{}; r.hdr = response; r.hdr.type = VIRTIO_GPU_RESP_OK_CAPSET_INFO;
-                r.capset_id = p.capset_index == 2 ? VIRTIO_GPU_CAPSET_VENUS : p.capset_index + 1;
+                r.capset_id = p.capset_index == 2 ? VenusCapset : p.capset_index + 1;
                 virgl_renderer_get_cap_set(r.capset_id, &r.capset_max_version, &r.capset_max_size); return packed(r);
             }
             case VIRTIO_GPU_CMD_GET_CAPSET: {
                 auto p = packet<virtio_gpu_get_capset>(bytes); uint32_t version = 0, size = 0;
-                if (p.capset_id < 1 || (p.capset_id > 2 && !(vulkan && p.capset_id == VIRTIO_GPU_CAPSET_VENUS))) throw std::invalid_argument("Invalid capset");
+                if (p.capset_id < 1 || (p.capset_id > 2 && !(vulkan && p.capset_id == VenusCapset))) throw std::invalid_argument("Invalid capset");
                 virgl_renderer_get_cap_set(p.capset_id, &version, &size);
                 if (p.capset_version > version || size > CommandLimit) throw std::invalid_argument("Invalid capset version");
                 response.type = VIRTIO_GPU_RESP_OK_CAPSET;
@@ -413,10 +414,10 @@ struct Gpu::Impl {
                 uint32_t capset = p.context_init & VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK;
                 if (!h.ctx_id || contexts.count(h.ctx_id) || contexts.size() >= 64 || p.nlen > 64 ||
                     (p.context_init & ~VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK) ||
-                    (capset != 0 && capset != 1 && capset != 2 && !(vulkan && capset == VIRTIO_GPU_CAPSET_VENUS)) ||
+                    (capset != 0 && capset != 1 && capset != 2 && !(vulkan && capset == VenusCapset)) ||
                     virgl_renderer_context_create_with_flags(h.ctx_id, p.context_init, p.nlen, p.debug_name))
                     throw std::invalid_argument("Invalid GPU context");
-                if (capset == VIRTIO_GPU_CAPSET_VENUS) venusContexts.insert(h.ctx_id);
+                if (capset == VenusCapset) venusContexts.insert(h.ctx_id);
                 contexts.insert(h.ctx_id); break;
             }
             case VIRTIO_GPU_CMD_CTX_DESTROY:
@@ -515,7 +516,7 @@ struct Gpu::Impl {
         else if (outputSize < reply.bytes.size()) throw std::runtime_error("GPU response buffer too short");
         ++q.seen;
         if ((hdr.flags & VIRTIO_GPU_FLAG_FENCE) && index == 0) {
-            if (venusContexts.count(hdr.ctx_id)) {
+            if ((hdr.flags & VIRTIO_GPU_FLAG_INFO_RING_IDX) && venusContexts.count(hdr.ctx_id)) {
                 if (++contextSequence == 0) throw std::runtime_error("Vulkan fence counter exhausted");
                 auto id = contextSequence;
                 contextFences.emplace(id, std::move(reply));

@@ -26,6 +26,12 @@ def build(x11, root, paths):
     for name, expected in metadata['files'].items():
         if hashlib.sha256((venus/name).read_bytes()).hexdigest() != expected:
             raise ValueError('Venus build artifact checksum mismatch')
+    installed_versions = {}
+    for block in (root/'lib/apk/db/installed').read_text().strip().split('\n\n'):
+        fields = dict(line.split(':', 1) for line in block.splitlines() if ':' in line)
+        installed_versions[fields['P']] = fields['V']
+    if metadata['mesa_version'] != installed_versions['mesa']:
+        raise ValueError('Venus build does not match the installed Mesa snapshot')
     if metadata['architecture'] != 'riscv64':
         raise ValueError('Venus build must target riscv64')
     shutil.copy2(venus/'libvulkan_virtio.so', root/'usr/lib/libvulkan_virtio.so')

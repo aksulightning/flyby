@@ -57,7 +57,13 @@ jobs:
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
         with:
           platforms: riscv64
-      - run: python3 scripts/prepare-venus.py
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        id: venus-cache
+        with:
+          path: out/venus
+          key: riscv64-venus-${{ hashFiles('out/alpine/lock.json', 'scripts/prepare-venus.py') }}
+      - if: steps.venus-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/prepare-venus.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: riscv64-venus

@@ -41,8 +41,16 @@ jobs:
         run: |
           python3 scripts/prepare-native.py
           python3 scripts/alpine_packages.py
-          python3 scripts/prepare-venus.py
-          python3 scripts/prepare-alpine-riscv64.py
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        id: venus-cache
+        with:
+          path: out/venus
+          key: riscv64-venus-${{ hashFiles('out/alpine/lock.json', 'scripts/prepare-venus.py') }}
+      - name: Build RISC-V Venus from verified source
+        if: steps.venus-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/prepare-venus.py
+      - name: Prepare guest images
+        run: python3 scripts/prepare-alpine-riscv64.py
       # assembleDebug builds Kotlin/Java, Android native libraries and the APK.
       # Guest asset integrity checks remain part of packaging; no test or lint tasks run.
       - name: Compile ARM64 debug APK

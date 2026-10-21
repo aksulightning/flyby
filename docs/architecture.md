@@ -80,7 +80,7 @@ The interpreter, virtual devices and GLES renderer run in a non-exported bound
 service with `isolatedProcess=true`, under a separate Android UID. The started
 foreground VmService owns its binding, wake lock, notification and terminal.
 Startup verifies the worker PID/UID differ and that it cannot read a private
-guest file by pathname. There is no same-process fallback.
+guest file by pathname or create an internet socket. There is no same-process fallback.
 
 Only three read-only guest resource descriptors and the read/write active disk
 descriptor are delegated. RVVM duplicates those descriptors directly; it never

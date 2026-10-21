@@ -177,6 +177,8 @@ def main():
         'Use Alpine abuild for riscv64 with the exact APKBUILD in each directory; package versions/revisions\n'
         'are recorded in guest-provenance.json. Copy these distfiles into abuild SRCDEST for offline fetch.\n'
         'The packaged guest is produced by scripts/prepare-alpine-riscv64.py from official APKs resolved in out/alpine/lock.json.\n'
+        'The RISC-V Venus client is built separately by scripts/prepare-venus.py from the same locked Mesa source and patches.\n'
+        'Its source/compiler/output provenance is in guest-provenance.json custom_components.venus. The Mesa sources above cover it.\n'
         'Sources for every package in that guest, including Linux, BusyBox, apk-tools and OpenSBI, are included.\n')
     hashes = {str(p.relative_to(OUT)):digest(p) for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS.json'}
     (OUT/'SHA256SUMS.json').write_text(json.dumps(hashes,indent=2)+'\n')

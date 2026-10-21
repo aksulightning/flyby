@@ -1,8 +1,11 @@
 # Alpine riscv64 guest
 
-Run `python3 scripts/prepare-alpine-riscv64.py`. It produces the kernel, firmware,
+Resolve packages with `python3 scripts/alpine_packages.py`, build the RISC-V
+Venus client with `python3 scripts/prepare-venus.py`, then run
+`python3 scripts/prepare-alpine-riscv64.py`. It produces the kernel, firmware,
 initramfs, five image seeds and provenance in `app/src/main/assets/vm/`.
-The Linux build host needs Docker, Python/PyYAML, the RISC-V helper compiler and
+The Linux build host needs Docker with riscv64 binfmt for the build-only Mesa
+client, Python/PyYAML, the RISC-V helper compiler and
 e2fsprogs. Guest installation still runs without root or target-architecture
 install scripts.
 
