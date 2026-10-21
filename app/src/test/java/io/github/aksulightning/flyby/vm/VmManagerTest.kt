@@ -20,6 +20,7 @@ class VmManagerTest {
         var failStart = false
         var hangOnStop = false
         var failCleanup = false
+        var blockedNativeExit = false
         var spawnGate: CompletableDeferred<Unit>? = null
         var exit = CompletableDeferred<Int>()
         var lastInput: ByteArray? = null
@@ -29,7 +30,9 @@ class VmManagerTest {
             spawnGate?.await()
             onOutput("guest output".toByteArray())
         }
-        override suspend fun awaitExit() = exit.await()
+        override suspend fun awaitExit() = if (blockedNativeExit)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { exit.await() }
+        else exit.await()
         override suspend fun stop() { stops++; if (!hangOnStop) exit.complete(0) }
         override suspend fun forceStop() {
             forceStops++
@@ -156,6 +159,22 @@ class VmManagerTest {
         stopping.await()
         assertEquals(VmState.STOPPED, manager.status.value.state)
         assertEquals(1, fake.forceStops)
+    }
+
+    @Test fun stopCanTerminateANativeCallThatIgnoresCoroutineCancellation() = runTest {
+        val fake = FakeController().apply { hangOnStop = true; blockedNativeExit = true }
+        val manager = VmManager(backgroundScope, fake, shutdownTimeoutMs = 100,
+            ioDispatcher = StandardTestDispatcher(testScheduler))
+        manager.start(VmConfig(), temporary.guestFiles())
+        runCurrent()
+        val stopping = async { manager.stop() }
+        runCurrent()
+        advanceTimeBy(101)
+        runCurrent()
+        assertTrue("Stop must release the uninterruptible runtime call", stopping.isCompleted)
+        stopping.await()
+        assertEquals(VmState.STOPPED, manager.status.value.state)
+        assertTrue(fake.forceStops > 0)
     }
 
     @Test fun inputOnlyGoesToRunningGuestAndIsNotLogged() = runTest {

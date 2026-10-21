@@ -20,7 +20,7 @@ class NativeVmController(context: android.content.Context, private val log: (Str
     private val runtime = io.github.aksulightning.flyby.sandbox.SandboxClient(context, log)
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
-    private var handle = 0L
+    @Volatile private var handle = 0L
     private var shared: NinePServer? = null
     private var output: (ByteArray) -> Unit = {}
 
@@ -104,9 +104,10 @@ class NativeVmController(context: android.content.Context, private val log: (Str
         mutex.withLock { if (handle != 0L) runtime.requestStopVm(handle) }
     }
     override suspend fun forceStop() = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            if (handle != 0L) { runtime.destroyVm(handle); handle = 0 }
-        }
+        // Never queue termination behind a blocked frame/input Binder call.
+        // Killing the worker releases all in-flight native operations.
+        handle = 0L
+        runtime.close()
     }
     override suspend fun sendInput(bytes: ByteArray) = withContext(Dispatchers.IO) {
         mutex.withLock { check(handle != 0L) { "VM stopped" }; runtime.inputVm(handle, bytes) }

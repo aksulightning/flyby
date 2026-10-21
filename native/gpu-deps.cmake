@@ -91,3 +91,7 @@ if(ANDROID)
   set_source_files_properties("${VIRGL}/src/mesa/util/os_file.c" "${VIRGL}/src/mesa/util/anon_file.c" PROPERTIES
     COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/android/memfd.h")
 endif()
+
+# The pinned allocator bypasses the upstream dynamic-loader switch.
+set_source_files_properties("${VIRGL}/src/venus/vkr_allocator.c" PROPERTIES
+  COMPILE_DEFINITIONS "vkGetInstanceProcAddr=flyby_vkGetInstanceProcAddr")

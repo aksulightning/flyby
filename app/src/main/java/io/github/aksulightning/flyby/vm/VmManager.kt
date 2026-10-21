@@ -69,7 +69,8 @@ class VmManager(
                 throw cancelled
             } catch (failure: Exception) {
                 log("NATIVE_ERROR ${failure.message}")
-                result = VmStatus(VmState.ERROR, failure.message ?: failure.javaClass.simpleName)
+                result = if (current.value.state == VmState.STOPPING) VmStatus(VmState.STOPPED)
+                    else VmStatus(VmState.ERROR, failure.message ?: failure.javaClass.simpleName)
             } finally {
                 withContext(NonCancellable) {
                     var cleanupFailed = false
@@ -144,7 +145,11 @@ class VmManager(
                 job.cancel()
             }
         }
-        job.join() // run's finally performs forceStop and reaps before publishing STOPPED.
+        // A native Binder call is not cancellable by coroutine cancellation.
+        // Terminate its worker first, so the call and run's finally can finish.
+        kotlinx.coroutines.yield()
+        if (!job.isCompleted) runCatching { controller?.forceStop() }.onFailure { log("NATIVE_ERROR termination: ${it.message}") }
+        job.join() // run's finally retries cleanup before publishing STOPPED.
     }
 
     override suspend fun resize(rows: Int, cols: Int) {

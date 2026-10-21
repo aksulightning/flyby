@@ -5,6 +5,7 @@ import android.os.*
 import io.github.aksulightning.flyby.nativebridge.NativeBridge
 import io.github.aksulightning.flyby.vm.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.withLock
 import java.io.DataInputStream
 import java.io.File
 import java.nio.ByteBuffer
@@ -16,6 +17,7 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
     @Volatile private var remote: IVmSandbox? = null
     private var connection: ServiceConnection? = null
     private var broker = 0L
+    private val closeMutex = kotlinx.coroutines.sync.Mutex()
     private fun runtime() = checkNotNull(remote) { "VM sandbox disconnected" }
 
     suspend fun createVm(files: GuestFiles, ram: Int, cpus: Int, shared: Boolean, gpu: Boolean, vulkan: Boolean): Long {
@@ -70,7 +72,7 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
             throw failure
         }
     }
-    suspend fun close() {
+    suspend fun close(): Unit = closeMutex.withLock {
         val api = remote
         remote = null
         try { api?.terminate() } catch (_: RemoteException) { /* Worker exit is expected. */ }

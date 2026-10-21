@@ -4,6 +4,17 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
+// virglrenderer 1.1.1's allocator still references this entry point even
+// with ENABLE_VULKAN_DLOAD. Keep it lazy so GLES-only devices remain usable.
+extern "C" PFN_vkVoidFunction flyby_vkGetInstanceProcAddr(VkInstance instance, const char *name) {
+#ifdef __ANDROID__
+    static void *loader = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+#else
+    static void *loader = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
+#endif
+    static auto proc = loader ? reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(loader, "vkGetInstanceProcAddr")) : nullptr;
+    return proc ? proc(instance, name) : nullptr;
+}
 namespace flyby {
 VulkanSupport probeVulkan() {
 #ifdef __ANDROID__

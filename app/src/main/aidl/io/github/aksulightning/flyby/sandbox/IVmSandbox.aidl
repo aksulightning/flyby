@@ -20,5 +20,5 @@ interface IVmSandbox {
     boolean displayInputVm(long id, in byte[] reports);
     byte[] networkOutputVm(long id);
     void networkInputVm(long id, in byte[] data);
-    void terminate();
+    oneway void terminate();
 }
