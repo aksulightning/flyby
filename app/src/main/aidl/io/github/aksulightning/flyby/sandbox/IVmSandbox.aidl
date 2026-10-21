@@ -4,8 +4,9 @@ import android.os.ParcelFileDescriptor;
 // a ContentResolver, settings, a general-purpose file opener or a command runner.
 interface IVmSandbox {
     int[] identity();
+    String vulkanSupport();
     boolean canReadPrivateFile(String path);
-    long createVm(in ParcelFileDescriptor[] resources, int ram, int cpus, boolean system, boolean shared, boolean gpu);
+    long createVm(in ParcelFileDescriptor[] resources, int ram, int cpus, boolean system, boolean shared, boolean gpu, boolean vulkan);
     void startVm(long id);
     boolean runningVm(long id);
     void requestStopVm(long id);

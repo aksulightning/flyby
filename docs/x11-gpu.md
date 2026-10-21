@@ -3,7 +3,8 @@
 This separate image adds experimental OpenGL acceleration to the X11/twm/xterm
 image. The guest's Mesa VirGL driver talks to a Virtio 1.0 MMIO GPU implemented
 in Flyby. A dedicated native thread translates commands using virglrenderer and
-Android EGL/OpenGL ES. No root access, host DRM nodes or Vulkan are required.
+Android EGL/OpenGL ES. No Android root access or host DRM nodes are required. Vulkan is an optional,
+experimental Venus path described below.
 Supported OpenGL features depend on the device's GLES driver and VirGL.
 
 1. Stop Linux and export the current disk if you need its contents.
@@ -26,7 +27,7 @@ never converts an existing disk to the GPU image.
 - OpenGL ES 3 support is required on the host. EGL/VirGL initialization failure
   is reported as a startup error and leaves the disk intact.
 - The GPU image explicitly selects VirGL; it does not silently fall back to
-  guest-side software rendering. It does not provide Vulkan.
+  guest-side software rendering. Vulkan remains disabled unless Experimental Vulkan is enabled.
 - Display is fixed to 800 × 600, with readback into Flyby's existing Android
   Bitmap view. Presentation is still limited to 10 fps. 3D commands are accelerated,
   but readback and interpreted RISC-V execution limit performance.
@@ -38,7 +39,8 @@ never converts an existing disk to the GPU image.
 
 The native source archives and hashes are pinned in `scripts/prepare-native.py`.
 `native/gpu-deps.cmake` builds a GLES-only renderer, without GBM/DRM, GLX,
-Vulkan, video or an external render server. The small Android adapters use public
+video or an external render server. Venus dynamically loads the system Vulkan
+loader when requested. The small Android adapters use public
 NDK APIs for the embedded Mesa utilities. Source archives and notices are included
 in the corresponding-source release and APK license viewer.
 
@@ -58,3 +60,36 @@ Linux host builds need EGL headers and GLES runtime libraries (`libegl1-mesa-dev
 and `libgles2` on Ubuntu), plus Python 3/PyYAML for upstream source generation.
 Android builds use the pinned NDK's EGL headers. GPU disk gating and backup
 roundtrips also have JVM tests in `GpuImageTest`.
+
+## Experimental Vulkan
+
+Stop Linux, enable GPU and Experimental Vulkan, and use a newly created X11 GPU
+disk. New GPU images include Mesa's RISC-V Venus ICD, the Vulkan loader,
+`vulkaninfo`, `vkcube`, and `flyby-vulkan-check`. Ordinary applications and
+these checks run as `flybyuser`; only the virtual GPU render nodes are granted
+to that user.
+
+The startup probe runs inside the isolated worker. Android needs Vulkan 1.1,
+VK_EXT_external_memory_dma_buf, VK_EXT_image_drm_format_modifier and
+VK_EXT_queue_family_foreign. Meeting these requirements is a compatibility
+candidate, not a promise: external memory mapping depends on the phone driver.
+Initialization/mapping errors are reported; turn Vulkan off to retain OpenGL.
+
+The guest's Vulkan calls use Venus through Virtio-GPU context initialization,
+blob resources, a bounded 128 MiB host-visible window, and per-context timeline
+fences. Host-visible memory is exposed through interpreted MMIO accesses;
+the guest never supplies a host pointer. Mappings must fit the window and cannot
+overlap. Existing GPU resource and context limits remain in effect.
+
+Presentation uses Mesa's `MESA_VK_WSI_DEBUG=sw` path to copy Vulkan results into
+the X11 display. Vulkan commands still execute through the host driver, while
+presentation retains CPU copying and the existing 800x600/10fps limit.
+
+Try `vulkaninfo --summary`, `flyby-vulkan-check`, then `vkcube --c 60`.
+The check fills a Vulkan buffer on a queue, waits for its fence and verifies
+mapped memory. CI runs these through the real RISC-V guest with a software host
+Vulkan driver; physical Android GPU behavior still needs device testing.
+
+Existing GPU disks are not modified. Their user can install
+`doas apk add mesa-vulkan-virtio vulkan-loader vulkan-tools`; the standalone
+`flyby-vulkan-check` helper is included in new images.

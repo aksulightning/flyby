@@ -14,6 +14,7 @@ extern "C" {
 }
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
@@ -140,18 +141,18 @@ struct Vm::Impl {
     }
 };
 Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
-       bool fullSystem, bool sharedFolder, bool gpuEnabled)
+       bool fullSystem, bool sharedFolder, bool gpuEnabled, bool vulkanEnabled)
     : Vm(std::array<std::string,3>{dir+"/kernel", dir+"/firmware", dir+"/initrd"},
-         memoryMiB, cpus, diskPath, fullSystem, sharedFolder, gpuEnabled, false) {}
+         memoryMiB, cpus, diskPath, fullSystem, sharedFolder, gpuEnabled, false, vulkanEnabled) {}
 Vm::Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned cpus,
        const std::string &diskPath, bool fullSystem, bool sharedFolder, bool gpuEnabled,
-       bool proxyNetwork)
+       bool proxyNetwork, bool vulkanEnabled)
     : impl(std::make_unique<Impl>()) {
     if (!diskPath.empty()) {
         std::unique_ptr<rvfile_t, decltype(&rvclose)> disk(rvopen(diskPath.c_str(), RVFILE_READ), rvclose);
         std::array<char, 16> label{};
         if (!disk || rvread(disk.get(), label.data(), label.size(), 1144) != label.size())
-            throw std::runtime_error("Cannot read disk label");
+            throw std::runtime_error(std::string("Cannot read disk label: ") + std::strerror(errno));
         if (std::string(label.data(), 13) == "flyby-x11-gpu" && !gpuEnabled)
             throw std::invalid_argument("This X11 GPU disk requires GPU. Enable GPU in Settings before starting Linux.");
     }
@@ -178,7 +179,7 @@ Vm::Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned 
         !rvvm_ns16550a_init(m, &impl->shared.dev, SharedUart, 0, irq, 8) ||
         !rvvm_ns16550a_init(m, &impl->displayInput.dev, 0x10003000, 0, irq, 9))
         throw std::runtime_error("Native board initialization failed");
-    if (gpuEnabled) impl->gpu = std::make_unique<Gpu>(m, irq, impl->display);
+    if (gpuEnabled) impl->gpu = std::make_unique<Gpu>(m, irq, impl->display, vulkanEnabled);
     else impl->display.attach(m);
     const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
     if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
@@ -203,6 +204,8 @@ Vm::Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned 
         command += " flyby.shared=1";
     if (gpuEnabled)
         command += " flyby.gpu=1";
+    if (vulkanEnabled && gpuEnabled)
+        command += " flyby.vulkan=1";
     rvvm_set_cmdline(m, command.c_str());
 }
 Vm::~Vm() {

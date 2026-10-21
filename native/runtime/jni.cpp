@@ -1,6 +1,7 @@
 #include "terminal.h"
 #include "vm.h"
 #include "network.h"
+#include "vulkan-probe.h"
 #include <android/log.h>
 #include <atomic>
 #include <jni.h>
@@ -82,24 +83,29 @@ std::string string(JNIEnv *env, jstring s) {
         error(env, "Unknown native exception");                                                              \
     }
 extern "C" {
+JNIEXPORT jstring JNICALL JNI(vulkanSupport)(JNIEnv *env, jobject) {
+    try { auto support = flyby::probeVulkan();
+        return env->NewStringUTF(((support.available ? "available: " : "unavailable: ") + support.detail).c_str());
+    } CATCH_RET(nullptr)
+}
 JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint ram, jint cpus,
-                                      jboolean system, jboolean shared, jboolean gpu) {
+                                      jboolean system, jboolean shared, jboolean gpu, jboolean vulkan) {
     try {
         return put(vms, std::make_shared<flyby::Vm>(
                             string(env, path), ram, cpus,
-                            string(env, path) + (system ? "/system.raw" : "/disk.raw"), system, shared, gpu));
+                            string(env, path) + (system ? "/system.raw" : "/disk.raw"), system, shared, gpu, vulkan));
     }
     CATCH_RET(0)
 }
 JNIEXPORT jlong JNICALL JNI(createVmFds)(JNIEnv *env, jobject, jint kernel, jint firmware,
-        jint initrd, jint disk, jint ram, jint cpus, jboolean system, jboolean shared, jboolean gpu) {
+        jint initrd, jint disk, jint ram, jint cpus, jboolean system, jboolean shared, jboolean gpu, jboolean vulkan) {
     try {
         if (kernel < 0 || firmware < 0 || initrd < 0 || disk < 0)
             throw std::invalid_argument("Missing delegated descriptor");
         auto path = [](int fd) { return "flyby-fd:" + std::to_string(fd); };
         return put(vms, std::make_shared<flyby::Vm>(
             std::array<std::string,3>{path(kernel), path(firmware), path(initrd)},
-            ram, cpus, path(disk), system, shared, gpu, true));
+            ram, cpus, path(disk), system, shared, gpu, true, vulkan));
     } CATCH_RET(0)
 }
 JNIEXPORT jbyteArray JNICALL JNI(networkOutputVm)(JNIEnv *env, jobject, jlong id) {

@@ -31,6 +31,7 @@ replace Android or to be a polished desktop-computer experience.
 - Adjust the virtual machine's memory from 128 to 768 MiB.
 - Choose one or two virtual CPUs in Settings.
 - Enable an experimental virtual GPU for the separate X11 GPU image.
+- Try experimental Vulkan through Venus on compatible Android GPU drivers.
 
 The virtual Linux computer uses one or two virtual processors, selectable in
 Settings. It runs through a built-in RISC-V interpreter, so performance depends heavily on the Android device and is

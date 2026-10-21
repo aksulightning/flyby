@@ -18,11 +18,12 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
     private var broker = 0L
     private fun runtime() = checkNotNull(remote) { "VM sandbox disconnected" }
 
-    suspend fun createVm(files: GuestFiles, ram: Int, cpus: Int, shared: Boolean, gpu: Boolean): Long {
+    suspend fun createVm(files: GuestFiles, ram: Int, cpus: Int, shared: Boolean, gpu: Boolean, vulkan: Boolean): Long {
         check(connection == null)
         val connected = CompletableDeferred<IVmSandbox>()
         val link = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                if (connection !== this) return
                 val api = IVmSandbox.Stub.asInterface(service)
                 remote = api
                 connected.complete(api)
@@ -53,7 +54,12 @@ class SandboxClient(context: Context, private val log: (String) -> Unit) {
                     opened += ParcelFileDescriptor.open(File(validated.directory, name), ParcelFileDescriptor.MODE_READ_ONLY)
                 val disk = DiskImage.validate(validated.directory, validated.mode)
                 opened += ParcelFileDescriptor.open(disk, ParcelFileDescriptor.MODE_READ_WRITE)
-                val id = api.createVm(opened.toTypedArray(), ram, cpus, validated.mode == DiskMode.SYSTEM, shared, gpu)
+                if (vulkan) {
+                    val support = api.vulkanSupport()
+                    log("VULKAN_PROBE $support")
+                    check(support.startsWith("available:")) { "Vulkan $support" }
+                }
+                val id = api.createVm(opened.toTypedArray(), ram, cpus, validated.mode == DiskMode.SYSTEM, shared, gpu, vulkan)
                 check(id != 0L)
                 broker = NativeBridge.createNetworkBroker()
                 return id

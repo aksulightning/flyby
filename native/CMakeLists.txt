@@ -29,10 +29,19 @@ endif()
 # Ethernet proxy inside the isolated service.
 set_source_files_properties("${RVVM}/src/devices/tap_user.c" PROPERTIES
   COMPILE_DEFINITIONS "tap_open=user_tap_open;tap_attach=user_tap_attach;tap_send=user_tap_send;tap_get_mac=user_tap_get_mac;tap_set_mac=user_tap_set_mac;tap_portfwd=user_tap_portfwd;tap_ifaddr=user_tap_ifaddr;tap_close=user_tap_close")
-set_source_files_properties("${RVVM}/src/util/blk_io.c" PROPERTIES COMPILE_DEFINITIONS "open=flyby_open")
+# Replace the call expression after headers are processed. A macro on open
+# is insufficient: Bionic's large-file aliases may redirect it to open64.
+file(READ "${RVVM}/src/util/blk_io.c" FLYBY_BLK_IO)
+string(REPLACE "int fd = open(filepath, open_flags, 0600);"
+  "extern int flyby_open(const char*, int, ...);\n    int fd = flyby_open(filepath, open_flags, 0600);"
+  FLYBY_BLK_IO "${FLYBY_BLK_IO}")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/flyby-generated")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/flyby-generated/blk_io.c" "${FLYBY_BLK_IO}")
+set_source_files_properties("${RVVM}/src/util/blk_io.c" PROPERTIES HEADER_FILE_ONLY TRUE)
+target_sources(rvvm PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/flyby-generated/blk_io.c")
 target_sources(rvvm PRIVATE runtime/fd-open.c runtime/network.cpp)
 include(gpu-deps.cmake)
-add_library(flyby_runtime STATIC runtime/vm.cpp runtime/display.cpp runtime/gpu.cpp)
+add_library(flyby_runtime STATIC runtime/vm.cpp runtime/display.cpp runtime/gpu.cpp runtime/vulkan-probe.cpp)
 target_link_libraries(flyby_runtime PUBLIC rvvm flyby_virgl)
 target_include_directories(flyby_runtime PUBLIC runtime)
 if(NOT ANDROID)

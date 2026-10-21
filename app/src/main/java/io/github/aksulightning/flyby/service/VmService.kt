@@ -44,6 +44,11 @@ class VmService : Service() {
         settings.gpuEnabled(value)
         return true
     }
+    fun setVulkanEnabled(value: Boolean): Boolean {
+        if (!idle() || (value && !settings.state.value.gpuEnabled)) return false
+        settings.vulkanEnabled(value)
+        return true
+    }
     fun setSharedTree(value: String?): Boolean {
         if (!idle()) return false
         settings.sharedTree(value)
@@ -126,7 +131,7 @@ class VmService : Service() {
                 }
                 scope.launch {
                     val saved = settings.state.value
-                    val accepted = vm.start(VmConfig(memoryMiB = saved.memoryMiB, cpuCount = saved.cpuCount, gpuEnabled = saved.gpuEnabled)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
+                    val accepted = vm.start(VmConfig(memoryMiB = saved.memoryMiB, cpuCount = saved.cpuCount, gpuEnabled = saved.gpuEnabled, vulkanEnabled = saved.vulkanEnabled)) { GuestResources.prepare(this@VmService, DiskMode.SYSTEM) }
                     if (!accepted && vm.status.value.state in listOf(VmState.STOPPED, VmState.ERROR)) {
                         releaseWakeLock()
                         stopForeground(STOP_FOREGROUND_REMOVE)

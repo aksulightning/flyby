@@ -71,12 +71,20 @@ else
 fi"""
     profile.write_text('\n'.join(prompt if line.startswith('export PS1=') else line
                                  for line in profile.read_text().splitlines())+'\n')
+    if (root/'etc/init.d/flyby-x11').exists():
+        write('etc/udev/rules.d/70-flyby-render.rules',
+              'SUBSYSTEM=="drm", KERNEL=="renderD*", GROUP="flybyuser", MODE="0660"\n')
     # Keep privileged device setup separate from ordinary desktop clients.
     for service in ('flyby-x11-wm', 'flyby-x11-terminal', 'flyby-wayland', 'flyby-wayland-terminal'):
         path = root/'etc/init.d'/service
         if path.exists():
             value = path.read_text().replace('supervisor="supervise-daemon"',
-                'supervisor="supervise-daemon"\ncommand_user="flybyuser:flybyuser"\nexport HOME=/home/flybyuser\nexport USER=flybyuser\nexport LOGNAME=flybyuser')
+                'supervisor="supervise-daemon"\ncommand_user="flybyuser:flybyuser"\ndirectory=/home/flybyuser\nexport HOME=/home/flybyuser\nexport USER=flybyuser\nexport LOGNAME=flybyuser')
+            # supervise-daemon opens output files after dropping privileges.
+            # Create fixed log paths as root, then allow the selected user to write.
+            value = value.replace('start_pre() {', 'start_pre() {\n'
+                '    touch "$output_log" "$error_log" || return 1\n'
+                '    chown flybyuser:flybyuser "$output_log" "$error_log" || return 1\n')
             if service == 'flyby-wayland':
                 value = value.replace('chmod 700 "$XDG_RUNTIME_DIR"',
                     'chmod 700 "$XDG_RUNTIME_DIR"\n    chown flybyuser:flybyuser "$XDG_RUNTIME_DIR"\n'
@@ -88,6 +96,9 @@ fi"""
             'chmod 700 /run/flyby-x11\n    chown flybyuser:flybyuser /run/flyby-x11')
         value = value.replace('chmod 600 /run/flyby-x11/Xauthority',
             'chmod 600 /run/flyby-x11/Xauthority\n    chown flybyuser:flybyuser /run/flyby-x11/Xauthority')
+        value = value.replace('xauth -f /run/flyby-x11/Xauthority add :0 MIT-MAGIC-COOKIE-1 "$cookie" || return 1',
+            'xauth -f /run/flyby-x11/Xauthority add :0 MIT-MAGIC-COOKIE-1 "$cookie" || return 1\n'
+            '    chown flybyuser:flybyuser /run/flyby-x11/Xauthority')
         x11.write_text(value)
 
 

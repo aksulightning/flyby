@@ -10,7 +10,7 @@ class Display;
 // renderer teardown finish before RVVM releases guest RAM or its interrupt controller.
 class Gpu {
 public:
-    Gpu(rvvm_machine_t*, rvvm_irq_dev_t*, Display&);
+    Gpu(rvvm_machine_t*, rvvm_irq_dev_t*, Display&, bool vulkan = false);
     ~Gpu();
     void check();
     Gpu(const Gpu&) = delete;

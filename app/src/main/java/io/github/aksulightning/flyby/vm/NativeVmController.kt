@@ -33,7 +33,7 @@ class NativeVmController(context: android.content.Context, private val log: (Str
             log("VM_CREATE")
             try {
                 shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
-                handle = runtime.createVm(files, config.memoryMiB, config.cpuCount, shared != null, gpu)
+                handle = runtime.createVm(files, config.memoryMiB, config.cpuCount, shared != null, gpu, config.vulkanEnabled && gpu)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
                 runtime.startVm(handle)

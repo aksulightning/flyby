@@ -92,8 +92,9 @@ int main(int argc, char **argv) {
     const bool x11 = argc == 5;
     try {
         unsigned cpus = std::getenv("FLYBY_CPUS") ? std::stoul(std::getenv("FLYBY_CPUS")) : 1;
+        const bool vulkan = std::getenv("FLYBY_VULKAN") && std::string(std::getenv("FLYBY_VULKAN")) == "1";
         const bool gpu = std::getenv("FLYBY_GPU") && std::string(std::getenv("FLYBY_GPU")) == "1";
-        flyby::Vm vm(argv[1], gpu ? 768 : 512, cpus, argv[2], true, false, gpu);
+        flyby::Vm vm(argv[1], gpu ? 768 : 512, cpus, argv[2], true, false, gpu, vulkan);
         vm.start();
         try {
             guestTestLogin(vm);
@@ -123,6 +124,12 @@ int main(int argc, char **argv) {
                 }
                 if (colored < 100) throw std::runtime_error("GLX gears did not reach the visible GPU framebuffer");
                 shell(vm, "kill $(cat /tmp/gears.pid)\n");
+            }
+            if (vulkan) {
+                shell(vm, "su flybyuser -c 'vulkaninfo --summary && flyby-vulkan-check'\n");
+                wait(vm, "\r\nFLYBY_VULKAN_TRANSFER_OK\r\n", 180);
+                shell(vm, "su flybyuser -c 'MESA_VK_WSI_DEBUG=sw timeout 120 vkcube --c 20' && echo FLYBY_VULKAN_PRESENT_OK\n");
+                wait(vm, "\r\nFLYBY_VULKAN_PRESENT_OK\r\n", 180);
             }
             auto pixels = waitForDesktop(vm);
             shell(vm, x11

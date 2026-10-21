@@ -1,5 +1,6 @@
 #include "gpu.h"
 #include "display.h"
+#include "vulkan-probe.h"
 #include <sys/uio.h>
 extern "C" {
 #include <rvvm/rvvm_region.h>
@@ -30,6 +31,7 @@ namespace flyby {
 namespace {
 constexpr uint64_t GpuAddress = 0x10004000;
 constexpr unsigned QueueMax = 256;
+constexpr uint64_t HostMemoryBase = 0x20000000, HostMemorySize = 128 * 1024 * 1024;
 constexpr size_t CommandLimit = 4 * 1024 * 1024, MemoryLimit = 128 * 1024 * 1024;
 std::mutex rendererOwner; // virglrenderer has process-global state.
 struct Descriptor { uint64_t address; uint32_t length; uint16_t flags, next; };
@@ -49,6 +51,9 @@ struct Gpu::Impl {
     rvvm_irq_dev_t* irq;
     rvvm_irq_t irqNumber = RVVM_IRQ_INVALID;
     Display& display;
+    const bool vulkan;
+    uint32_t sharedMemorySelect = 0;
+    uint64_t supportedFeatures() const { return 0x100000001ULL | (vulkan ? 0x18ULL : 0); }
     std::mutex mutex;
     std::condition_variable changed;
     std::thread thread;
@@ -62,15 +67,22 @@ struct Gpu::Impl {
     EGLSurface surface = EGL_NO_SURFACE;
     EGLContext rootContext = EGL_NO_CONTEXT;
     bool renderer = false;
-    struct Resource { std::vector<iovec> backing; uint64_t size = 0; uint32_t width, height, format; };
+    struct Resource { std::vector<iovec> backing; uint64_t size = 0; uint32_t width, height, format;
+        bool blob = false; void* mapping = nullptr; uint64_t offset = 0, mappedSize = 0; };
     std::unordered_map<uint32_t, Resource> resources;
     std::unordered_set<uint32_t> contexts;
+    std::unordered_set<uint32_t> venusContexts;
+    std::mutex callbackMutex;
+    std::deque<uint32_t> retiredLegacy;
+    std::deque<uint64_t> retiredContexts;
+    std::unordered_map<uint64_t, Reply> contextFences;
+    uint64_t contextSequence = 0;
     uint64_t allocated = 0;
     uint32_t scanout = 0, nextFence = 0;
     unsigned errorsLogged = 0;
     std::deque<std::pair<uint32_t, Reply>> fences;
 
-    Impl(rvvm_machine_t* m, rvvm_irq_dev_t* i, Display& d) : machine(m), irq(i), display(d) {}
+    Impl(rvvm_machine_t* m, rvvm_irq_dev_t* i, Display& d, bool vk) : machine(m), irq(i), display(d), vulkan(vk) {}
     ~Impl() { shutdown(); }
     void shutdown() {
         { std::lock_guard lock(mutex); stopped = true; changed.notify_all(); }
@@ -92,15 +104,18 @@ struct Gpu::Impl {
         case 0x004: return 2;
         case 0x008: return 16; // GPU device ID
         case 0x00c: return 0x554d4551;
-        case 0x010: return featureSelect < 2 ? 1 : 0; // VIRGL, VERSION_1
+        case 0x010: return featureSelect < 2 ? uint32_t(supportedFeatures() >> (featureSelect * 32)) : 0;
         case 0x034: return queueSelect < 2 ? QueueMax : 0;
         case 0x044: return queueSelect < 2 ? queues[queueSelect].ready : 0;
         case 0x060: return interrupt;
         case 0x070: return status;
-        case 0x0b0: case 0x0b4: return 0xffffffff; // no shared-memory region
+        case 0x0b0: return vulkan && sharedMemorySelect == 1 ? uint32_t(HostMemorySize) : 0xffffffff;
+        case 0x0b4: return vulkan && sharedMemorySelect == 1 ? 0 : 0xffffffff;
+        case 0x0b8: return vulkan && sharedMemorySelect == 1 ? uint32_t(HostMemoryBase) : 0;
+        case 0x0bc: return 0;
         case 0x0fc: return 0; // stable config generation
         case 0x108: return 1; // one scanout
-        case 0x10c: return 2; // VIRGL and VIRGL2 capsets
+        case 0x10c: return vulkan ? 3 : 2; // VIRGL, VIRGL2, optional VENUS
         default: return 0;
         }
     }
@@ -108,6 +123,7 @@ struct Gpu::Impl {
         std::lock_guard lock(mutex);
         switch (offset) {
         case 0x014: featureSelect = value; break;
+        case 0x0ac: sharedMemorySelect = value; break;
         case 0x020:
             if (driverSelect < 2) {
                 unsigned shift = driverSelect * 32;
@@ -124,7 +140,7 @@ struct Gpu::Impl {
                 resetting = true; rvvm_irq_lower(irq, irqNumber); changed.notify_one();
             } else {
                 status = value;
-                if ((status & 8) && ((driverFeatures & ~uint64_t(0x100000001)) || !(driverFeatures & (uint64_t(1) << 32)))) status &= ~8u;
+                if ((status & 8) && ((driverFeatures & ~supportedFeatures()) || !(driverFeatures & (uint64_t(1) << 32)))) status &= ~8u;
             }
             break;
         default:
@@ -148,6 +164,7 @@ struct Gpu::Impl {
         return eglCreateContext(eglDisplay, eglConfig, shared ? rootContext : EGL_NO_CONTEXT, attrs);
     }
     void initRenderer() {
+        if (vulkan) { auto support = probeVulkan(); if (!support.available) throw std::runtime_error("Vulkan unavailable: " + support.detail); }
         eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         EGLint major, minor, count;
         if (eglDisplay == EGL_NO_DISPLAY || !eglInitialize(eglDisplay, &major, &minor) || !eglBindAPI(EGL_OPENGL_ES_API))
@@ -162,7 +179,7 @@ struct Gpu::Impl {
         if (surface == EGL_NO_SURFACE || rootContext == EGL_NO_CONTEXT || !eglMakeCurrent(eglDisplay, surface, surface, rootContext))
             throw std::runtime_error("GPU unavailable: cannot create GLES context");
         static virgl_renderer_callbacks callbacks = [] {
-            virgl_renderer_callbacks c{}; c.version = 1;
+            virgl_renderer_callbacks c{}; c.version = 3;
             c.create_gl_context = [](void* p, int, virgl_renderer_gl_ctx_param* params) -> void* {
                 // ctx0 and all guest contexts must see the same textures/buffers.
                 // Our persistent root is outside VirGL, so even its first context
@@ -173,19 +190,23 @@ struct Gpu::Impl {
             c.make_current = [](void* p, int, void* ctx) { auto& g = *static_cast<Impl*>(p); return eglMakeCurrent(g.eglDisplay, g.surface, g.surface, ctx) ? 0 : -1; };
             c.write_fence = [](void* p, uint32_t id) {
                 auto& g = *static_cast<Impl*>(p);
-                while (!g.fences.empty() && g.fences.front().first <= id) {
-                    g.complete(g.fences.front().second); g.fences.pop_front();
-                }
+                std::lock_guard lock(g.callbackMutex); g.retiredLegacy.push_back(id);
+                g.changed.notify_one();
+            };
+            c.write_context_fence = [](void* p, uint32_t, uint32_t, uint64_t id) {
+                auto& g = *static_cast<Impl*>(p);
+                std::lock_guard lock(g.callbackMutex); g.retiredContexts.push_back(id);
+                g.changed.notify_one();
             };
             return c;
         }();
-        if (virgl_renderer_init(this, VIRGL_RENDERER_USE_GLES, &callbacks))
+        if (virgl_renderer_init(this, VIRGL_RENDERER_USE_GLES | (vulkan ? VIRGL_RENDERER_VENUS | VIRGL_RENDERER_THREAD_SYNC | VIRGL_RENDERER_ASYNC_FENCE_CB : 0), &callbacks))
             throw std::runtime_error("GPU unavailable: VirGL initialization failed");
         renderer = true;
     }
     void cleanupRenderer() {
-        if (renderer) { virgl_renderer_cleanup(this); renderer = false; }
-        resources.clear(); contexts.clear(); fences.clear();
+        if (renderer) { unmapAll(); virgl_renderer_cleanup(this); renderer = false; }
+        resources.clear(); contexts.clear(); venusContexts.clear(); fences.clear(); contextFences.clear();
         if (eglDisplay != EGL_NO_DISPLAY) {
             eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
             if (rootContext != EGL_NO_CONTEXT) eglDestroyContext(eglDisplay, rootContext);
@@ -193,6 +214,37 @@ struct Gpu::Impl {
             eglTerminate(eglDisplay);
         }
         eglReleaseThread();
+    }
+    void unmapAll() {
+        for (auto& [id, res] : resources) if (res.mapping) {
+            virgl_renderer_resource_unmap(id); res.mapping = nullptr;
+        }
+    }
+    void retireFences() {
+        std::deque<uint32_t> legacy;
+        std::deque<uint64_t> perContext;
+        { std::lock_guard lock(callbackMutex);
+          legacy.swap(retiredLegacy); perContext.swap(retiredContexts); }
+        for (auto id : legacy) while (!fences.empty() && fences.front().first <= id) {
+            complete(fences.front().second); fences.pop_front();
+        }
+        for (auto id : perContext) {
+            auto it = contextFences.find(id);
+            if (it != contextFences.end()) { complete(it->second); contextFences.erase(it); }
+        }
+    }
+    void hostMemory(void* data, size_t size, uint64_t off, bool writing) {
+        std::lock_guard lock(mutex);
+        for (auto& [id, res] : resources) {
+            (void)id;
+            if (res.mapping && off >= res.offset && off - res.offset <= res.mappedSize &&
+                size <= res.mappedSize - (off - res.offset)) {
+                auto* ptr = static_cast<uint8_t*>(res.mapping) + off - res.offset;
+                if (writing) std::memcpy(ptr, data, size); else std::memcpy(data, ptr, size);
+                return;
+            }
+        }
+        if (!writing) std::memset(data, 0, size);
     }
     void complete(Reply& reply) {
         auto& q = queues[reply.queue];
@@ -244,7 +296,7 @@ struct Gpu::Impl {
     std::vector<uint8_t> execute(const std::vector<uint8_t>& bytes) {
         auto h = packet<virtio_gpu_ctrl_hdr>(bytes);
         virtio_gpu_ctrl_hdr response{}; response.type = VIRTIO_GPU_RESP_OK_NODATA;
-        response.flags = h.flags & VIRTIO_GPU_FLAG_FENCE; response.fence_id = h.fence_id; response.ctx_id = h.ctx_id;
+        response.flags = h.flags & (VIRTIO_GPU_FLAG_FENCE | VIRTIO_GPU_FLAG_INFO_RING_IDX); response.ring_idx = h.ring_idx; response.fence_id = h.fence_id; response.ctx_id = h.ctx_id;
         try {
             switch (h.type) {
             case VIRTIO_GPU_CMD_GET_DISPLAY_INFO: {
@@ -253,19 +305,73 @@ struct Gpu::Impl {
             }
             case VIRTIO_GPU_CMD_GET_CAPSET_INFO: {
                 auto p = packet<virtio_gpu_get_capset_info>(bytes);
-                if (p.capset_index > 1) throw std::invalid_argument("Invalid capset index");
+                if (p.capset_index > (vulkan ? 2u : 1u)) throw std::invalid_argument("Invalid capset index");
                 virtio_gpu_resp_capset_info r{}; r.hdr = response; r.hdr.type = VIRTIO_GPU_RESP_OK_CAPSET_INFO;
-                r.capset_id = p.capset_index + 1;
+                r.capset_id = p.capset_index == 2 ? VIRTIO_GPU_CAPSET_VENUS : p.capset_index + 1;
                 virgl_renderer_get_cap_set(r.capset_id, &r.capset_max_version, &r.capset_max_size); return packed(r);
             }
             case VIRTIO_GPU_CMD_GET_CAPSET: {
                 auto p = packet<virtio_gpu_get_capset>(bytes); uint32_t version = 0, size = 0;
-                if (p.capset_id < 1 || p.capset_id > 2) throw std::invalid_argument("Invalid capset");
+                if (p.capset_id < 1 || (p.capset_id > 2 && !(vulkan && p.capset_id == VIRTIO_GPU_CAPSET_VENUS))) throw std::invalid_argument("Invalid capset");
                 virgl_renderer_get_cap_set(p.capset_id, &version, &size);
                 if (p.capset_version > version || size > CommandLimit) throw std::invalid_argument("Invalid capset version");
                 response.type = VIRTIO_GPU_RESP_OK_CAPSET;
                 auto result = packed(response); result.resize(sizeof(response) + size);
                 virgl_renderer_fill_caps(p.capset_id, p.capset_version, result.data() + sizeof(response)); return result;
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_CREATE_BLOB: {
+                auto p = packet<virtio_gpu_resource_create_blob>(bytes);
+                if (!vulkan || !p.resource_id || resources.count(p.resource_id) || resources.size() >= 1024 ||
+                    !p.size || p.size > MemoryLimit || allocated > MemoryLimit - p.size ||
+                    (p.blob_mem != VIRTIO_GPU_BLOB_MEM_HOST3D && p.blob_mem != VIRTIO_GPU_BLOB_MEM_GUEST) ||
+                    (p.blob_flags & ~7u) || p.nr_entries > 32768 ||
+                    bytes.size() != sizeof(p) + size_t(p.nr_entries) * sizeof(virtio_gpu_mem_entry) ||
+                    (p.blob_mem == VIRTIO_GPU_BLOB_MEM_HOST3D && (!contexts.count(h.ctx_id) || p.nr_entries)))
+                    throw std::invalid_argument("Invalid Vulkan blob");
+                Resource res{{}, p.size, 0, 0, 0};
+                res.blob = true;
+                uint64_t backingSize = 0;
+                for (unsigned i = 0; i < p.nr_entries; ++i) {
+                    virtio_gpu_mem_entry e; std::memcpy(&e, bytes.data()+sizeof(p)+i*sizeof(e), sizeof(e));
+                    void* ptr = rvvm_get_dma_ptr(machine, e.addr, e.length);
+                    if (!ptr || !e.length || e.length > MemoryLimit - backingSize) throw std::invalid_argument("Invalid blob backing");
+                    backingSize += e.length; res.backing.push_back({ptr, e.length});
+                }
+                if (p.blob_mem == VIRTIO_GPU_BLOB_MEM_GUEST && backingSize < p.size)
+                    throw std::invalid_argument("Short blob backing");
+                virgl_renderer_resource_create_blob_args args{};
+                args.res_handle = p.resource_id; args.ctx_id = h.ctx_id; args.blob_mem = p.blob_mem;
+                args.blob_flags = p.blob_flags; args.blob_id = p.blob_id; args.size = p.size;
+                args.iovecs = res.backing.data(); args.num_iovs = res.backing.size();
+                // Insert first so iovec storage lives until resource destruction.
+                auto [it, added] = resources.emplace(p.resource_id, std::move(res));
+                if (virgl_renderer_resource_create_blob(&args)) {
+                    resources.erase(it); throw std::invalid_argument("Vulkan blob creation failed");
+                }
+                allocated += p.size; break;
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_MAP_BLOB: {
+                auto p = packet<virtio_gpu_resource_map_blob>(bytes); auto& r = resource(p.resource_id);
+                if (!vulkan || !r.blob || r.mapping || p.offset % 4096 || p.offset > HostMemorySize ||
+                    r.size > HostMemorySize - p.offset) throw std::invalid_argument("Invalid blob mapping");
+                for (const auto& [id, other] : resources) if (id != p.resource_id && other.mapping &&
+                    p.offset < other.offset + other.mappedSize && other.offset < p.offset + r.size)
+                    throw std::invalid_argument("Overlapping blob mapping");
+                void* ptr = nullptr; uint64_t size = 0; uint32_t info = 0;
+                if (virgl_renderer_resource_get_map_info(p.resource_id, &info) ||
+                    virgl_renderer_resource_map(p.resource_id, &ptr, &size))
+                    throw std::invalid_argument("Vulkan memory mapping unsupported by host");
+                if (!ptr || size < r.size || size > HostMemorySize - p.offset) {
+                    virgl_renderer_resource_unmap(p.resource_id); throw std::invalid_argument("Invalid mapped blob size");
+                }
+                r.mapping = ptr; r.mappedSize = r.size; r.offset = p.offset;
+                virtio_gpu_resp_map_info reply{}; reply.hdr = response;
+                reply.hdr.type = VIRTIO_GPU_RESP_OK_MAP_INFO; reply.map_info = info; return packed(reply);
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_UNMAP_BLOB: {
+                auto p = packet<virtio_gpu_resource_unmap_blob>(bytes); auto& r = resource(p.resource_id);
+                if (!r.mapping || virgl_renderer_resource_unmap(p.resource_id)) throw std::invalid_argument("Invalid blob unmap");
+                r.mapping = nullptr; r.mappedSize = 0; break;
             }
             case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
                 auto p = packet<virtio_gpu_resource_create_2d>(bytes);
@@ -278,6 +384,7 @@ struct Gpu::Impl {
             }
             case VIRTIO_GPU_CMD_RESOURCE_UNREF: {
                 auto p = packet<virtio_gpu_resource_unref>(bytes); auto cost = resource(p.resource_id).size;
+                if (resource(p.resource_id).mapping) virgl_renderer_resource_unmap(p.resource_id);
                 virgl_renderer_resource_unref(p.resource_id); resources.erase(p.resource_id); allocated -= cost;
                 if (scanout == p.resource_id) scanout = 0; break;
             }
@@ -303,12 +410,18 @@ struct Gpu::Impl {
             }
             case VIRTIO_GPU_CMD_CTX_CREATE: {
                 auto p = packet<virtio_gpu_ctx_create>(bytes);
-                if (!h.ctx_id || contexts.count(h.ctx_id) || contexts.size() >= 64 || p.nlen > 64 || p.context_init ||
-                    virgl_renderer_context_create(h.ctx_id, p.nlen, p.debug_name)) throw std::invalid_argument("Invalid GPU context");
+                uint32_t capset = p.context_init & VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK;
+                if (!h.ctx_id || contexts.count(h.ctx_id) || contexts.size() >= 64 || p.nlen > 64 ||
+                    (p.context_init & ~VIRGL_RENDERER_CONTEXT_FLAG_CAPSET_ID_MASK) ||
+                    (capset != 0 && capset != 1 && capset != 2 && !(vulkan && capset == VIRTIO_GPU_CAPSET_VENUS)) ||
+                    virgl_renderer_context_create_with_flags(h.ctx_id, p.context_init, p.nlen, p.debug_name))
+                    throw std::invalid_argument("Invalid GPU context");
+                if (capset == VIRTIO_GPU_CAPSET_VENUS) venusContexts.insert(h.ctx_id);
                 contexts.insert(h.ctx_id); break;
             }
             case VIRTIO_GPU_CMD_CTX_DESTROY:
                 if (!contexts.erase(h.ctx_id)) throw std::invalid_argument("Unknown GPU context");
+                venusContexts.erase(h.ctx_id);
                 virgl_renderer_context_destroy(h.ctx_id); break;
             case VIRTIO_GPU_CMD_CTX_ATTACH_RESOURCE:
             case VIRTIO_GPU_CMD_CTX_DETACH_RESOURCE: {
@@ -402,6 +515,15 @@ struct Gpu::Impl {
         else if (outputSize < reply.bytes.size()) throw std::runtime_error("GPU response buffer too short");
         ++q.seen;
         if ((hdr.flags & VIRTIO_GPU_FLAG_FENCE) && index == 0) {
+            if (venusContexts.count(hdr.ctx_id)) {
+                if (++contextSequence == 0) throw std::runtime_error("Vulkan fence counter exhausted");
+                auto id = contextSequence;
+                contextFences.emplace(id, std::move(reply));
+                auto ring = hdr.flags & VIRTIO_GPU_FLAG_INFO_RING_IDX ? hdr.ring_idx : 0;
+                if (virgl_renderer_context_create_fence(hdr.ctx_id, 0, ring, id))
+                    throw std::runtime_error("Vulkan fence creation failed");
+                return true;
+            }
             if (++nextFence == 0) throw std::runtime_error("GPU fence counter exhausted; restart Linux");
             uint32_t id = nextFence;
             fences.emplace_back(id, std::move(reply));
@@ -418,11 +540,12 @@ struct Gpu::Impl {
             initialized = true; changed.notify_all();
             while (!stopped) {
                 if (resetting) {
-                    fences.clear(); virgl_renderer_reset(); resources.clear(); contexts.clear();
+                    unmapAll(); fences.clear(); contextFences.clear(); virgl_renderer_reset(); resources.clear(); contexts.clear(); venusContexts.clear();
+                    { std::lock_guard callbackLock(callbackMutex); retiredLegacy.clear(); retiredContexts.clear(); }
                     allocated = scanout = nextFence = 0; resetting = false;
                 }
                 for (unsigned i = 0; i < 32; ++i) { bool worked = process(0); worked = process(1) || worked; if (!worked) break; }
-                virgl_renderer_poll();
+                virgl_renderer_poll(); retireFences();
                 changed.wait_for(lock, std::chrono::milliseconds(2));
             }
         } catch (const std::exception& e) {
@@ -431,8 +554,8 @@ struct Gpu::Impl {
         if (owner.owns_lock()) cleanupRenderer();
     }
 };
-Gpu::Gpu(rvvm_machine_t* machine, rvvm_irq_dev_t* irq, Display& display)
-    : impl(std::make_unique<Impl>(machine, irq, display)) {
+Gpu::Gpu(rvvm_machine_t* machine, rvvm_irq_dev_t* irq, Display& display, bool vulkan)
+    : impl(std::make_unique<Impl>(machine, irq, display, vulkan)) {
     impl->thread = std::thread([this] { impl->run(); });
     { std::unique_lock lock(impl->mutex); impl->changed.wait(lock, [this] { return impl->initialized; }); }
     check();
@@ -448,6 +571,17 @@ Gpu::Gpu(rvvm_machine_t* machine, rvvm_irq_dev_t* irq, Display& display)
     rvvm_reg_desc_t desc{}; desc.addr = GpuAddress; desc.size = 0x1000; desc.attr = RVVM_REG_ATTR_FIX;
     desc.data = impl.get(); desc.type = &type;
     if (!rvvm_region_init(machine, &desc)) throw std::runtime_error("Cannot attach virtual GPU");
+    if (vulkan) {
+        static rvvm_reg_type_t memoryType = [] {
+            rvvm_reg_type_t t{}; t.name = "flyby-gpu-host-memory"; t.min_size = 1; t.max_size = 8;
+            t.read = [](rvvm_reg_dev_t* d, void* data, size_t size, size_t off) { static_cast<Impl*>(rvvm_region_data(d))->hostMemory(data, size, off, false); };
+            t.write = [](rvvm_reg_dev_t* d, const void* data, size_t size, size_t off) { static_cast<Impl*>(rvvm_region_data(d))->hostMemory(const_cast<void*>(data), size, off, true); };
+            return t;
+        }();
+        rvvm_reg_desc_t memory{}; memory.addr = HostMemoryBase; memory.size = HostMemorySize;
+        memory.attr = RVVM_REG_ATTR_FIX; memory.type = &memoryType; memory.data = impl.get();
+        if (!rvvm_region_init(machine, &memory)) throw std::runtime_error("Cannot attach Vulkan host memory");
+    }
     auto* node = rvvm_fdt_init_reg("virtio_mmio", GpuAddress);
     rvvm_fdt_prop_set_str(node, "compatible", "virtio,mmio");
     rvvm_fdt_prop_set_reg(node, "reg", GpuAddress, 0x1000);

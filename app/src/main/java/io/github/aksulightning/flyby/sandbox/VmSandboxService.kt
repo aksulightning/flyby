@@ -17,14 +17,15 @@ class VmSandboxService : Service() {
     private val frameBusy = AtomicBoolean()
     private val frames = Executors.newSingleThreadExecutor()
     private val binder = object : IVmSandbox.Stub() {
+        override fun vulkanSupport() = NativeBridge.vulkanSupport()
         override fun identity() = intArrayOf(Process.myPid(), Process.myUid())
         override fun canReadPrivateFile(path: String) = File(path).canRead()
-        @Synchronized override fun createVm(files: Array<ParcelFileDescriptor>, ram: Int, cpus: Int, system: Boolean, shared: Boolean, gpu: Boolean): Long {
+        @Synchronized override fun createVm(files: Array<ParcelFileDescriptor>, ram: Int, cpus: Int, system: Boolean, shared: Boolean, gpu: Boolean, vulkan: Boolean): Long {
             require(handle == 0L && files.size == 4)
             require(ram in 128..768 && cpus in 1..2)
             resources = files
             handle = NativeBridge.createVmFds(files[0].fd, files[1].fd, files[2].fd, files[3].fd,
-                ram, cpus, system, shared, gpu)
+                ram, cpus, system, shared, gpu, vulkan)
             return handle
         }
         override fun startVm(id: Long) = NativeBridge.startVm(id)

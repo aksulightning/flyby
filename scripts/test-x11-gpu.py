@@ -27,7 +27,7 @@ with (out/'boot.log').open('w') as log:
         result = subprocess.run([str(build/'flyby-wayland-tests'), str(root/'app/src/main/assets/vm'),
                                  str(out/'system.raw'), str(out/'desktop.ppm'), '--x11'],
                                 env=dict(os.environ, FLYBY_GPU='1'), stdout=log,
-                                stderr=subprocess.STDOUT, timeout=600)
+                                stderr=subprocess.STDOUT, timeout=900)
     except subprocess.TimeoutExpired:
         log.flush()
         print((out/'boot.log').read_text(errors='replace')[-18000:])

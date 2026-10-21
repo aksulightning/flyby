@@ -58,7 +58,7 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       - name: Install guest helper compiler
-        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu python3-yaml libegl1-mesa-dev libgles2
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu python3-yaml libegl1-mesa-dev libgles2 mesa-vulkan-drivers
       - name: Prepare verified native sources and Alpine guest
         run: |
           python3 scripts/prepare-native.py
@@ -81,6 +81,7 @@ jobs:
           python3 scripts/test-x11.py
           FLYBY_CPUS=2 python3 scripts/test-x11.py
           EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
+          EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
       - name: Unit tests, debug APK and lint
         run: ./gradlew --no-daemon test assembleDebug assembleDebugAndroidTest lintDebug
 

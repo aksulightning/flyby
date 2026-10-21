@@ -16,10 +16,10 @@ constexpr uint64_t Rtc = 0x00101000;
 class Vm {
   public:
     Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "",
-       bool fullSystem = false, bool sharedFolder = false, bool gpuEnabled = false);
+       bool fullSystem = false, bool sharedFolder = false, bool gpuEnabled = false, bool vulkanEnabled = false);
     Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned cpus,
        const std::string &diskPath, bool fullSystem, bool sharedFolder, bool gpuEnabled,
-       bool proxyNetwork);
+       bool proxyNetwork, bool vulkanEnabled = false);
     ~Vm();
     std::vector<uint8_t> networkOutput();
     void networkInput(const uint8_t *, size_t);

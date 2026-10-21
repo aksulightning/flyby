@@ -1,6 +1,7 @@
 """GPU-required X11 image; a separate seed preserves the small CPU-only image."""
 import json
 import pathlib
+import os
 import shutil
 import subprocess
 
@@ -18,6 +19,19 @@ def build(x11, root, paths):
                     *[str(paths[name]) for name in PACKAGES]], check=True)
     if not (root/'usr/lib/dri/virtio_gpu_dri.so').exists():
         raise ValueError('GPU image requires the Mesa Virtio-GPU driver')
+    # Build a tiny target-ABI Vulkan acceptance client against the exact
+    # installed guest loader/musl, without running target code on the host.
+    helper = root/'usr/local/bin/flyby-vulkan-check'
+    helper.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([os.environ.get('RISCV_CC', 'riscv64-linux-gnu-gcc'), '-Os', '-s',
+                    '-nostdlib', '-ffreestanding', '-fno-builtin', '-fno-stack-protector',
+                    '-mno-relax', '-msmall-data-limit=0', '-Wl,-e,_start',
+                    '-Wl,--dynamic-linker,/lib/ld-musl-riscv64.so.1',
+                    '-I'+str(ROOT/'native/vendor/virglrenderer/src'),
+                    '-L'+str(root/'usr/lib'), '-L'+str(root/'lib'),
+                    '-Wl,-rpath-link,'+str(root/'usr/lib'), '-Wl,-rpath-link,'+str(root/'lib'),
+                    str(ROOT/'native/guest/vulkan-check.c'),
+                    '-l:libvulkan.so.1', '-l:libc.musl-riscv64.so.1', '-o', str(helper)], check=True)
     (root/'etc/flyby-image').write_text('Alpine X11 GPU\n')
     (root/'etc/flyby-requires-gpu').write_text('1\n')
     config = root/'etc/X11/xorg.conf.d/10-flyby.conf'
@@ -36,7 +50,8 @@ def build(x11, root, paths):
     # this image into slow guest-side software rendering.
     environment = 'export MESA_LOADER_DRIVER_OVERRIDE=virtio_gpu\nexport GALLIUM_DRIVER=virgl\n'
     profile = root/'etc/profile.d/x11.sh'
-    profile.write_text(profile.read_text()+environment)
+    profile.write_text(profile.read_text()+environment+
+        "if grep -q 'flyby.vulkan=1' /proc/cmdline; then export MESA_VK_WSI_DEBUG=sw; fi\n")
     for service in ('flyby-x11', 'flyby-x11-wm', 'flyby-x11-terminal'):
         path = root/'etc/init.d'/service
         path.write_text(path.read_text().replace('supervisor=', environment+'supervisor=', 1))

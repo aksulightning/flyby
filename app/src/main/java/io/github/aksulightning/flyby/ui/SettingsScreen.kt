@@ -17,7 +17,7 @@ import io.github.aksulightning.flyby.service.VmService
 
 @Composable
 fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transfer,
-                   preferences: AppSettings, memory: (Int) -> Unit, cpuCount: (Int) -> Unit, gpuEnabled: (Boolean) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
+                   preferences: AppSettings, memory: (Int) -> Unit, cpuCount: (Int) -> Unit, gpuEnabled: (Boolean) -> Unit, vulkanEnabled: (Boolean) -> Unit, createDisk: (Int, ImageVariant) -> Unit,
                    selectShared: () -> Unit, clearShared: () -> Unit, licenses: () -> Unit,
                    export: () -> Unit, import: () -> Unit, back: () -> Unit, modifier: Modifier, error: String? = null) {
     var ram by rememberSaveable(settings.memoryMiB) { mutableStateOf(settings.memoryMiB.toString()) }
@@ -60,6 +60,11 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
             Switch(settings.gpuEnabled, gpuEnabled, enabled = idle)
         }
         Text("Enables the X11 GPU image. When off, X11 GPU disks cannot be created or started, including imported disks. Existing files are kept. Stop Linux before changing GPU. Other images work with GPU off.")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Experimental Vulkan", Modifier.weight(1f).padding(top = 12.dp))
+            Switch(settings.vulkanEnabled, vulkanEnabled, enabled = idle && settings.gpuEnabled)
+        }
+        Text("Adds Vulkan to the X11 GPU image on compatible devices. Startup checks the phone's Vulkan support. If unsupported, turn this off to use OpenGL. New GPU disks include Vulkan tools; older disks need the guest packages installed separately.")
         Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
         ImageVariant.entries.forEach { variant ->
             val available = idle && variant.available(settings.gpuEnabled)

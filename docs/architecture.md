@@ -28,7 +28,7 @@ JNI uses checked monotonically increasing IDs in native registries. A call takes
 shared ownership, so destroying a handle cannot free memory underneath a concurrent
 read. Closed/invalid handles throw Java exceptions. C++ exceptions are caught at
 JNI boundaries. RVVM owns native vCPU/event-loop threads; no instructions cross JNI.
-Main RAM uses RVVM native allocation, not the Kotlin heap. Thread shutdown joins
+Main RAM uses RVVM native allocation in the isolated worker, not the Kotlin heap. Thread shutdown joins
 before RAM/UART objects are freed. ART retains signal handling; RVVM crash signal
 handlers, JIT, KVM, GUI, VFIO and host isolation are disabled.
 

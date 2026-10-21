@@ -75,3 +75,19 @@ if(ANDROID)
   target_include_directories(flyby_virgl PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/android")
   target_link_libraries(flyby_virgl PUBLIC log)
 endif()
+
+# Venus uses its bundled Vulkan protocol headers and dynamically loads the
+# system Vulkan loader. GLES-only devices retain the existing VirGL path.
+file(APPEND "${GPU_GEN}/virgl/config.h" "#define ENABLE_VENUS 1\n#define ENABLE_VULKAN_DLOAD 1\n#define HAVE_MEMFD_CREATE 1\n")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${VIRGL}/src/venus/vkr_device_object.py"
+  -o "${GPU_GEN}/virgl" "${VIRGL}/src/venus/vkr_device_object.json"
+  COMMAND_ERROR_IS_FATAL ANY)
+file(GLOB VENUS_SOURCES "${VIRGL}/src/venus/*.c")
+target_sources(flyby_virgl PRIVATE ${VENUS_SOURCES})
+if(ANDROID)
+  target_sources(flyby_virgl PRIVATE android/memfd.c)
+  # memfd_create's libc symbol starts at API 30; the syscall is available on
+  # supported Android kernels and keeps anonymous memory independent of paths.
+  set_source_files_properties("${VIRGL}/src/mesa/util/os_file.c" PROPERTIES
+    COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/android/memfd.h")
+endif()
