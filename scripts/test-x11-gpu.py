@@ -36,7 +36,7 @@ with (out/'boot.log').open('w') as log:
         print((out/'boot.log').read_text(errors='replace')[-18000:])
         raise SystemExit('X11 GPU test timed out')
 if result.returncode:
-    print((out/'boot.log').read_text(errors='replace')[-60000:])
+    print((out/'boot.log').read_text(errors='replace'))
     frame = out/'desktop.ppm.gears.ppm'
     if frame.exists():
         magic, dimensions, maximum, pixels = frame.read_bytes().split(b'\n', 3)

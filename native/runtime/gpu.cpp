@@ -452,10 +452,14 @@ struct Gpu::Impl {
             }
             case VIRTIO_GPU_CMD_SUBMIT_3D: {
                 auto p = packet<virtio_gpu_cmd_submit>(bytes);
-                if (!contexts.count(h.ctx_id) || p.size % 4 || p.size != bytes.size() - sizeof(p)) throw std::invalid_argument("Invalid GPU submission");
+                if (!contexts.count(h.ctx_id)) throw std::invalid_argument("Unknown GPU submission context");
+                if (p.size % 4 || p.size != bytes.size() - sizeof(p))
+                    throw std::invalid_argument("Invalid GPU submission size: declared=" + std::to_string(p.size) +
+                        " actual=" + std::to_string(bytes.size() - sizeof(p)));
                 // Snapshot the command stream: virgl must never decode mutable guest memory.
                 std::vector<uint32_t> commands(p.size / 4); std::memcpy(commands.data(), bytes.data() + sizeof(p), p.size);
-                if (virgl_renderer_submit_cmd(commands.data(), h.ctx_id, commands.size())) throw std::invalid_argument("GPU submission failed"); break;
+                int result = virgl_renderer_submit_cmd(commands.data(), h.ctx_id, commands.size());
+                if (result) throw std::invalid_argument("GPU submission failed: " + std::to_string(result)); break;
             }
             case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: {
                 auto p = packet<virtio_gpu_transfer_to_host_2d>(bytes); resource(p.resource_id);

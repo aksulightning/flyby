@@ -64,7 +64,7 @@ fun SettingsScreen(settings: Settings, idle: Boolean, transfer: VmService.Transf
             Text("Experimental Vulkan", Modifier.weight(1f).padding(top = 12.dp))
             Switch(settings.vulkanEnabled, vulkanEnabled, enabled = idle && settings.gpuEnabled)
         }
-        Text("Adds Vulkan to the X11 GPU image on compatible devices. Startup checks the phone's Vulkan support. If unsupported, turn this off to use OpenGL. New GPU disks include Vulkan tools; older disks need the guest packages installed separately.")
+        Text("Adds Vulkan to the X11 GPU image on compatible devices. Startup checks the phone's Vulkan support. If unsupported, turn this off to use OpenGL. Create a fresh GPU disk to include the Vulkan driver and tools. Export your files first.")
         Text("Disk Creator", style = MaterialTheme.typography.titleMedium)
         ImageVariant.entries.forEach { variant ->
             val available = idle && variant.available(settings.gpuEnabled)

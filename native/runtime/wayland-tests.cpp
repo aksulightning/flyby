@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
             const std::string runtime = x11 ? "/run/flyby-x11" : "/run/flyby-wayland";
             shell(vm, "i=0; until test -s " + runtime + "/terminal-ready; do i=$((i+1)); [ $i -lt 90 ] || break; sleep 1; done\n");
             shell(vm, x11
-                ? "xdpyinfo && kill -0 $(cat /run/flyby-x11/terminal-ready) && rc-service flyby-x11-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n"
+                ? "xdpyinfo >/dev/null && kill -0 $(cat /run/flyby-x11/terminal-ready) && rc-service flyby-x11-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n"
                 : "cat /var/log/weston.log; test -S /run/flyby-wayland/wayland-0 && kill -0 $(cat /run/flyby-wayland/terminal-ready) && rc-service flyby-wayland-terminal status && echo DISPLAY_TEST_READY_FOR_INPUT\n");
             wait(vm, "\r\nDISPLAY_TEST_READY_FOR_INPUT\r\n");
             if (gpu) {
