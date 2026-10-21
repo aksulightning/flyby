@@ -17,7 +17,7 @@ jobs:
         run: |
           from pathlib import Path
           root = Path('native/vendor/virglrenderer')
-          for name in ['src/virglrenderer.c', 'src/vrend_renderer.c', 'src/venus/vkr_renderer.c', 'src/venus/vkr_context.c']:
+          for name in ['src/virgl_context.h', 'src/proxy/proxy_context.c', 'src/proxy/proxy_renderer.h', 'src/venus/vkr_renderer.h', 'src/venus/vkr_context.h', 'src/virglrenderer.c']:
               print('\nFILE: '+name, flush=True)
               print((root/name).read_text() if (root/name).exists() else 'MISSING', flush=True)
           print('GENERATED PROTOCOL HEADERS')
