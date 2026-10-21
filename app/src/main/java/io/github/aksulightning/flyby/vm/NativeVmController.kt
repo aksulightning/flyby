@@ -1,6 +1,5 @@
 package io.github.aksulightning.flyby.vm
 
-import io.github.aksulightning.flyby.nativebridge.NativeBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -17,7 +16,8 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeout
 
-class NativeVmController(private val log: (String) -> Unit, private val sharedTree: () -> SharedTree? = { null }) : VmController {
+class NativeVmController(context: android.content.Context, private val log: (String) -> Unit, private val sharedTree: () -> SharedTree? = { null }) : VmController {
+    private val runtime = io.github.aksulightning.flyby.sandbox.SandboxClient(context, log)
     private val kernelPanic = Regex("(?:^|[\\r\\n])\\[\\s*[0-9]+\\.[0-9]+] Kernel panic - not syncing:")
     private val mutex = Mutex()
     private var handle = 0L
@@ -33,10 +33,10 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
             log("VM_CREATE")
             try {
                 shared = sharedTree()?.let { it.root(); NinePServer(it, log) }
-                handle = NativeBridge.createVm(files.validated().directory.path, config.memoryMiB, config.cpuCount, files.mode == DiskMode.SYSTEM, shared != null, gpu)
+                handle = runtime.createVm(files, config.memoryMiB, config.cpuCount, shared != null, gpu)
                 check(handle != 0L) { "Native initialization failed" }
                 output = onOutput
-                NativeBridge.startVm(handle)
+                runtime.startVm(handle)
                 log("CONSOLE_CONNECTED")
             } catch (failure: LinkageError) {
                 throw IllegalStateException("Native ARM64 library could not be loaded", failure)
@@ -47,26 +47,31 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
     override suspend fun awaitExit(): Int = withContext(Dispatchers.IO) { coroutineScope {
         val id = mutex.withLock { check(handle != 0L); handle }
         val sharedJob = shared?.let { server -> launch {
-            while (isActive && NativeBridge.runningVm(id)) {
-                val bytes = NativeBridge.sharedOutputVm(id)
+            while (isActive && runtime.runningVm(id)) {
+                val bytes = runtime.sharedOutputVm(id)
                 if (bytes.isEmpty()) delay(5)
-                else server.receive(bytes) { NativeBridge.sharedInputVm(id, it) }
+                else server.receive(bytes) { runtime.sharedInputVm(id, it) }
             }
         } }
+        val networkJob = launch {
+            while (isActive && runtime.runningVm(id)) {
+                if (!runtime.pumpNetwork(id)) delay(5)
+            }
+        }
         try {
         var tail = ""
         var booted = false
         val bootDeadline = System.nanoTime() + 300_000_000_000L
-        while (NativeBridge.runningVm(id)) {
+        while (runtime.runningVm(id)) {
             currentCoroutineContext().ensureActive()
-            val first = NativeBridge.readVm(id, 50)
+            val first = runtime.readVm(id, 50)
             if (first.isNotEmpty()) {
                 // Coalesce bursts to at most ~60 terminal updates/second.
                 delay(16)
                 val batch = ByteArrayOutputStream().apply {
                     write(first)
                     while (size() < 65536) {
-                        val next = NativeBridge.readVm(id, 0)
+                        val next = runtime.readVm(id, 0)
                         if (next.isEmpty()) break
                         write(next)
                     }
@@ -87,36 +92,36 @@ class NativeVmController(private val log: (String) -> Unit, private val sharedTr
             check(booted || System.nanoTime() < bootDeadline) { "Linux did not reach its shell within the startup timeout. See Terminal." }
         }
         while (true) {
-            val bytes = NativeBridge.readVm(id, 0)
+            val bytes = runtime.readVm(id, 0)
             if (bytes.isEmpty()) break
             output(bytes)
         }
         0
-        } finally { sharedJob?.cancelAndJoin() }
+        } finally { sharedJob?.cancelAndJoin(); networkJob.cancelAndJoin() }
     } }
 
     override suspend fun stop() = withContext(Dispatchers.IO) {
-        mutex.withLock { if (handle != 0L) NativeBridge.requestStopVm(handle) }
+        mutex.withLock { if (handle != 0L) runtime.requestStopVm(handle) }
     }
     override suspend fun forceStop() = withContext(Dispatchers.IO) {
         mutex.withLock {
-            if (handle != 0L) { NativeBridge.destroyVm(handle); handle = 0 }
+            if (handle != 0L) { runtime.destroyVm(handle); handle = 0 }
         }
     }
     override suspend fun sendInput(bytes: ByteArray) = withContext(Dispatchers.IO) {
-        mutex.withLock { check(handle != 0L) { "VM stopped" }; NativeBridge.inputVm(handle, bytes) }
+        mutex.withLock { check(handle != 0L) { "VM stopped" }; runtime.inputVm(handle, bytes) }
     }
     override suspend fun resize(rows: Int, cols: Int) = withContext(Dispatchers.IO) {
-        mutex.withLock { if (handle != 0L) NativeBridge.resizeVm(handle, rows, cols) }
+        mutex.withLock { if (handle != 0L) runtime.resizeVm(handle, rows, cols) }
     }
     override suspend fun displayFrame(pixels: IntArray): Boolean = withContext(Dispatchers.IO) {
-        mutex.withLock { handle != 0L && NativeBridge.displayFrameVm(handle, pixels) }
+        mutex.withLock { handle != 0L && runtime.displayFrameVm(handle, pixels) }
     }
     override suspend fun displayInput(reports: ByteArray) = withContext(Dispatchers.IO) {
         // A full 4 KiB chunk contains 256 paced HID reports. Allow time for
         // that much queue space to drain while the compositor handles input.
         withTimeout(15_000) {
-            while (!mutex.withLock { handle == 0L || NativeBridge.displayInputVm(handle, reports) }) delay(10)
+            while (!mutex.withLock { handle == 0L || runtime.displayInputVm(handle, reports) }) delay(10)
         }
     }
 }

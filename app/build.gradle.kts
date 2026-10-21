@@ -33,7 +33,7 @@ android {
             require(storeFile!!.isFile) { "Provision the nightly development key before building" }
         }
     }
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures { compose = true; buildConfig = true; aidl = true }
     sourceSets.getByName("main").assets.srcDir("../docs/licenses")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

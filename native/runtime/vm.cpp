@@ -1,6 +1,10 @@
 #include "vm.h"
 #include "display.h"
 #include "gpu.h"
+#include "network.h"
+extern "C" {
+#include <blk_io.h>
+}
 extern "C" {
 #include <devices/ns16550a.h>
 #include <devices/rtl8169.h>
@@ -23,16 +27,13 @@ namespace flyby {
 namespace {
 constexpr size_t OutputCapacity = 1024 * 1024, InputCapacity = 64 * 1024;
 std::vector<uint8_t> load(const std::string &path, size_t limit) {
-    std::ifstream stream(path, std::ios::binary | std::ios::ate);
-    if (!stream)
-        throw std::runtime_error("Guest resource missing: " + path);
-    auto size = stream.tellg();
-    if (size <= 0 || static_cast<size_t>(size) > limit)
-        throw std::runtime_error("Invalid guest resource size: " + path);
-    std::vector<uint8_t> result(static_cast<size_t>(size));
-    stream.seekg(0);
-    if (!stream.read(reinterpret_cast<char *>(result.data()), size))
-        throw std::runtime_error("Cannot read guest resource: " + path);
+    std::unique_ptr<rvfile_t, decltype(&rvclose)> file(rvopen(path.c_str(), RVFILE_READ), rvclose);
+    if (!file) throw std::runtime_error("Guest resource missing");
+    auto size = rvfilesize(file.get());
+    if (size == 0 || size > limit) throw std::runtime_error("Invalid guest resource size");
+    std::vector<uint8_t> result(size);
+    if (rvread(file.get(), result.data(), size, 0) != size)
+        throw std::runtime_error("Cannot read guest resource");
     return result;
 }
 struct Console {
@@ -131,6 +132,7 @@ struct Vm::Impl {
     Console shared;
     Console displayInput{true, "FLYBY_DISPLAY_READY\n", true};
     Display display;
+    tap_dev_t *proxyTap = nullptr;
     std::unique_ptr<Gpu> gpu;
     ~Impl() {
         if (machine)
@@ -139,21 +141,27 @@ struct Vm::Impl {
 };
 Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::string &diskPath,
        bool fullSystem, bool sharedFolder, bool gpuEnabled)
+    : Vm(std::array<std::string,3>{dir+"/kernel", dir+"/firmware", dir+"/initrd"},
+         memoryMiB, cpus, diskPath, fullSystem, sharedFolder, gpuEnabled, false) {}
+Vm::Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned cpus,
+       const std::string &diskPath, bool fullSystem, bool sharedFolder, bool gpuEnabled,
+       bool proxyNetwork)
     : impl(std::make_unique<Impl>()) {
     if (!diskPath.empty()) {
-        std::ifstream disk(diskPath, std::ios::binary);
+        std::unique_ptr<rvfile_t, decltype(&rvclose)> disk(rvopen(diskPath.c_str(), RVFILE_READ), rvclose);
         std::array<char, 16> label{};
-        disk.seekg(1144); disk.read(label.data(), label.size());
+        if (!disk || rvread(disk.get(), label.data(), label.size(), 1144) != label.size())
+            throw std::runtime_error("Cannot read disk label");
         if (std::string(label.data(), 13) == "flyby-x11-gpu" && !gpuEnabled)
             throw std::invalid_argument("This X11 GPU disk requires GPU. Enable GPU in Settings before starting Linux.");
     }
     if (memoryMiB < 128 || memoryMiB > 768 || (cpus < 1 || cpus > 2))
         throw std::invalid_argument("RV64 requires 128–768 MiB and one or two CPUs");
-    auto kernel = load(dir + "/kernel", 120 * 1024 * 1024);
+    auto kernel = load(resources[0], 120 * 1024 * 1024);
     if (kernel.size() < 64 || std::memcmp(kernel.data() + 56, "RSC\x05", 4))
         throw std::invalid_argument("Invalid RISC-V Linux Image header");
-    auto fw = load(dir + "/firmware", 2 * 1024 * 1024);
-    auto initrd = load(dir + "/initrd", 64 * 1024 * 1024);
+    auto fw = load(resources[1], 2 * 1024 * 1024);
+    auto initrd = load(resources[2], 64 * 1024 * 1024);
     // RVVM serializes its device tree at the very top of RAM during reset.
     constexpr uint64_t fdtReserve = 2 * 1024 * 1024;
     const uint64_t initrdBase = (RamBase + (uint64_t(memoryMiB) << 20) - fdtReserve - initrd.size()) & ~uint64_t(4095);
@@ -174,12 +182,12 @@ Vm::Vm(const std::string &dir, unsigned memoryMiB, unsigned cpus, const std::str
     else impl->display.attach(m);
     const rvvm_irq_t pciIrqs[] = {3, 4, 5, 6};
     if (!rvvm_pci_ecam_init(m, 0, PciEcam, irq, pciIrqs, PciIo, PciMemory, PciMemorySize) ||
-        !rvvm_rtc_goldfish_init(m, Rtc, irq, 7) || !rtl8169_init_auto(m))
+        !rvvm_rtc_goldfish_init(m, Rtc, irq, 7) || !(proxyNetwork ? rvvm_rtl8169_init(m, impl->proxyTap = flybyProxyTap(), RVVM_PCI_ADDR_ANY) : rtl8169_init_auto(m)))
         throw std::runtime_error("Cannot initialize PCI, RTC or userspace networking");
     if (!diskPath.empty() && !rvvm_nvme_init_auto(m, diskPath.c_str()))
         throw std::runtime_error("Cannot attach persistent NVMe disk");
-    if (!rvvm_load_firmware(m, (dir + "/firmware").c_str()) ||
-        !rvvm_load_kernel(m, (dir + "/kernel").c_str()) ||
+    if (!rvvm_load_firmware(m, (resources[1]).c_str()) ||
+        !rvvm_load_kernel(m, (resources[0]).c_str()) ||
         !rvvm_write_ram(m, initrdBase, initrd.data(), initrd.size()))
         throw std::runtime_error("Cannot load guest into native RAM");
     auto *chosen = rvvm_fdt_find(rvvm_get_fdt_root(m), "chosen");
@@ -291,3 +299,14 @@ void Vm::sharedInput(const uint8_t *data, size_t size) {
     impl->shared.write(data, size);
 }
 } // namespace flyby
+
+namespace flyby {
+std::vector<uint8_t> Vm::networkOutput() {
+    std::lock_guard lock(impl->lifecycle);
+    return impl->machine && impl->proxyTap ? flybyTapRead(impl->proxyTap) : std::vector<uint8_t>{};
+}
+void Vm::networkInput(const uint8_t *data, size_t size) {
+    std::lock_guard lock(impl->lifecycle);
+    if (impl->machine && impl->proxyTap) flybyTapInput(impl->proxyTap, data, size);
+}
+}

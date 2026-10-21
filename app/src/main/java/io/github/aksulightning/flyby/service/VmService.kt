@@ -68,7 +68,7 @@ class VmService : Service() {
         try { terminal = TerminalEmulator() }
         catch (failure: Exception) { nativeError = failure.message; log("NATIVE_ERROR $nativeError") }
         catch (failure: LinkageError) { nativeError = "Cannot load ARM64 native runtime: ${failure.message}"; log("NATIVE_ERROR $nativeError") }
-        vm = VmManager(scope, NativeVmController(::log) {
+        vm = VmManager(scope, NativeVmController(this, ::log) {
             settings.state.value.sharedTree?.let {
                 io.github.aksulightning.flyby.shared.AndroidSharedTree(contentResolver, android.net.Uri.parse(it))
             }

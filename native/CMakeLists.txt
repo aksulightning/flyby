@@ -25,6 +25,12 @@ target_link_libraries(rvvm PUBLIC m dl)
 if(NOT ANDROID)
   target_link_libraries(rvvm PUBLIC pthread)
 endif()
+# Keep the real socket backend in the owner process and use an explicit
+# Ethernet proxy inside the isolated service.
+set_source_files_properties("${RVVM}/src/devices/tap_user.c" PROPERTIES
+  COMPILE_DEFINITIONS "tap_open=user_tap_open;tap_attach=user_tap_attach;tap_send=user_tap_send;tap_get_mac=user_tap_get_mac;tap_set_mac=user_tap_set_mac;tap_portfwd=user_tap_portfwd;tap_ifaddr=user_tap_ifaddr;tap_close=user_tap_close")
+set_source_files_properties("${RVVM}/src/util/blk_io.c" PROPERTIES COMPILE_DEFINITIONS "open=flyby_open")
+target_sources(rvvm PRIVATE runtime/fd-open.c runtime/network.cpp)
 include(gpu-deps.cmake)
 add_library(flyby_runtime STATIC runtime/vm.cpp runtime/display.cpp runtime/gpu.cpp)
 target_link_libraries(flyby_runtime PUBLIC rvvm flyby_virgl)

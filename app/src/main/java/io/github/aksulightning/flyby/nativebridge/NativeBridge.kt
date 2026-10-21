@@ -4,6 +4,13 @@ package io.github.aksulightning.flyby.nativebridge
 object NativeBridge {
     init { System.loadLibrary("flyby") }
     external fun createVm(directory: String, memoryMiB: Int, cpus: Int, fullSystem: Boolean = false, sharedFolder: Boolean = false, gpuEnabled: Boolean = false): Long
+    external fun createVmFds(kernel: Int, firmware: Int, initrd: Int, disk: Int, memoryMiB: Int, cpus: Int, fullSystem: Boolean, sharedFolder: Boolean, gpuEnabled: Boolean): Long
+    external fun networkInputVm(id: Long, data: ByteArray)
+    external fun networkOutputVm(id: Long): ByteArray
+    external fun createNetworkBroker(): Long
+    external fun readNetworkBroker(id: Long): ByteArray
+    external fun inputNetworkBroker(id: Long, data: ByteArray)
+    external fun destroyNetworkBroker(id: Long)
     external fun startVm(id: Long)
     external fun runningVm(id: Long): Boolean
     external fun requestStopVm(id: Long)

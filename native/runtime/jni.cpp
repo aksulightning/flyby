@@ -1,5 +1,6 @@
 #include "terminal.h"
 #include "vm.h"
+#include "network.h"
 #include <android/log.h>
 #include <atomic>
 #include <jni.h>
@@ -11,6 +12,7 @@ std::mutex registryMutex;
 std::atomic<jlong> sequence{1};
 std::unordered_map<jlong, std::shared_ptr<flyby::Vm>> vms;
 std::unordered_map<jlong, std::shared_ptr<flyby::Terminal>> terms;
+std::unordered_map<jlong, std::shared_ptr<flyby::NetworkBroker>> brokers;
 template <class T> std::shared_ptr<T> get(std::unordered_map<jlong, std::shared_ptr<T>> &map, jlong id) {
     std::lock_guard lock(registryMutex);
     auto i = map.find(id);
@@ -88,6 +90,40 @@ JNIEXPORT jlong JNICALL JNI(createVm)(JNIEnv *env, jobject, jstring path, jint r
                             string(env, path) + (system ? "/system.raw" : "/disk.raw"), system, shared, gpu));
     }
     CATCH_RET(0)
+}
+JNIEXPORT jlong JNICALL JNI(createVmFds)(JNIEnv *env, jobject, jint kernel, jint firmware,
+        jint initrd, jint disk, jint ram, jint cpus, jboolean system, jboolean shared, jboolean gpu) {
+    try {
+        if (kernel < 0 || firmware < 0 || initrd < 0 || disk < 0)
+            throw std::invalid_argument("Missing delegated descriptor");
+        auto path = [](int fd) { return "flyby-fd:" + std::to_string(fd); };
+        return put(vms, std::make_shared<flyby::Vm>(
+            std::array<std::string,3>{path(kernel), path(firmware), path(initrd)},
+            ram, cpus, path(disk), system, shared, gpu, true));
+    } CATCH_RET(0)
+}
+JNIEXPORT jbyteArray JNICALL JNI(networkOutputVm)(JNIEnv *env, jobject, jlong id) {
+    try { return array(env, get(vms, id)->networkOutput()); } CATCH_RET(nullptr)
+}
+JNIEXPORT void JNICALL JNI(networkInputVm)(JNIEnv *env, jobject, jlong id, jbyteArray data) {
+    try { auto b = bytes(env, data); get(vms, id)->networkInput(b.data(), b.size()); } CATCH_VOID
+}
+JNIEXPORT jlong JNICALL JNI(createNetworkBroker)(JNIEnv *env, jobject) {
+    try { return put(brokers, std::make_shared<flyby::NetworkBroker>()); } CATCH_RET(0)
+}
+JNIEXPORT jbyteArray JNICALL JNI(readNetworkBroker)(JNIEnv *env, jobject, jlong id) {
+    try { return array(env, get(brokers, id)->read()); } CATCH_RET(nullptr)
+}
+JNIEXPORT void JNICALL JNI(inputNetworkBroker)(JNIEnv *env, jobject, jlong id, jbyteArray data) {
+    try { auto b = bytes(env, data); get(brokers, id)->input(b.data(), b.size()); } CATCH_VOID
+}
+JNIEXPORT void JNICALL JNI(destroyNetworkBroker)(JNIEnv *env, jobject, jlong id) {
+    try {
+        std::shared_ptr<flyby::NetworkBroker> broker;
+        { std::lock_guard lock(registryMutex);
+          auto found = brokers.find(id);
+          if (found != brokers.end()) { broker = std::move(found->second); brokers.erase(found); } }
+    } CATCH_VOID
 }
 JNIEXPORT void JNICALL JNI(startVm)(JNIEnv *env, jobject, jlong id) {
     try {

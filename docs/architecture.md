@@ -1,6 +1,6 @@
 # Architecture
 
-`MainActivity (bind/unbind) -> VmService -> VmManager -> NativeVmController -> JNI -> RVVM`
+`MainActivity -> VmService -> VmManager -> NativeVmController -> Binder -> VmSandboxService -> JNI -> RVVM`
 
 `VmService` owns the coroutine scope, manager, native runtime and `TerminalEmulator`.
 A binding is only a view onto that session. The explicit Start intent starts the
@@ -67,9 +67,33 @@ CONSOLE_CONNECTED, NATIVE_ERROR. `FlybyRVVM` receives upstream native diagnostic
 through an Android-only CMake logging adapter. Input payloads are not logged.
 Missing resources, invalid images, native RAM allocation failure and startup
 exceptions become ERROR. The terminal retains boot output; detected kernel panic
-or a five-minute boot timeout becomes an error and triggers cleanup. Extreme native
-allocator failures/internal core assertions may still abort in this in-process
-architecture; they are a limitation, not normal error handling.
+or a five-minute boot timeout becomes an error and triggers cleanup. Extreme native allocator failures/internal core assertions may still abort the
+isolated worker. Binder death becomes an error in the owner; the VM is not
+silently restarted.
 
 `Vm::pause/resume` exist and are host-tested. Full process-death save/restore is not
 exposed: adding snapshot persistence requires a versioned guest/device state format.
+
+## Android runtime isolation
+
+The interpreter, virtual devices and GLES renderer run in a non-exported bound
+service with `isolatedProcess=true`, under a separate Android UID. The started
+foreground VmService owns its binding, wake lock, notification and terminal.
+Startup verifies the worker PID/UID differ and that it cannot read a private
+guest file by pathname. There is no same-process fallback.
+
+Only three read-only guest resource descriptors and the read/write active disk
+descriptor are delegated. RVVM duplicates those descriptors directly; it never
+reopens private paths through /proc. Serial, lifecycle, display input, 9P and
+Ethernet messages have fixed limits. A frame uses a pipe rather than exceeding
+Binder's transaction limit. The owner validates frame length. Unbinding kills
+the worker; a worker crash retains the disk and reports an error.
+
+The owning process retains the selected Android folder's 9P server and RVVM's
+userspace network backend. The worker has no ContentResolver or internet
+permission. It receives Ethernet frames through a bounded queue (256 frames,
+1514 bytes each); port forwarding is disabled. These parsers remain part of the
+trusted owner boundary and need their own hardening. An isolated worker can
+still modify its delegated Linux disk and selected shared folder, and make
+outgoing connections through the network broker. Isolation does not promise
+protection from Android GPU-driver or kernel vulnerabilities.

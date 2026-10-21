@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -16,7 +17,12 @@ class Vm {
   public:
     Vm(const std::string &directory, unsigned memoryMiB, unsigned cpus, const std::string &diskPath = "",
        bool fullSystem = false, bool sharedFolder = false, bool gpuEnabled = false);
+    Vm(const std::array<std::string,3> &resources, unsigned memoryMiB, unsigned cpus,
+       const std::string &diskPath, bool fullSystem, bool sharedFolder, bool gpuEnabled,
+       bool proxyNetwork);
     ~Vm();
+    std::vector<uint8_t> networkOutput();
+    void networkInput(const uint8_t *, size_t);
     Vm(const Vm &) = delete;
     Vm &operator=(const Vm &) = delete;
     void start();
