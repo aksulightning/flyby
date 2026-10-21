@@ -71,7 +71,7 @@ disk. New GPU images include Mesa's RISC-V Venus ICD, the Vulkan loader,
 these checks run as `flybyuser`; only the virtual GPU render nodes are granted
 to that user.
 
-The startup probe runs inside the isolated worker. Android needs Vulkan 1.1,
+The startup probe runs inside the VM worker. Android needs Vulkan 1.1,
 VK_EXT_external_memory_dma_buf, VK_EXT_image_drm_format_modifier and
 VK_EXT_queue_family_foreign. Meeting these requirements is a compatibility
 candidate, not a promise: external memory mapping depends on the phone driver.

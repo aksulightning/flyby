@@ -20,7 +20,7 @@ int flyby_open(const char *path, int flags, ...) {
         }
         return fcntl((int)value, F_DUPFD_CLOEXEC, 0);
     }
-    // Host tests retain ordinary resource paths. The Android sandbox never
+    // Host tests retain ordinary resource paths. The Android worker never
     // receives paths, only descriptors explicitly opened by the owning app.
     mode_t mode = 0600;
     if (flags & O_CREAT) {

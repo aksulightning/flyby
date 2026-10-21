@@ -25,6 +25,17 @@ static std::string wait(flyby::Vm &vm, const std::string &marker, int seconds = 
     }
     throw std::runtime_error("Timed out waiting for " + marker);
 }
+// A failed command must report immediately, rather than waiting for a success
+// marker until the timeout. The terminating marker follows the exit status.
+static void vulkanCommand(flyby::Vm &vm, const std::string &command,
+                          const std::string &success, int seconds) {
+    shell(vm, "su flybyuser -c '" + command + "'; result=$?; "
+        "printf '\\nFLYBY_VULKAN_STATUS=%s\\nFLYBY_VULKAN_COMMAND_DONE\\n' \"$result\"\n");
+    const auto output = wait(vm, "\r\nFLYBY_VULKAN_COMMAND_DONE\r\n", seconds);
+    if (output.find("\r\nFLYBY_VULKAN_STATUS=0\r\n") == std::string::npos ||
+        output.find(success) == std::string::npos)
+        throw std::runtime_error("Vulkan acceptance command failed: " + command);
+}
 static void key(flyby::Vm &vm, unsigned code, unsigned mods = 0) {
     std::array<uint8_t,16> p{'F','I',1,1};
     p[4] = mods; p[6] = code; vm.displayInput(p.data(), p.size());
@@ -127,10 +138,12 @@ int main(int argc, char **argv) {
                 shell(vm, "kill $(cat /tmp/gears.pid)\n");
             }
             if (vulkan) {
-                shell(vm, "su flybyuser -c 'vulkaninfo --summary && flyby-vulkan-check'\n");
-                wait(vm, "\r\nFLYBY_VULKAN_TRANSFER_OK\r\n", 180);
-                shell(vm, "su flybyuser -c 'MESA_VK_WSI_DEBUG=sw timeout 120 vkcube --c 20' && echo FLYBY_VULKAN_PRESENT_OK\n");
-                wait(vm, "\r\nFLYBY_VULKAN_PRESENT_OK\r\n", 180);
+                vulkanCommand(vm,
+                    "VN_DEBUG=init VK_LOADER_DEBUG=error,warn vulkaninfo --summary && flyby-vulkan-check",
+                    "\r\nFLYBY_VULKAN_TRANSFER_OK\r\n", 180);
+                vulkanCommand(vm,
+                    "MESA_VK_WSI_DEBUG=sw timeout 120 vkcube --c 20 && echo FLYBY_VULKAN_PRESENT_OK",
+                    "\r\nFLYBY_VULKAN_PRESENT_OK\r\n", 180);
             }
             auto pixels = waitForDesktop(vm);
             shell(vm, x11

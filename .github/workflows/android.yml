@@ -102,6 +102,15 @@ jobs:
         run: EGL_PLATFORM=surfaceless python3 scripts/test-x11-gpu.py
       - name: Vulkan transport, memory and presentation
         run: EGL_PLATFORM=surfaceless FLYBY_VULKAN=1 python3 scripts/test-x11-gpu.py
+      - name: Preserve graphics diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: graphics-diagnostics
+          path: |
+            out/x11-gpu-test/boot.log
+            out/x11-gpu-test/*.ppm
+          if-no-files-found: ignore
 
   build:
     needs: [packages, venus]

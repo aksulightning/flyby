@@ -29,7 +29,7 @@ JNI uses checked monotonically increasing IDs in native registries. A call takes
 shared ownership, so destroying a handle cannot free memory underneath a concurrent
 read. Closed/invalid handles throw Java exceptions. C++ exceptions are caught at
 JNI boundaries. RVVM owns native vCPU/event-loop threads; no instructions cross JNI.
-Main RAM uses RVVM native allocation in the isolated worker, not the Kotlin heap. Thread shutdown joins
+Main RAM uses RVVM native allocation in the VM worker, not the Kotlin heap. Thread shutdown joins
 before RAM/UART objects are freed. ART retains signal handling; RVVM crash signal
 handlers, JIT, KVM, GUI, VFIO and host isolation are disabled.
 
@@ -69,32 +69,28 @@ through an Android-only CMake logging adapter. Input payloads are not logged.
 Missing resources, invalid images, native RAM allocation failure and startup
 exceptions become ERROR. The terminal retains boot output; detected kernel panic
 or a five-minute boot timeout becomes an error and triggers cleanup. Extreme native allocator failures/internal core assertions may still abort the
-isolated worker. Binder death becomes an error in the owner; the VM is not
+VM worker. Binder death becomes an error in the owner; the VM is not
 silently restarted.
 
 `Vm::pause/resume` exist and are host-tested. Full process-death save/restore is not
 exposed: adding snapshot persistence requires a versioned guest/device state format.
 
-## Android runtime isolation
+## Android VM worker
 
-The interpreter, virtual devices and GLES renderer run in a non-exported bound
-service with `isolatedProcess=true`, under a separate Android UID. The started
-foreground VmService owns its binding, wake lock, notification and terminal.
-Startup verifies the worker PID/UID differ and that it cannot read a private
-guest file by pathname or create an internet socket. There is no same-process fallback.
+The interpreter, virtual devices and GLES/Vulkan renderers run in a non-exported
+bound service with `isolatedProcess=false`, in a separate process under the app
+UID. Android isolated UIDs can prevent graphics-driver access. The foreground
+VmService owns the binding, wake lock, notification and terminal. Startup checks
+that the worker has a different PID and the same UID; it never runs the VM in
+the UI process.
 
-Only three read-only guest resource descriptors and the read/write active disk
-descriptor are delegated. RVVM duplicates those descriptors directly; it never
-reopens private paths through /proc. Serial, lifecycle, display input, 9P and
-Ethernet messages have fixed limits. A frame uses a pipe rather than exceeding
-Binder's transaction limit. The owner validates frame length. Unbinding kills
-the worker; a worker crash retains the disk and reports an error.
+Three read-only guest resource descriptors and the read/write active disk
+descriptor are passed over Binder. RVVM duplicates those descriptors directly.
+Serial, lifecycle, display input, 9P and Ethernet messages retain fixed limits.
+Frames use pipes to avoid Binder's transaction limit, with length validation by
+the owner. Unbinding terminates the worker; a crash retains the disk and reports
+an error. The existing 9P server and network broker remain in the owning process.
 
-The owning process retains the selected Android folder's 9P server and RVVM's
-userspace network backend. The worker has no ContentResolver or internet
-permission. It receives Ethernet frames through a bounded queue (256 frames,
-1514 bytes each); port forwarding is disabled. These parsers remain part of the
-trusted owner boundary and need their own hardening. An isolated worker can
-still modify its delegated Linux disk and selected shared folder, and make
-outgoing connections through the network broker. Isolation does not promise
-protection from Android GPU-driver or kernel vulnerabilities.
+This is process separation for lifecycle and crash handling, not a security
+boundary: the worker can access private app files and internet sockets with the
+app's permissions. Android's ordinary application sandbox still applies.

@@ -10,7 +10,7 @@ import java.nio.ByteOrder
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Owns the interpreter and renderer under Android's isolated UID. */
+/** Owns the interpreter and renderer in a separate process with the application UID. */
 class VmSandboxService : Service() {
     private var handle = 0L
     private var resources = emptyArray<ParcelFileDescriptor>()

@@ -151,7 +151,7 @@ raw disk images or ZIP files.
   Symbolic links, hard links, special files and Unix ownership changes are not
   supported, and the Android storage provider may restrict other operations.
 - A bug in the native interpreter, extreme memory use or a hostile guest kernel may
-  crash the isolated VM process. Flyby is **not a security-audited sandbox** for untrusted
+  crash the separate VM process. Flyby is **not a security-audited sandbox** for untrusted
   Linux software.
 - Clearing Flyby's Android app data or uninstalling the app deletes its private
   Linux disk. Export important data before doing either.
@@ -219,7 +219,7 @@ publication remains separate from this compilation-only workflow.
 Flyby embeds [RVVM](https://github.com/LekKit/RVVM) as an MPL-2.0 library and uses
 its interpreter without a JIT. Linux boots through OpenSBI into a pinned Alpine Edge
 RISC-V system. A foreground service owns the terminal and lifecycle, while the virtual machine
-runs in a separate Android isolated process. libvterm renders the terminal.
+runs in a separate Android process with the app UID. libvterm renders the terminal.
 
 The VM has a virtual NVMe system disk, user-mode outgoing networking and private
 communication channels for lifecycle commands, Android folder sharing and display

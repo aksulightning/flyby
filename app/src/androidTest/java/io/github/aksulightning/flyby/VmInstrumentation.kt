@@ -301,9 +301,9 @@ class VmInstrumentation : Instrumentation() {
                 check(workerReady.await(10, TimeUnit.SECONDS))
                 val api = checkNotNull(worker)
                 val identity = api.identity()
-                check(identity[0] != Process.myPid() && identity[1] != Process.myUid())
-                check(!api.canReadPrivateFile(currentDisk.path))
-                check(!api.canOpenInternetSocket())
+                check(identity[0] != Process.myPid() && identity[1] == Process.myUid())
+                check(api.canReadPrivateFile(currentDisk.path))
+                check(api.canOpenInternetSocket())
                 try { api.terminate() } catch (_: RemoteException) { /* Expected process death. */ }
             } finally { targetContext.unbindService(workerConnection) }
             // This particular test deliberately expects ERROR.

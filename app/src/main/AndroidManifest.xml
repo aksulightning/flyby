@@ -21,7 +21,7 @@
                 android:value="User-started local Linux virtual machine with interactive terminal; continues guest workloads while Activity is backgrounded until user stops it." />
         </service>
         <service android:name=".sandbox.VmSandboxService" android:exported="false"
-            android:isolatedProcess="true" android:process=":vm_sandbox" />
+            android:isolatedProcess="false" android:process=":vm_sandbox" />
         <activity android:name=".MainActivity" android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

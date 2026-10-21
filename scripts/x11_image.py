@@ -57,6 +57,7 @@ EndSection
 ''')
     write('etc/profile.d/x11.sh', '''export DISPLAY=:0
 export XAUTHORITY=/run/flyby-x11/Xauthority
+export XDG_RUNTIME_DIR=/run/flyby-x11
 export XDG_SESSION_TYPE=x11
 ''')
     with (root/'etc/profile').open('a') as profile:
@@ -132,6 +133,7 @@ command="/usr/bin/xterm"
 command_args="-geometry 96x30+8+8 -fa monospace -fs 10 -e /usr/local/bin/flyby-x11-shell"
 export DISPLAY=:0
 export XAUTHORITY=/run/flyby-x11/Xauthority
+export XDG_RUNTIME_DIR=/run/flyby-x11
 export XDG_SESSION_TYPE=x11
 output_log="/var/log/flyby-x11-terminal.log"
 error_log="/var/log/flyby-x11-terminal.log"
