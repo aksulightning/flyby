@@ -1,5 +1,5 @@
-# Embedded GLES renderer. Keep the upstream source lists/configuration scoped
-# here: no DRM device access, display server, Vulkan, subprocess or video backend.
+# Embedded GLES and Venus renderers. No host DRM device, display server,
+# subprocess or video backend is used.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(EPOXY "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libepoxy")
 set(VIRGL "${CMAKE_CURRENT_SOURCE_DIR}/vendor/virglrenderer")
@@ -64,6 +64,20 @@ foreach(src iov virgl_context virgl_fence virgl_resource virgl_util virglrendere
     vrend_shader vrend_tweaks vrend_winsys)
   list(APPEND VIRGL_SOURCES "${VIRGL}/src/${src}.c")
 endforeach()
+# Flyby polls legacy GL fences on its submission thread. Venus needs async
+# workers, but propagating those global flags to vrend stalls X11 startup.
+# Keep the existing GL polling model while Venus retains both required flags.
+file(READ "${VIRGL}/src/virglrenderer.c" VIRGL_ENTRY)
+set(VIRGL_GL_SYNC_FLAGS "      if (flags & VIRGL_RENDERER_THREAD_SYNC)\n         renderer_flags |= VREND_USE_THREAD_SYNC;\n      if (flags & VIRGL_RENDERER_ASYNC_FENCE_CB)\n         renderer_flags |= VREND_USE_ASYNC_FENCE_CB;")
+string(FIND "${VIRGL_ENTRY}" "${VIRGL_GL_SYNC_FLAGS}" VIRGL_GL_SYNC_AT)
+if(VIRGL_GL_SYNC_AT EQUAL -1)
+  message(FATAL_ERROR "Pinned virglrenderer GL fence adapter no longer matches")
+endif()
+string(REPLACE "${VIRGL_GL_SYNC_FLAGS}" "      /* Flyby: GL fences are polled on the submission thread. */"
+  VIRGL_ENTRY "${VIRGL_ENTRY}")
+file(WRITE "${GPU_GEN}/virgl/virglrenderer.c" "${VIRGL_ENTRY}")
+list(REMOVE_ITEM VIRGL_SOURCES "${VIRGL}/src/virglrenderer.c")
+list(APPEND VIRGL_SOURCES "${GPU_GEN}/virgl/virglrenderer.c")
 add_library(flyby_virgl STATIC ${VIRGL_SOURCES} "${GPU_GEN}/virgl/u_format_table.c")
 target_include_directories(flyby_virgl PUBLIC "${VIRGL}/src" "${GPU_GEN}/virgl"
   PRIVATE "${GPU_GEN}/virgl" "${VIRGL}/src/venus" "${VIRGL}/src/drm" "${VIRGL}/src/drm/drm-uapi"

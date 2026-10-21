@@ -33,14 +33,16 @@ never converts an existing disk to the GPU image.
   but readback and interpreted RISC-V execution limit performance.
 - Resource accounting is bounded to 128 MiB, 1,024 resources and 64 contexts.
   Large textures, workloads and applications may exceed these limits.
-- One VM can own the process-wide VirGL renderer. All rendering runs on one
-  thread, and teardown joins it before RVVM releases guest RAM.
+- One VM can own the process-wide VirGL renderer. A dedicated thread submits
+  commands; Venus also uses renderer workers. Teardown joins the renderer
+  before RVVM releases guest RAM.
 - Physical Android GPU compatibility and performance require device testing.
 
 The native source archives and hashes are pinned in `scripts/prepare-native.py`.
-`native/gpu-deps.cmake` builds a GLES-only renderer, without GBM/DRM, GLX,
-video or an external render server. Venus dynamically loads the system Vulkan
-loader when requested. The small Android adapters use public
+`native/gpu-deps.cmake` builds the GLES and Venus paths, without GBM/DRM, GLX,
+video or an external render server. Legacy GL fences stay on Flyby's polled submission thread; a checked build adapter
+keeps Venus's required asynchronous flags from enabling a separate GL fence worker.
+Venus dynamically loads the system Vulkan loader when requested. The small Android adapters use public
 NDK APIs for the embedded Mesa utilities. Source archives and notices are included
 in the corresponding-source release and APK license viewer.
 
