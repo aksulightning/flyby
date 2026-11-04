@@ -42,7 +42,7 @@ cmake_pop_check_state()
 set(VIRGL_THREADS_HEADER "${GPU_GEN}/virgl/c11/threads.h")
 if(FLYBY_SYSTEM_C11_THREADS)
   file(MAKE_DIRECTORY "${GPU_GEN}/virgl/c11")
-  file(WRITE "${VIRGL_THREADS_HEADER}" "/* Use the target libc's C11 thread implementation. */\n#include <time.h>\n#include <threads.h>\n")
+  file(WRITE "${VIRGL_THREADS_HEADER}" "/* Use the target libc's C11 thread implementation. */\n#include <pthread.h>\n#include <time.h>\n#include <threads.h>\n")
 else()
   # Older Android targets retain the pinned upstream pthread implementation.
   file(REMOVE "${VIRGL_THREADS_HEADER}")
