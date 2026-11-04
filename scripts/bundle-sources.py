@@ -2,7 +2,7 @@
 """Collect pinned Alpine recipes, all SHA512-listed sources, native sources and Flyby.
 Fails closed: a nightly must not publish if a required corresponding source is missing.
 """
-import hashlib, http.client, io, json, pathlib, re, shutil, socket, ssl, subprocess, tarfile, tempfile, time, urllib.request, urllib.error
+import hashlib, http.client, io, json, os, pathlib, re, shutil, socket, ssl, subprocess, tarfile, tempfile, time, urllib.request, urllib.error
 from functools import lru_cache
 from html.parser import HTMLParser
 from alpine_sources import recipe_sources
@@ -56,6 +56,53 @@ def download(url, path):
             # Never reuse an interrupted transfer, including on permanent failures.
             tmp.unlink(missing_ok=True)
         time.sleep(delay)
+
+
+def recipe_archive(commit):
+    """Fetch the exact locked aports commit, including when its mirror lags."""
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        raise ValueError('Invalid aports commit')
+    urls = [
+        f'https://codeload.github.com/alpinelinux/aports/tar.gz/{commit}',
+        f'https://gitlab.alpinelinux.org/alpine/aports/-/archive/{commit}/aports-{commit}.tar.gz',
+    ]
+    failures = []
+    for url in urls:
+        try:
+            return download(url, CACHE/(commit+'.tar.gz'))
+        except (urllib.error.HTTPError, DownloadUnavailable) as error:
+            if isinstance(error, urllib.error.HTTPError) and error.code not in (404, 410, 418):
+                raise
+            failures.append(f'{url}: {error}')
+            print(f'Recipe endpoint unavailable: {url}: {error}', flush=True)
+    # Alpine's archive endpoint can reject automation while its public Git
+    # transport remains available. Fetch and verify the identical locked commit.
+    target = CACHE/(commit+'.tar.gz')
+    pending = target.with_name(target.name+'.partial')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, GIT_TERMINAL_PROMPT='0')
+    try:
+        with tempfile.TemporaryDirectory(prefix='flyby-aports-') as directory:
+            subprocess.run(['git', 'init', '--bare', directory], check=True,
+                           stdout=subprocess.DEVNULL, env=env, timeout=120)
+            subprocess.run(['git', '-C', directory, 'fetch', '--depth=1', '--no-tags',
+                            'https://gitlab.alpinelinux.org/alpine/aports.git', commit],
+                           check=True, env=env, timeout=120)
+            actual = subprocess.check_output(['git', '-C', directory, 'rev-parse', 'FETCH_HEAD'],
+                                             text=True, env=env, timeout=30).strip()
+            if actual != commit:
+                raise ValueError('Fetched aports commit does not match the package lock')
+            subprocess.run(['git', '-C', directory, 'archive', '--format=tar.gz',
+                            f'--prefix=aports-{commit}/', '-o', str(pending), commit],
+                           check=True, env=env, timeout=120)
+        pending.replace(target)
+        return target
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        raise FileNotFoundError(f'Pinned aports commit unavailable: {commit}; '
+                                + '; '.join(failures)) from error
+    finally:
+        pending.unlink(missing_ok=True)
+
 
 def digest(path, algorithm='sha256'):
     h = hashlib.new(algorithm)
@@ -134,7 +181,7 @@ def main():
     metadata = json.loads((ROOT/'app/src/main/assets/vm/provenance.json').read_text())
     recipes = sorted({(p.get('repository', 'main'),p['origin'],p['commit']) for p in metadata['packages']})
     for repository, origin, commit in recipes:
-        archive = download(f'https://codeload.github.com/alpinelinux/aports/tar.gz/{commit}', CACHE/(commit+'.tar.gz'))
+        archive = recipe_archive(commit)
         prefix = f'aports-{commit}/{repository}/{origin}/'
         dest = OUT/'aports'/commit/repository/origin
         dest.mkdir(parents=True, exist_ok=True)

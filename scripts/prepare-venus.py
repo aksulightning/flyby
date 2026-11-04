@@ -26,8 +26,7 @@ def main():
     stage.mkdir(parents=True)
     recipe = stage/'recipe'; recipe.mkdir()
     commit = mesa['commit']; repository = mesa['repository']
-    archive = bundle.download('https://codeload.github.com/alpinelinux/aports/tar.gz/'+commit,
-                              bundle.CACHE/(commit+'.tar.gz'))
+    archive = bundle.recipe_archive(commit)
     prefix = f'aports-{commit}/{repository}/mesa/'
     with tarfile.open(archive) as tar:
         for item in tar:

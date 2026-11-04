@@ -3,6 +3,7 @@
 import hashlib
 import http.client
 import ssl
+import subprocess
 import importlib.util
 import io
 import os
@@ -214,6 +215,74 @@ class SourceDownloadTests(unittest.TestCase):
                         bundle.download(url, pathlib.Path(tmp)/'source')
                     request.assert_called_once()
                     sleep.assert_not_called()
+
+    def test_missing_recipe_mirror_uses_same_commit_on_alpine_origin(self):
+        commit = 'a'*40
+        content = b'exact pinned recipe archive'
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    urllib.error.HTTPError('mirror', 404, 'gone', {}, None), self.response(content)]) as request:
+                self.assertEqual(bundle.recipe_archive(commit).read_bytes(), content)
+                self.assertEqual(request.call_count, 2)
+                self.assertEqual(request.call_args.args[0],
+                                 f'https://gitlab.alpinelinux.org/alpine/aports/-/archive/{commit}/aports-{commit}.tar.gz')
+                self.assertEqual(bundle.recipe_archive(commit).read_bytes(), content)
+                self.assertEqual(request.call_count, 2)
+
+    def test_recipe_missing_at_both_endpoints_fails_closed(self):
+        commit = 'a'*40
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen',
+                              side_effect=urllib.error.HTTPError('source', 404, 'gone', {}, None)) as request, patch.object(
+                                  bundle.subprocess, 'run', side_effect=subprocess.CalledProcessError(128, 'git')):
+                with self.assertRaisesRegex(FileNotFoundError, commit):
+                    bundle.recipe_archive(commit)
+                self.assertEqual(request.call_count, 2)
+                self.assertEqual(list(pathlib.Path(tmp).rglob('*')), [])
+
+    def test_recipe_archive_rejection_uses_verified_git_commit(self):
+        commit = 'a'*40
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            def run(args, **kwargs):
+                if 'archive' in args:
+                    pathlib.Path(args[args.index('-o')+1]).write_bytes(b'verified git archive')
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    urllib.error.HTTPError('mirror', 404, 'gone', {}, None),
+                    urllib.error.HTTPError('archive', 418, 'rejected', {}, None)]), patch.object(
+                        bundle.subprocess, 'run', side_effect=run) as command, patch.object(
+                            bundle.subprocess, 'check_output', return_value=commit+'\n'):
+                self.assertEqual(bundle.recipe_archive(commit).read_bytes(), b'verified git archive')
+                fetch = command.call_args_list[1].args[0]
+                self.assertEqual(fetch[-2:], ['https://gitlab.alpinelinux.org/alpine/aports.git', commit])
+                archive = command.call_args.args[0]
+                self.assertEqual(archive[-1], commit)
+                self.assertIn(f'--prefix=aports-{commit}/', archive)
+
+    def test_recipe_git_commit_mismatch_is_fatal_without_caching(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen',
+                              side_effect=urllib.error.HTTPError('source', 404, 'gone', {}, None)), patch.object(
+                                  bundle.subprocess, 'run') as command, patch.object(
+                                      bundle.subprocess, 'check_output', return_value='b'*40):
+                with self.assertRaisesRegex(ValueError, 'does not match'):
+                    bundle.recipe_archive('a'*40)
+                self.assertEqual(command.call_count, 2)
+                self.assertEqual(list(pathlib.Path(tmp).rglob('*')), [])
+
+    def test_recipe_certificate_failure_does_not_use_another_endpoint(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen',
+                              side_effect=urllib.error.URLError(ssl.SSLCertVerificationError('invalid'))) as request:
+                with self.assertRaises(urllib.error.URLError):
+                    bundle.recipe_archive('a'*40)
+                request.assert_called_once()
+
+    def test_recipe_rejects_unpinned_references_before_network_access(self):
+        with patch.object(bundle.urllib.request, 'urlopen') as request:
+            for commit in ['master', '../escape', 'a'*39, 'g'*40]:
+                with self.assertRaises(ValueError):
+                    bundle.recipe_archive(commit)
+            request.assert_not_called()
 
     def test_bad_checksum_is_fatal_without_trying_another_endpoint(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):

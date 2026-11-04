@@ -30,6 +30,23 @@ file(WRITE "${GPU_GEN}/virgl/config.h" "#define VERSION \"1.1.1\"\n#define _GNU_
 if(NOT ANDROID)
   file(APPEND "${GPU_GEN}/virgl/config.h" "#define HAVE_TIMESPEC_GET 1\n")
 endif()
+# Prefer the target libc's C11 threads when they compile and link. New glibc
+# exposes call_once in stdlib.h, which conflicts with the bundled emulation.
+find_package(Threads REQUIRED)
+include(CheckSymbolExists)
+include(CMakePushCheckState)
+cmake_push_check_state(RESET)
+set(CMAKE_REQUIRED_LIBRARIES Threads::Threads)
+check_symbol_exists(thrd_create "threads.h" FLYBY_SYSTEM_C11_THREADS)
+cmake_pop_check_state()
+set(VIRGL_THREADS_HEADER "${GPU_GEN}/virgl/c11/threads.h")
+if(FLYBY_SYSTEM_C11_THREADS)
+  file(MAKE_DIRECTORY "${GPU_GEN}/virgl/c11")
+  file(WRITE "${VIRGL_THREADS_HEADER}" "/* Use the target libc's C11 thread implementation. */\n#include <pthread.h>\n#include <time.h>\n#include <threads.h>\n")
+else()
+  # Older Android targets retain the pinned upstream pthread implementation.
+  file(REMOVE "${VIRGL_THREADS_HEADER}")
+endif()
 foreach(b BSWAP32 BSWAP64 CLZ CLZLL EXPECT FFS FFSLL POPCOUNT POPCOUNTLL TYPES_COMPATIBLE_P UNREACHABLE)
   file(APPEND "${GPU_GEN}/virgl/config.h" "#define HAVE___BUILTIN_${b} 1\n")
 endforeach()
@@ -84,7 +101,7 @@ target_include_directories(flyby_virgl PUBLIC "${VIRGL}/src" "${GPU_GEN}/virgl"
   "${VIRGL}/src/gallium/include" "${VIRGL}/src/gallium/auxiliary" "${VIRGL}/src/gallium/auxiliary/util"
   "${VIRGL}/src/mesa" "${VIRGL}/src/mesa/compat" "${VIRGL}/src/mesa/pipe" "${VIRGL}/src/mesa/util")
 target_compile_options(flyby_virgl PRIVATE -imacros "${GPU_GEN}/virgl/config.h" -fno-strict-aliasing -fvisibility=hidden)
-target_link_libraries(flyby_virgl PUBLIC flyby_epoxy m)
+target_link_libraries(flyby_virgl PUBLIC flyby_epoxy m Threads::Threads)
 if(ANDROID)
   target_include_directories(flyby_virgl PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/android")
   target_link_libraries(flyby_virgl PUBLIC log)
