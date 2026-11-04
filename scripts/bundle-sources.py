@@ -57,6 +57,27 @@ def download(url, path):
             tmp.unlink(missing_ok=True)
         time.sleep(delay)
 
+
+def recipe_archive(commit):
+    """Fetch the exact locked aports commit, including when its mirror lags."""
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        raise ValueError('Invalid aports commit')
+    urls = [
+        f'https://codeload.github.com/alpinelinux/aports/tar.gz/{commit}',
+        f'https://gitlab.alpinelinux.org/alpine/aports/-/archive/{commit}/aports-{commit}.tar.gz',
+    ]
+    failures = []
+    for url in urls:
+        try:
+            return download(url, CACHE/(commit+'.tar.gz'))
+        except (urllib.error.HTTPError, DownloadUnavailable) as error:
+            if isinstance(error, urllib.error.HTTPError) and error.code not in (404, 410):
+                raise
+            failures.append(f'{url}: {error}')
+            print(f'Recipe endpoint unavailable: {url}: {error}', flush=True)
+    raise FileNotFoundError(f'Pinned aports commit unavailable: {commit}; ' + '; '.join(failures))
+
+
 def digest(path, algorithm='sha256'):
     h = hashlib.new(algorithm)
     with path.open('rb') as stream:
@@ -134,7 +155,7 @@ def main():
     metadata = json.loads((ROOT/'app/src/main/assets/vm/provenance.json').read_text())
     recipes = sorted({(p.get('repository', 'main'),p['origin'],p['commit']) for p in metadata['packages']})
     for repository, origin, commit in recipes:
-        archive = download(f'https://codeload.github.com/alpinelinux/aports/tar.gz/{commit}', CACHE/(commit+'.tar.gz'))
+        archive = recipe_archive(commit)
         prefix = f'aports-{commit}/{repository}/{origin}/'
         dest = OUT/'aports'/commit/repository/origin
         dest.mkdir(parents=True, exist_ok=True)
