@@ -3,6 +3,7 @@
 import hashlib
 import http.client
 import ssl
+import subprocess
 import importlib.util
 import io
 import os
@@ -232,10 +233,40 @@ class SourceDownloadTests(unittest.TestCase):
         commit = 'a'*40
         with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
             with patch.object(bundle.urllib.request, 'urlopen',
-                              side_effect=urllib.error.HTTPError('source', 404, 'gone', {}, None)) as request:
+                              side_effect=urllib.error.HTTPError('source', 404, 'gone', {}, None)) as request, patch.object(
+                                  bundle.subprocess, 'run', side_effect=subprocess.CalledProcessError(128, 'git')):
                 with self.assertRaisesRegex(FileNotFoundError, commit):
                     bundle.recipe_archive(commit)
                 self.assertEqual(request.call_count, 2)
+                self.assertEqual(list(pathlib.Path(tmp).rglob('*')), [])
+
+    def test_recipe_archive_rejection_uses_verified_git_commit(self):
+        commit = 'a'*40
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            def run(args, **kwargs):
+                if 'archive' in args:
+                    pathlib.Path(args[args.index('-o')+1]).write_bytes(b'verified git archive')
+            with patch.object(bundle.urllib.request, 'urlopen', side_effect=[
+                    urllib.error.HTTPError('mirror', 404, 'gone', {}, None),
+                    urllib.error.HTTPError('archive', 418, 'rejected', {}, None)]), patch.object(
+                        bundle.subprocess, 'run', side_effect=run) as command, patch.object(
+                            bundle.subprocess, 'check_output', return_value=commit+'\n'):
+                self.assertEqual(bundle.recipe_archive(commit).read_bytes(), b'verified git archive')
+                fetch = command.call_args_list[1].args[0]
+                self.assertEqual(fetch[-2:], ['https://gitlab.alpinelinux.org/alpine/aports.git', commit])
+                archive = command.call_args.args[0]
+                self.assertEqual(archive[-1], commit)
+                self.assertIn(f'--prefix=aports-{commit}/', archive)
+
+    def test_recipe_git_commit_mismatch_is_fatal_without_caching(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(bundle, 'CACHE', pathlib.Path(tmp)):
+            with patch.object(bundle.urllib.request, 'urlopen',
+                              side_effect=urllib.error.HTTPError('source', 404, 'gone', {}, None)), patch.object(
+                                  bundle.subprocess, 'run') as command, patch.object(
+                                      bundle.subprocess, 'check_output', return_value='b'*40):
+                with self.assertRaisesRegex(ValueError, 'does not match'):
+                    bundle.recipe_archive('a'*40)
+                self.assertEqual(command.call_count, 2)
                 self.assertEqual(list(pathlib.Path(tmp).rglob('*')), [])
 
     def test_recipe_certificate_failure_does_not_use_another_endpoint(self):
